@@ -1,0 +1,107 @@
+#!/usr/bin/perl -w
+
+use strict;
+use File::Basename;
+
+my $DEBUG = $ENV{'DEPDEBUG'};
+
+my @sysdlls = (
+    'acledit', 'aclui', 'activeds', 'actxprxy', 'advapi32', 'advpack', 'amstream',
+    'atl', 'authz', 'avicap32', 'avifil32', 'browseui', 'cabinet', 'capi2032', 'cards',
+    'cfgmgr32', 'clusapi', 'comcat', 'comctl32', 'comdlg32', 'compstui', 'credui',
+    'crtdll', 'crypt32', 'cryptdlg', 'cryptdll', 'cryptnet', 'cryptui', 'ctapi32',
+    'ctl3d32', 'd3d10', 'd3d10core', 'd3d8', 'd3d9', 'd3dim', 'd3drm', 'd3dx8', 'd3dx9_24',
+    'd3dx9_25', 'd3dx9_26', 'd3dx9_27', 'd3dx9_28', 'd3dx9_29', 'd3dx9_30', 'd3dx9_31',
+    'd3dx9_32', 'd3dx9_33', 'd3dx9_34', 'd3dx9_35', 'd3dx9_36', 'd3dx9_37', 'd3dx9_38',
+    'd3dx9_39', 'd3dx9_40', 'd3dxof', 'dbghelp', 'dciman32', 'ddraw', 'ddrawex', 'devenum',
+    'dinput', 'dinput8', 'dmband', 'dmcompos', 'dmime', 'dmloader', 'dmscript', 'dmstyle',
+    'dmsynth', 'dmusic', 'dmusic32', 'dnsapi', 'dplay', 'dplayx', 'dpnaddr', 'dpnet', 'dpnhpast',
+    'dpnlobby', 'dpwsockx', 'dsound', 'dssenh', 'dswave', 'dwmapi', 'dxdiagn', 'dxgi',
+    'faultrep', 'fusion', 'gdi32', 'gdiplus', 'glu32', 'gpkcsp', 'hal', 'hid', 'hlink',
+    'hnetcfg', 'httpapi', 'iccvid', 'icmp', 'imagehlp', 'imm32', 'inetcomm', 'inetmib1',
+    'infosoft', 'initpki', 'inkobj', 'inseng', 'iphlpapi', 'itircl', 'itss', 'jscript',
+    'kernel32', 'loadperf', 'localspl', 'localui', 'lz32', 'mapi32', 'mciavi32', 'mcicda',
+    'mciqtz32', 'mciseq', 'mciwave', 'midimap', 'mlang', 'mpr', 'mprapi', 'msacm32',
+    'mscat32', 'mscms', 'mscoree', 'msctf', 'msdmo', 'msftedit', 'mshtml', 'msi', 'msimg32',
+    'msimtf', 'msisip', 'msnet32', 'msrle32', 'mssign32', 'mssip32', 'mstask', 'msvcirt',
+    'msvcr71', 'msvcrt', 'msvcrt20', 'msvcrt40', 'msvcrtd', 'msvfw32', 'msvidc32', 'mswsock',
+    'msxml3', 'nddeapi', 'netapi32', 'newdev', 'ntdll', 'ntdsapi', 'ntprint', 'objsel',
+    'odbc32', 'odbccp32', 'ole32', 'oleacc', 'oleaut32', 'olecli32', 'oledlg', 'olepro32',
+    'olesvr32', 'olethk32', 'opengl32', 'pdh', 'pidgen', 'powrprof', 'printui', 'propsys',
+    'psapi', 'pstorec', 'qcap', 'qedit', 'qmgr', 'qmgrprxy', 'quartz', 'query', 'rasapi32',
+    'rasdlg', 'resutils', 'riched20', 'riched32', 'rpcrt4', 'rsabase', 'rsaenh', 'sccbase',
+    'schannel', 'secur32', 'security', 'sensapi', 'serialui', 'setupapi', 'sfc', 'sfc_os',
+    'shdoclc', 'shdocvw', 'shell32', 'shfolder', 'shlwapi', 'slbcsp', 'slc', 'snmpapi',
+    'softpub', 'spoolss', 'sti', 'svrapi', 'sxs', 'tapi32', 'traffic', 'twain_32', 'unicows',
+    'updspapi', 'url', 'urlmon', 'user32', 'userenv', 'usp10', 'uxtheme', 'vdmdbg', 'version',
+    'w32skrnl', 'wined3d', 'winedos', 'wing32', 'winhttp', 'wininet', 'winmm', 'winnls32',
+    'winscard', 'winspool', 'wintab32', 'wintrust', 'wldap32', 'wmi', 'wnaspi32', 'wow32', 'ws2_32',
+    'wsock32', 'wtsapi32', 'wuapi', 'xinput1_1', 'xinput1_2', 'xinput1_3', 'xinput9_1_0',
+);
+
+die "Usage: findrequires <syspath> binary1 binary2 ...\n" unless ($#ARGV > 0);
+my $dllpath = shift(@ARGV);
+my %required;
+my %examined;
+my $dstdir;
+
+sub dbg {
+    print STDERR @_ if ($DEBUG);
+}
+
+sub finddeps($$);
+
+sub finddeps($$) {
+    my $target = shift;
+    my $lvl = shift;
+    my %lreq;
+    my $indent = sprintf("%*s", $lvl, "");
+    return if ($examined{$target});
+    $examined{$target} = 1;
+    dbg $indent, "Examining ", $target, "\n";
+    foreach (sort keys %required) {
+        return if ($required{$_} eq $target);
+    }
+    if ($lvl) {
+        $required{basename($target)} = $target;
+    } else {
+        $dstdir = dirname($target) if (!$lvl);
+    }
+    $lvl++;
+    open (P, "@OBJDUMP@ -p $target|sort -u|") || die "Can't run @OBJDUMP@ -p $target: $!\n";
+    while (<P>) {
+        chomp;
+        if (/^\s*DLL\s+Name:\s+(\S+)/) {
+            my $dll = $1;
+            my $cdll = lc($dll);
+            $cdll =~ s/\.dll$//;
+            $cdll =~ s/\.drv$//;
+            next if grep { $cdll eq $_ } @sysdlls;
+            dbg $indent, " Depends on ", $dll, "\n";
+            next if (-f ($dstdir ."/" . $dll));
+            my $absdll = '';
+            foreach my $dir (split(/:/, $dllpath)) {
+                if (-f "$dir/$dll") {
+                    $absdll = "$dir/$dll";
+                    last;
+                }
+            }
+            if ($absdll ne '') {
+                dbg $indent, " $dll found in dllpath\n";
+                $lreq{$cdll} = $absdll;
+            } else {
+                die "Can't find required DLL $dll\n";
+            }
+        }
+    }
+    foreach (sort keys %lreq) {
+        finddeps($lreq{$_}, $lvl);
+    }
+}
+
+foreach my $p (@ARGV) {
+    finddeps($p, 0);
+}
+foreach (sort keys %required) {
+    print $required{$_}, "\n";
+}
