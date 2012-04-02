@@ -1,1 +1,17 @@
 .*.swp
+aclocal.m4
+autom4te.cache
+config.guess
+config.h.in
+config.sub
+configure
+depcomp
+install-sh
+libtool.m4
+ltmain.sh
+ltoptions.m4
+ltsugar.m4
+ltversion.m4
+lt~obsolete.m4
+missing
+Makefile.in
