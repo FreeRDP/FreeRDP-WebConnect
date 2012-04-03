@@ -1,6 +1,6 @@
 dnl Process this file with autoconf to produce a configure script.
 AC_INIT([wsgate],[1.0.0],[fritz@fritz-elfert.de])
-AC_REVISION([$Id: configure.ac 111 2012-04-02 13:51:39Z felfert $])
+AC_REVISION([$Id$])
 AC_CONFIG_AUX_DIR([conf])
 AC_CONFIG_MACRO_DIR([m4])
 AC_CONFIG_SRCDIR([wsgate_main.cpp])
@@ -89,8 +89,9 @@ dnl AC_CHECK_LIB for pcrecpp, ssl and crypto in order for those
 dnl checks to work correctly in mingw
 AC_CHECK_HEADERS([openssl/ssl.h openssl/err.h pcre.h pcrecpp.h])
 
-AC_CHECK_LIB(ehs, main)
+AC_LANG_PUSH([C++])
 AC_CHECK_LIB(pcrecpp, main)
+AC_LANG_POP
 AC_CHECK_LIB(pthread, pthread_create)
 AC_CHECK_LIB(sokt, socket)
 AC_CHECK_LIB(z, inflate)
@@ -277,6 +278,19 @@ void mv(std::unique_ptr<foo>p) { int v = p->bar; }]],
 )],[USE_UNIQUE_PTR=1;AC_MSG_RESULT([yes])],[AC_MSG_RESULT([no])])
 AC_LANG_POP
 AC_SUBST([USE_UNIQUE_PTR])
+
+CPPFLAGS="-I/usr/include/ehs $CPPFLAGS"
+AC_LANG_PUSH([C++])
+AC_CHECK_LIB(ehs,getEHSconfig,,,$BOOST_REGEX_LIBS)
+AC_CHECK_HEADERS([ehs.h])
+AC_LANG_POP
+
+if test "$ac_cv_lib_ehs_getEHSconfig$ac_cv_header_ehs_h" != "yesyes" ; then
+    AC_MSG_ERROR([Mandatory EHS development package not found])
+fi
+if test "$ac_cv_header_elfutils_libdwfl_h" = "yes" ; then
+CPPFLAGS="-I/usr/include/elfutils $CPPFLAGS"
+fi
 
 dnl Required for findrequires.pl script
 AC_CHECK_TARGET_TOOL([OBJDUMP],[objdump],[no])

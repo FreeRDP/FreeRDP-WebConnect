@@ -5,8 +5,13 @@ DIST_SUBDIRS = . setup
 
 bin_PROGRAMS = wsgate
 
-wsgate_SOURCES = wsgate_main.cpp
-wsgate_LDADD = $(WSGATE_RES) $(BOOST_REGEX_LIBS)
+wsgate_SOURCES = \
+	base64.cpp \
+	btexception.cpp \
+	sha1.cpp \
+	wsgate_main.cpp
+
+wsgate_LDADD = $(WSGATE_RES) $(BOOST_REGEX_LIBS) $(TRACE_LIBS)
 wsgate_DEPENDENCIES = $(WSGATE_RES)
 EXTRA_wsgate_SOURCES = wsgate.rc
 
