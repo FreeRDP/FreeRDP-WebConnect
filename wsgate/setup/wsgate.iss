@@ -8,7 +8,7 @@
 #define APPEXE "setupdir\bin\wsgate.exe"
 #include "version.iss"
 
-#define APPIDSTR "{3CA40ED6-5F8E-40E2-930B-5CF87F3BD2CF}"
+#define APPIDSTR "{93F8582A-FA30-440D-9145-18CE33AA40F7}"
 #define APPIDVAL "{" + APPIDSTR
 
 [Setup]
