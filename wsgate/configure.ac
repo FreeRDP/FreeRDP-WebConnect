@@ -314,6 +314,7 @@ SETUP=
 DLLPATH=
 PLATFORMDIST=
 INSTALL_SAMPLES=
+BINDHELPER='bindhelper$(EXEEXT)'
 
 case $target_os in
     linux*)
@@ -328,6 +329,7 @@ case $target_os in
         fi
         ;;
     mingw*)
+        BINDHELPER=
         PLATFORMDIST=setup
         INSTALL_SAMPLES='$(noinst_PROGRAMS)'
         if test "$build_os" = "$target_os" ; then
@@ -368,6 +370,7 @@ case $target_os in
         ;;
 esac
 
+AC_SUBST(BINDHELPER)
 AC_SUBST(SETUP)
 AC_SUBST(DLLPATH)
 AC_SUBST(PLATFORMDIST)
@@ -387,6 +390,6 @@ DX_PS_FEATURE(OFF)
 DX_INIT_DOXYGEN([wsgate], [conf/doxygen.cfg], [doc])
 
 AC_CONFIG_FILES([Makefile setup/Makefile
-                 conf/doxygen.cfg
+                 conf/doxygen.cfg conf/wsgate.spec
                  setup/findrequires.pl setup/isccwrap.sh wsgate.rc])
 AC_OUTPUT

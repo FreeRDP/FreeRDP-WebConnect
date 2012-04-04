@@ -3,7 +3,11 @@ ACLOCAL_AMFLAGS = -I m4
 SUBDIRS = . $(PLATFORM_SUBDIRS)
 DIST_SUBDIRS = . setup
 
-bin_PROGRAMS = wsgate
+sbin_PROGRAMS = wsgate
+pkglibexec_PROGRAMS = $(BINDHELPER)
+EXTRA_PROGRAMS = bindhelper
+
+bindhelper_SOURCES = bindhelper.c
 
 wsgate_SOURCES = \
 	base64.cpp \
@@ -11,11 +15,16 @@ wsgate_SOURCES = \
 	sha1.cpp \
 	wsgate_main.cpp
 
+wsgate_CPPFLAGS = -DBINDHELPER_PATH=\"$(pkglibexecdir)/bindhelper$(EXEEXT)\"
 wsgate_LDADD = $(WSGATE_RES) $(BOOST_REGEX_LIBS) $(TRACE_LIBS)
 wsgate_DEPENDENCIES = $(WSGATE_RES)
 EXTRA_wsgate_SOURCES = wsgate.rc
 
 noinst_HEADERS = \
+	base64.h \
+	btexception.h \
+	common.h \
+	sha1.h \
 	wscommon.h \
 	wsendpoint.h \
 	wsframe.h \
@@ -50,12 +59,11 @@ bootstrap:
 	autoreconf -if
 
 dist-hook: conf/doxygen.cfg doxygen-doc
-	cp -a doc/html $(distdir)/doc/html
+	cp -a doc $(distdir)/doc
 
 rpm: dist conf/$(PACKAGE).spec
-	cp $(distdir).tar.gz ~/rpmbuild/SOURCES/
 	rm -f *.rpm
-	QA_RPATHS=3 rpmbuild -ba conf/$(PACKAGE).spec 2>&1 | tee rpmbuild.log
+	rpmbuild -ta $(distdir).tar.gz 2>&1 | tee rpmbuild.log
 	test -n "`grep ^Wrote: rpmbuild.log`" || exit 1
 	for rpm in `grep ^Wrote: rpmbuild.log|awk '{print $$2}'` ; do ln -snf $$rpm . ; done
 	rm -f rpmbuild.log

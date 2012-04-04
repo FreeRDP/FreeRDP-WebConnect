@@ -334,8 +334,6 @@ namespace wspp {
 
                 m_state = session::state::CLOSING;
 
-                // m_closed_by_me = true;
-
                 frame::parser<simple_rng> control(m_rng);
                 control.set_opcode(frame::opcode::CLOSE);
                 control.set_fin(true);
@@ -402,6 +400,7 @@ namespace wspp {
                 std::string tmp(control.get_header_str());
                 tmp.append(control.get_payload_str());
                 m_handler->do_response(tmp);
+                shutdown();
             }
 
             void process_control() {
@@ -444,7 +443,7 @@ namespace wspp {
 #else
             mutable pthread_mutex_t m_lock;
 #endif
-            boost::shared_ptr<wshandler> m_handler;
+            wshandler *m_handler;
     };
 
     void wshandler::send(const std::string& payload, frame::opcode::value op)

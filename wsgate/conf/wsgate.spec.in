@@ -1,0 +1,36 @@
+Summary: FreeRDP-WebConnct gateway
+Name:    wsgate
+Version: @VERSION@
+Release: @GITREV@
+License: LGPL
+Group: Network Servers
+URL: https://github.com/thinstuff/FreeRDP-WebConnect
+Source0: %{name}-%{version}.tar.gz
+BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-root-%(id -u -n)
+Buildrequires: openssl-devel, gcc-c++, pcre-devel, boost-devel, ehs-devel
+Buildrequires: doxygen, graphviz, automake, libtool
+
+%description
+A WebSockets gateway for FreeRDP-WebConnect
+
+%prep
+%setup -q
+
+%build
+%configure
+%{__make} %{?_smp_mflags} V=1
+
+%install
+%{__rm} -rf %{buildroot}
+%{__make} DESTDIR=%{buildroot} install
+
+%clean
+%{__rm} -rf %{buildroot}
+
+%files
+%defattr(-,root,root,-)
+%{_sbindir}/*
+%defattr(4755,root,root,-)
+%{_libexecdir}/%{name}/bindhelper
+
+%changelog

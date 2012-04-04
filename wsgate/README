@@ -1,7 +1,11 @@
+Minimalistic build instructions
+
 Prerequisites:
 
-autotools, g++, boost-devel, pcrepp-devel, openssl-devel, ehs-devel
+autotools, g++, boost-devel, pcre-devel, openssl-devel, ehs-devel >= 1.5.0-114
 (For tracing exceptions additionally elfutils-devel or bfd-devel)
+
+The EHS package is available at http://sourceforge.net/projects/ehs/ (Source-tarball, windows-package) and at http://download.opensuse.org/repositories/home:/felfert/Fedora_15/ or http://download.opensuse.org/repositories/home:/felfert/Fedora_16/ (RPMs for F15 and F16)
 
 Only after initial checkout, run make -f Makefile.am
  
@@ -10,6 +14,12 @@ After that:
 ./configure ...
 make
 make install
+
+Building an RPM on Fedora:
+Additional tools rpm-build rpmdevtools
+Instead of make install, use:
+
+make dist-platform
 
 mingw32 cross-build on Fedora:
 Prerequisites: The mingw32-aequivalent of the devel packages, for generating
@@ -23,4 +33,6 @@ mingw32 cross-build of an installer on Fedora:
 mingw32-configure \
     --with-dllpath=/usr/i686-pc-mingw32/sys-root/mingw/bin \
     --with-wine-iscc="$HOME/.wine/drive_c/Program Files/Inno Setup 5/ISCC.exe"
-make dist-platform 
+
+make dist-platform
+
