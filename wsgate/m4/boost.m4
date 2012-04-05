@@ -52,6 +52,9 @@ m4_pattern_allow([BOOST_REGEX_LDPATH])
 m4_pattern_allow([BOOST_REGEX_LDFLAGS])
 m4_pattern_allow([BOOST_REGEX_LIBS])
 m4_pattern_allow([BOOST_LDPATH])
+m4_pattern_allow([BOOST_PROGRAM_OPTIONS_LDPATH])
+m4_pattern_allow([BOOST_PROGRAM_OPTIONS_LDFLAGS])
+m4_pattern_allow([BOOST_PROGRAM_OPTIONS_LIBS])
 
 
 # _BOOST_SED_CPP(SED-PROGRAM, PROGRAM,

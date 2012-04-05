@@ -38,6 +38,7 @@
 #include <cstdio>
 #include <cerrno>
 #include <boost/algorithm/string.hpp>
+#include <boost/program_options.hpp>
 
 #ifdef HAVE_SYS_TYPES_H
 # include <sys/types.h>
@@ -63,6 +64,9 @@
 
 using namespace std;
 using boost::algorithm::to_lower_copy;
+using boost::algorithm::ends_with;
+using boost::algorithm::replace_all;
+namespace po = boost::program_options;
 
 static const char * const ws_magic = "258EAFA5-E914-47DA-95CA-C5AB0DC85B11";
 
@@ -102,24 +106,6 @@ class WsGate : public EHS
     // generates a page for each http request
     ResponseCode HandleRequest(HttpRequest *request, HttpResponse *response)
     {
-        if ((0 == request->Uri().compare("/")) || (0 == request->Uri().compare("/index.html"))) {
-            ifstream f("samples/wstest.html", ios::binary);
-            if (f.fail()) {
-                f.open("wstest.html", ios::binary);
-                if (f.fail()) {
-                    throw tracing::runtime_error("Failed to open html source");
-                }
-            }
-            f.seekg (0, ios::end);
-            size_t fsize = f.tellg();
-            f.seekg (0, ios::beg);
-            char *buf = new char [fsize];
-            f.read (buf,fsize);
-            f.close();
-            response->SetBody(buf, fsize);
-            delete buf;
-            return HTTPRESPONSECODE_200_OK;
-        }
         if (0 == request->Uri().compare("/wsgate")) {
             response->SetBody("", 0);
             if (REQUESTMETHOD_GET != request->Method()) {
@@ -180,15 +166,41 @@ class WsGate : public EHS
                     base64_encode(reinterpret_cast<const unsigned char *>(digest), 20));
             return HTTPRESPONSECODE_101_SWITCHING_PROTOCOLS;
         }
-        return HTTPRESPONSECODE_404_NOTFOUND;
+        std::string path(m_sDocumentRoot);
+        path.append(request->Uri());
+        if (ends_with(path, "/")) {
+            path.append("index.html");
+        }
+        ifstream f(path.c_str(), ios::binary);
+        if (f.fail()) {
+            return HTTPRESPONSECODE_404_NOTFOUND;
+        }
+        f.seekg (0, ios::end);
+        size_t fsize = f.tellg();
+        f.seekg (0, ios::beg);
+        char *buf = new char [fsize];
+        f.read (buf,fsize);
+        f.close();
+        string rbuf(buf, fsize);
+        delete buf;
+        string wsuri(request->Secure() ? "wss://" : "ws://");
+        wsuri.append(m_sHostname).append("/wsgate");
+        replace_all(rbuf, "%WSURI%", wsuri);
+        response->SetBody(rbuf.data(), rbuf.length());
+        return HTTPRESPONSECODE_200_OK;
     }
 
     void SetHostname(const string &name) {
         m_sHostname = name;
     }
 
+    void SetDocumentRoot(const string &name) {
+        m_sDocumentRoot = name;
+    }
+
     private:
     string m_sHostname;
+    string m_sDocumentRoot;
 };
 
 #ifndef _WIN32
@@ -244,7 +256,7 @@ class MyWsHandler : public wspp::wshandler
     public:
     MyWsHandler(EHSConnection *econn, EHS *ehs)
         : m_econn(econn)
-        , m_ehs(ehs)
+          , m_ehs(ehs)
     {}
 
     virtual void on_message(std::string, std::string data) {
@@ -332,14 +344,93 @@ class MyRawSocketHandler : public RawSocketHandler
 //   sleeps forever and lets the EHS thread do its job.
 int main (int argc, char **argv)
 {
-    cout << getEHSconfig() << endl;
-    if (argc != 2) {
-        cerr << "Usage: " << basename(argv[0]) << " [port]" << endl;
-        return 0;
+    po::options_description desc("Supported options");
+    desc.add_options()
+        ("help,h", "Show this message and exit.")
+        ("version,V", "Show version information and exit.")
+        ("config,c", po::value<string>()->default_value(DEFAULTCFG), "Specify config file")
+        ;
+
+    po::options_description cfg("");
+    cfg.add_options()
+        ("global.hostname", po::value<string>(), "specify host name")
+        ("global.port", po::value<uint16_t>(), "specify listening port")
+        ("global.bindaddr", po::value<string>(), "specify bind address")
+        ("ssl.port", po::value<uint16_t>(), "specify listening port for SSL")
+        ("ssl.bindaddr", po::value<string>(), "specify bind address for SSL")
+        ("ssl.certfile", po::value<string>(), "specify certificate file")
+        ("ssl.certpass", po::value<string>(), "specify certificate passphrase")
+        ("threading.mode", po::value<string>(), "specify threading mode")
+        ("threading.poolsize", po::value<int>(), "specify threading pool size")
+        ("http.maxrequestsize", po::value<size_t>(), "specify maximum http request size")
+        ("http.documentroot", po::value<string>(), "specify http document root")
+        ;
+
+    po::variables_map vm;
+    try {
+        po::store(po::parse_command_line(argc, argv, desc), vm);
+        po::notify(vm);
+    } catch (const po::error &e) {
+        cerr << e.what() << endl << "Hint: Use --help option." << endl;
+        return -1;
     }
 
-    cerr << "binding to " << atoi(argv[1]) << endl;
+    if (vm.count("help")) {
+        cout << desc << endl;
+        return 0;
+    }
+    if (vm.count("version")) {
+        cout << "wsgate v" << VERSION << endl << getEHSconfig() << endl;
+        return 0;
+    }
+    if (vm.count("config")) {
+        string cfgname(vm["config"].as<string>());
+        ifstream f(cfgname.c_str());
+        if (f.fail()) {
+            cerr << "Could not read config file '" << cfgname << "'." << endl;
+            return -1;
+        }
+        try {
+            po::store(po::parse_config_file(f, cfg, true), vm);
+            po::notify(vm);
+        } catch (const po::error &e) {
+            cerr << e.what() << endl;
+            return -1;
+        }
+    } else {
+        cerr << "Mandatory option --config <filename> is missing." << endl;
+        return -1;
+    }
+    if (0 == (vm.count("global.port") + vm.count("ssl.port"))) {
+        cerr << "No listening ports defined." << endl;
+        return -1;
+    }
+    if (0 == (vm.count("global.hostname"))) {
+        cerr << "No hostname defined." << endl;
+        return -1;
+    }
+    if (0 == (vm.count("http.documentroot"))) {
+        cerr << "No documentroot defined." << endl;
+        return -1;
+    }
+
     WsGate srv;
+
+    string hostname(vm["global.hostname"].as<string>());
+    int port = -1;
+    bool need2 = false;
+    bool https = false;
+    if (vm.count("global.port")) {
+        port = vm["global.port"].as<uint16_t>();
+        if (vm.count("ssl.port")) {
+            need2 = true;
+        }
+    } else if (vm.count("ssl.port")) {
+        port = vm["ssl.port"].as<uint16_t>();
+        https = true;
+    }
+    srv.SetHostname(hostname + ":" + boost::lexical_cast<string>(port));
+    srv.SetDocumentRoot(vm["http.documentroot"].as<string>());
 
 #ifndef _WIN32
     MyBindHelper h;
@@ -348,13 +439,51 @@ int main (int argc, char **argv)
     MyRawSocketHandler sh(&srv);
     srv.SetRawSocketHandler(&sh);
 
-    ostringstream oss;
-    oss << "localhost:" << argv[1];
-    srv.SetHostname(oss.str());
-
     EHSServerParameters oSP;
-    oSP["port"] = argv[1];
-    oSP["mode"] = "onethreadperrequest";
+    oSP["port"] = port;
+    if (https) {
+        if (vm.count("ssl.bindaddr")) {
+            oSP["bindaddress"] = vm["ssl.bindaddr"].as<string>();
+        }
+        oSP["https"] = 1;
+        if (vm.count("ssl.certfile")) {
+            oSP["certificate"] = vm["ssl.certfile"].as<string>();
+        }
+        if (vm.count("ssl.certpass")) {
+            oSP["passphrase"] = vm["ssl.certpass"].as<string>();
+        }
+    } else {
+        if (vm.count("global.bindaddr")) {
+            oSP["bindaddress"] = vm["global.bindaddr"].as<string>();
+        }
+    }
+    if (vm.count("http.maxrequestsize")) {
+        oSP["maxrequestsize"] = vm["http.maxrequestsize"].as<size_t>();
+    }
+    if (vm.count("threading.mode")) {
+        string mode(vm["threading.mode"].as<string>());
+        if (0 == mode.compare("single")) {
+            oSP["mode"] = "singlethreaded";
+        } else if (0 == mode.compare("pool")) {
+            oSP["mode"] = "threadpool";
+            if (vm.count("threading.poolsize")) {
+                oSP["threadcount"] = vm["threading.poolsize"].as<int>();
+            }
+        } else if (0 == mode.compare("perrequest")) {
+            oSP["mode"] = "onethreadperrequest";
+        } else {
+            cerr << "Invalid threading mode '" << mode << "'." << endl;
+            return -1;
+        }
+    } else {
+        oSP["mode"] = "onethreadperrequest";
+    }
+    if (vm.count("ssl.certfile")) {
+        oSP["certificate"] = vm["ssl.certfile"].as<string>();
+    }
+    if (vm.count("ssl.certpass")) {
+        oSP["passphrase"] = vm["ssl.certpass"].as<string>();
+    }
 
     try {
         srv.StartServer(oSP);
