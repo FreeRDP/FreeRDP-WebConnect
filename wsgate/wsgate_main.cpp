@@ -60,290 +60,298 @@
 #include "btexception.h"
 #include "base64.h"
 #include "sha1.h"
+#include "logging.h"
 #include "wsendpoint.h"
+#include "wsgate.h"
 
 using namespace std;
 using boost::algorithm::to_lower_copy;
 using boost::algorithm::ends_with;
 using boost::algorithm::replace_all;
+using boost::algorithm::to_upper_copy;
 namespace po = boost::program_options;
 
-static const char * const ws_magic = "258EAFA5-E914-47DA-95CA-C5AB0DC85B11";
+namespace wsgate {
 
-// subclass of EHS that defines a custom HTTP response.
-class WsGate : public EHS
-{
-    public:
+    static const char * const ws_magic = "258EAFA5-E914-47DA-95CA-C5AB0DC85B11";
 
-    WsGate(EHS *parent = NULL, std::string registerpath = "")
-        : EHS(parent, registerpath)
-        , m_sHostname("localhost")
-        {
-        }
-
-    HttpResponse *HandleThreadException(ehs_threadid_t, HttpRequest *request, exception &ex)
+    // subclass of EHS that defines a custom HTTP response.
+    class WsGate : public EHS
     {
-        HttpResponse *ret = NULL;
-        string msg(ex.what());
-        cerr << "##################### Catched " << msg << endl;
-        cerr << "request: " << hex << request << dec << endl;
-        tracing::exception *btx =
-            dynamic_cast<tracing::exception*>(&ex);
-        if (NULL != btx) {
-            string tmsg = btx->where();
-            cerr << "Backtrace:" << endl << tmsg;
-            if (0 != msg.compare("fatal")) {
-                ret = HttpResponse::Error(HTTPRESPONSECODE_500_INTERNALSERVERERROR, request);
-                string body(ret->GetBody());
-                tmsg.insert(0, "<br>\n<pre>").append(msg).append("</pre><p><a href=\"/\">Back to main page</a>");
-                body.insert(body.find("</body>"), tmsg);
-                ret->SetBody(body.c_str(), body.length());
-            }
-        }
-        return ret;
-    }
+        public:
 
-    // generates a page for each http request
-    ResponseCode HandleRequest(HttpRequest *request, HttpResponse *response)
-    {
-        if (0 == request->Uri().compare("/wsgate")) {
-            response->SetBody("", 0);
-            if (REQUESTMETHOD_GET != request->Method()) {
-                cerr << endl << "!0 '" << request->Method() << "'" << endl;
-                return HTTPRESPONSECODE_400_BADREQUEST;
-            }
-            if (0 != request->HttpVersion().compare("1.1")) {
-                cerr << endl << "!1 '" << request->HttpVersion() << "'" << endl;
-                return HTTPRESPONSECODE_400_BADREQUEST;
-            }
-            string wshost(to_lower_copy(request->Headers("Host")));
-            string wsconn(to_lower_copy(request->Headers("Connection")));
-            string wsupg(to_lower_copy(request->Headers("Upgrade")));
-            string wsver(request->Headers("Sec-WebSocket-Version"));
-            string wskey(request->Headers("Sec-WebSocket-Key"));
-            string wsproto(request->Headers("Sec-WebSocket-Protocol"));
-            string wsext(request->Headers("Sec-WebSocket-Extension"));
+            WsGate(EHS *parent = NULL, std::string registerpath = "")
+                : EHS(parent, registerpath)
+                , m_sHostname("localhost")
+                {
+                }
 
-            if (!MultivalHeaderContains(wsconn, "upgrade")) {
-                return HTTPRESPONSECODE_400_BADREQUEST;
-            }
-            if (!MultivalHeaderContains(wsupg, "websocket")) {
-                return HTTPRESPONSECODE_400_BADREQUEST;
-            }
-            if (0 != wshost.compare(m_sHostname)) {
-                return HTTPRESPONSECODE_400_BADREQUEST;
-            }
-            string wskey_decoded(base64_decode(wskey));
-            if (16 != wskey_decoded.length()) {
-                return HTTPRESPONSECODE_400_BADREQUEST;
-            }
-            SHA1 sha1;
-            uint32_t digest[5];
-            sha1 << wskey.c_str() << ws_magic;
-            if (!sha1.Result(digest)) {
-                return HTTPRESPONSECODE_500_INTERNALSERVERERROR;
-            }
-            // Handle endianess
-            for (int i = 0; i < 5; ++i) {
-                digest[i] = htonl(digest[i]);
+            HttpResponse *HandleThreadException(ehs_threadid_t, HttpRequest *request, exception &ex)
+            {
+                HttpResponse *ret = NULL;
+                string msg(ex.what());
+                log::err << "##################### Catched " << msg << endl;
+                log::err << "request: " << hex << request << dec << endl;
+                tracing::exception *btx =
+                    dynamic_cast<tracing::exception*>(&ex);
+                if (NULL != btx) {
+                    string tmsg = btx->where();
+                    log::err << "Backtrace:" << endl << tmsg;
+                    if (0 != msg.compare("fatal")) {
+                        ret = HttpResponse::Error(HTTPRESPONSECODE_500_INTERNALSERVERERROR, request);
+                        string body(ret->GetBody());
+                        tmsg.insert(0, "<br>\n<pre>").append(msg).append("</pre><p><a href=\"/\">Back to main page</a>");
+                        body.insert(body.find("</body>"), tmsg);
+                        ret->SetBody(body.c_str(), body.length());
+                    }
+                }
+                return ret;
             }
 
-            response->RemoveHeader("Content-Type");
-            response->RemoveHeader("Content-Length");
-            response->RemoveHeader("Last-Modified");
-            response->RemoveHeader("Cache-Control");
+            // generates a page for each http request
+            ResponseCode HandleRequest(HttpRequest *request, HttpResponse *response)
+            {
+                if (0 == request->Uri().compare("/wsgate")) {
+                    response->SetBody("", 0);
+                    if (REQUESTMETHOD_GET != request->Method()) {
+                        return HTTPRESPONSECODE_400_BADREQUEST;
+                    }
+                    if (0 != request->HttpVersion().compare("1.1")) {
+                        return HTTPRESPONSECODE_400_BADREQUEST;
+                    }
+                    string wshost(to_lower_copy(request->Headers("Host")));
+                    string wsconn(to_lower_copy(request->Headers("Connection")));
+                    string wsupg(to_lower_copy(request->Headers("Upgrade")));
+                    string wsver(request->Headers("Sec-WebSocket-Version"));
+                    string wskey(request->Headers("Sec-WebSocket-Key"));
+                    string wsproto(request->Headers("Sec-WebSocket-Protocol"));
+                    string wsext(request->Headers("Sec-WebSocket-Extension"));
+                    if (!MultivalHeaderContains(wsconn, "upgrade")) {
+                        return HTTPRESPONSECODE_400_BADREQUEST;
+                    }
+                    if (!MultivalHeaderContains(wsupg, "websocket")) {
+                        return HTTPRESPONSECODE_400_BADREQUEST;
+                    }
+                    if (0 != wshost.compare(m_sHostname)) {
+                        log::warn << "wshost:'" << wshost << "' hostname:'" << m_sHostname << "'" << endl;
+                        return HTTPRESPONSECODE_400_BADREQUEST;
+                    }
+                    string wskey_decoded(base64_decode(wskey));
+                    if (16 != wskey_decoded.length()) {
+                        return HTTPRESPONSECODE_400_BADREQUEST;
+                    }
+                    SHA1 sha1;
+                    uint32_t digest[5];
+                    sha1 << wskey.c_str() << ws_magic;
+                    if (!sha1.Result(digest)) {
+                        return HTTPRESPONSECODE_500_INTERNALSERVERERROR;
+                    }
+                    // Handle endianess
+                    for (int i = 0; i < 5; ++i) {
+                        digest[i] = htonl(digest[i]);
+                    }
 
-            if (!MultivalHeaderContains(wsver, "13")) {
-                response->SetHeader("Sec-WebSocket-Version", "13");
-                return HTTPRESPONSECODE_426_UPGRADE_REQUIRED;
+                    response->RemoveHeader("Content-Type");
+                    response->RemoveHeader("Content-Length");
+                    response->RemoveHeader("Last-Modified");
+                    response->RemoveHeader("Cache-Control");
+
+                    if (!MultivalHeaderContains(wsver, "13")) {
+                        response->SetHeader("Sec-WebSocket-Version", "13");
+                        return HTTPRESPONSECODE_426_UPGRADE_REQUIRED;
+                    }
+                    if (0 < wsproto.length()) {
+                        response->SetHeader("Sec-WebSocket-Protocol", wsproto);
+                    }
+                    response->SetHeader("Upgrade", "websocket");
+                    response->SetHeader("Connection", "Upgrade");
+                    response->SetHeader("Sec-WebSocket-Accept",
+                            base64_encode(reinterpret_cast<const unsigned char *>(digest), 20));
+                    return HTTPRESPONSECODE_101_SWITCHING_PROTOCOLS;
+                }
+                std::string path(m_sDocumentRoot);
+                path.append(request->Uri());
+                if (ends_with(path, "/")) {
+                    path.append("index.html");
+                }
+                ifstream f(path.c_str(), ios::binary);
+                if (f.fail()) {
+                    return HTTPRESPONSECODE_404_NOTFOUND;
+                }
+                f.seekg (0, ios::end);
+                size_t fsize = f.tellg();
+                f.seekg (0, ios::beg);
+                char *buf = new char [fsize];
+                f.read (buf,fsize);
+                f.close();
+                string rbuf(buf, fsize);
+                delete buf;
+                ostringstream oss;
+                oss << (request->Secure() ? "wss://" : "ws://")
+                    << m_sHostname << ":" << request->LocalPort() << "/wsgate";
+                replace_all(rbuf, "%WSURI%", oss.str());
+                response->SetBody(rbuf.data(), rbuf.length());
+                return HTTPRESPONSECODE_200_OK;
             }
-            if (0 < wsproto.length()) {
-                response->SetHeader("Sec-WebSocket-Protocol", wsproto);
+
+            void SetHostname(const string &name) {
+                m_sHostname = name;
             }
-            response->SetHeader("Upgrade", "websocket");
-            response->SetHeader("Connection", "Upgrade");
-            response->SetHeader("Sec-WebSocket-Accept",
-                    base64_encode(reinterpret_cast<const unsigned char *>(digest), 20));
-            return HTTPRESPONSECODE_101_SWITCHING_PROTOCOLS;
-        }
-        std::string path(m_sDocumentRoot);
-        path.append(request->Uri());
-        if (ends_with(path, "/")) {
-            path.append("index.html");
-        }
-        ifstream f(path.c_str(), ios::binary);
-        if (f.fail()) {
-            return HTTPRESPONSECODE_404_NOTFOUND;
-        }
-        f.seekg (0, ios::end);
-        size_t fsize = f.tellg();
-        f.seekg (0, ios::beg);
-        char *buf = new char [fsize];
-        f.read (buf,fsize);
-        f.close();
-        string rbuf(buf, fsize);
-        delete buf;
-        string wsuri(request->Secure() ? "wss://" : "ws://");
-        wsuri.append(m_sHostname).append("/wsgate");
-        replace_all(rbuf, "%WSURI%", wsuri);
-        response->SetBody(rbuf.data(), rbuf.length());
-        return HTTPRESPONSECODE_200_OK;
-    }
 
-    void SetHostname(const string &name) {
-        m_sHostname = name;
-    }
+            void SetDocumentRoot(const string &name) {
+                m_sDocumentRoot = name;
+            }
 
-    void SetDocumentRoot(const string &name) {
-        m_sDocumentRoot = name;
-    }
-
-    private:
-    string m_sHostname;
-    string m_sDocumentRoot;
-};
+        private:
+            string m_sHostname;
+            string m_sDocumentRoot;
+    };
 
 #ifndef _WIN32
-// Bind helper is not needed on win32, because win32 does not
-// have a concept of privileged ports.
-class MyBindHelper : public PrivilegedBindHelper
-{
-    public:
-    MyBindHelper() : mutex(pthread_mutex_t())
+    // Bind helper is not needed on win32, because win32 does not
+    // have a concept of privileged ports.
+    class MyBindHelper : public PrivilegedBindHelper
     {
-        pthread_mutex_init(&mutex, NULL);
-    }
-
-    virtual bool BindPrivilegedPort(int socket, const char *addr, const unsigned short port)
-    {
-        bool ret = false;
-        pid_t pid;
-        int status;
-        char buf[32];
-        pthread_mutex_lock(&mutex);
-        switch (pid = fork()) {
-            case 0:
-                sprintf(buf, "%08x%08x%04x", socket, inet_addr(addr), port);
-                execl(BINDHELPER_PATH, buf, ((void *)NULL));
-                exit(errno);
-                break;
-            case -1:
-                break;
-            default:
-                if (waitpid(pid, &status, 0) != -1) {
-                    ret = (0 == status);
-                    if (0 != status)
-                        cerr << "bind: " << strerror(WEXITSTATUS(status)) << endl;
-                }
-                break;
+        public:
+            MyBindHelper() : mutex(pthread_mutex_t())
+        {
+            pthread_mutex_init(&mutex, NULL);
         }
-        pthread_mutex_unlock(&mutex);
-        return ret;
-    }
 
-    private:
-    pthread_mutex_t mutex;
-};
+            virtual bool BindPrivilegedPort(int socket, const char *addr, const unsigned short port)
+            {
+                bool ret = false;
+                pid_t pid;
+                int status;
+                char buf[32];
+                pthread_mutex_lock(&mutex);
+                switch (pid = fork()) {
+                    case 0:
+                        sprintf(buf, "%08x%08x%04x", socket, inet_addr(addr), port);
+                        execl(BINDHELPER_PATH, buf, ((void *)NULL));
+                        exit(errno);
+                        break;
+                    case -1:
+                        break;
+                    default:
+                        if (waitpid(pid, &status, 0) != -1) {
+                            ret = (0 == status);
+                            if (0 != status)
+                                log::err << "bind: " << strerror(WEXITSTATUS(status)) << endl;
+                        }
+                        break;
+                }
+                pthread_mutex_unlock(&mutex);
+                return ret;
+            }
+
+        private:
+            pthread_mutex_t mutex;
+    };
 #endif
 
-typedef boost::shared_ptr<wspp::wsendpoint> conn_ptr;
-typedef boost::shared_ptr<wspp::wshandler> handler_ptr;
-typedef std::map<EHSConnection *, conn_ptr> conn_map;
-typedef std::map<EHSConnection *, handler_ptr> handler_map;
+    typedef boost::shared_ptr<wspp::wsendpoint> conn_ptr;
+    typedef boost::shared_ptr<wspp::wshandler> handler_ptr;
+    typedef std::map<EHSConnection *, conn_ptr> conn_map;
+    typedef std::map<EHSConnection *, handler_ptr> handler_map;
 
-class MyWsHandler : public wspp::wshandler
-{
-    public:
-    MyWsHandler(EHSConnection *econn, EHS *ehs)
-        : m_econn(econn)
-          , m_ehs(ehs)
-    {}
-
-    virtual void on_message(std::string, std::string data) {
-        cerr << "GOT Message: '" << data << "'" << endl;
-        data.insert(0, "Yes, ");
-        send_text(data);
-    }
-    virtual void on_close() {
-        cerr << "GOT Close" << endl;
-        ehs_autoptr<GenericResponse> r(new GenericResponse(0, m_econn));
-        m_ehs->AddResponse(ehs_move(r));
-    }
-    virtual bool on_ping(const std::string data) {
-        cerr << "GOT Ping: '" << data << "'" << endl;
-        return true;
-    }
-    virtual void on_pong(const std::string data) {
-        cerr << "GOT Pong: '" << data << "'" << endl;
-    }
-    virtual void do_response(const std::string data) {
-        cerr << "Send WS response '" << data << "'" << endl;
-        ehs_autoptr<GenericResponse> r(new GenericResponse(0, m_econn));
-        r->SetBody(data.data(), data.length());
-        m_ehs->AddResponse(ehs_move(r));
-    }
-
-    private:
-    MyWsHandler(const MyWsHandler&);
-    MyWsHandler& operator=(const MyWsHandler&);
-    EHSConnection *m_econn;
-    EHS *m_ehs;
-};
-
-class MyRawSocketHandler : public RawSocketHandler
-{
-    public:
-    MyRawSocketHandler(WsGate *parent)
-        : m_parent(parent)
-          , m_cmap(conn_map())
-          , m_hmap(handler_map())
-    { }
-
-    virtual bool OnData(EHSConnection *conn, std::string data)
+    class MyWsHandler : public wspp::wshandler
     {
-        if (m_cmap.end() != m_cmap.find(conn)) {
-            m_cmap[conn]->AddRxData(data);
-            return true;
-        }
-        return false;
-    }
+        public:
+            MyWsHandler(EHSConnection *econn, EHS *ehs)
+                : m_econn(econn)
+                  , m_ehs(ehs)
+        {}
 
-    virtual void OnConnect(EHSConnection *conn)
+            virtual void on_message(std::string, std::string data) {
+                log::debug << "GOT Message: '" << data << "'" << endl;
+                data.insert(0, "Yes, ");
+                send_text(data);
+            }
+            virtual void on_close() {
+                log::debug << "GOT Close" << endl;
+                ehs_autoptr<GenericResponse> r(new GenericResponse(0, m_econn));
+                m_ehs->AddResponse(ehs_move(r));
+            }
+            virtual bool on_ping(const std::string data) {
+                log::debug << "GOT Ping: '" << data << "'" << endl;
+                return true;
+            }
+            virtual void on_pong(const std::string data) {
+                log::debug << "GOT Pong: '" << data << "'" << endl;
+            }
+            virtual void do_response(const std::string data) {
+                log::debug << "Send WS response '" << data << "'" << endl;
+                ehs_autoptr<GenericResponse> r(new GenericResponse(0, m_econn));
+                r->SetBody(data.data(), data.length());
+                m_ehs->AddResponse(ehs_move(r));
+            }
+
+        private:
+            MyWsHandler(const MyWsHandler&);
+            MyWsHandler& operator=(const MyWsHandler&);
+            EHSConnection *m_econn;
+            EHS *m_ehs;
+    };
+
+    class MyRawSocketHandler : public RawSocketHandler
     {
-        cerr << "GOT WS CONNECT" << endl;
-        handler_ptr h(new MyWsHandler(conn, m_parent));
-        conn_ptr c(new wspp::wsendpoint(h.get()));
-        m_hmap[conn] = h;
-        m_cmap[conn] = c;
-    }
+        public:
+            MyRawSocketHandler(WsGate *parent)
+                : m_parent(parent)
+                  , m_cmap(conn_map())
+                  , m_hmap(handler_map())
+        { }
 
-    virtual void OnDisconnect(EHSConnection *conn)
-    {
-        cerr << "GOT WS DISCONNECT" << endl;
-        conn_map::iterator ic = m_cmap.find(conn);
-        if (m_cmap.end() != ic) {
-            m_cmap.erase(ic);
-        }
-        handler_map::iterator ih = m_hmap.find(conn);
-        if (m_hmap.end() != ih) {
-            m_hmap.erase(ih);
-        }
-    }
+            virtual bool OnData(EHSConnection *conn, std::string data)
+            {
+                if (m_cmap.end() != m_cmap.find(conn)) {
+                    m_cmap[conn]->AddRxData(data);
+                    return true;
+                }
+                return false;
+            }
 
-    private:
-    MyRawSocketHandler(const MyRawSocketHandler&);
-    MyRawSocketHandler& operator=(const MyRawSocketHandler&);
+            virtual void OnConnect(EHSConnection *conn)
+            {
+                log::debug << "GOT WS CONNECT" << endl;
+                handler_ptr h(new MyWsHandler(conn, m_parent));
+                conn_ptr c(new wspp::wsendpoint(h.get()));
+                m_hmap[conn] = h;
+                m_cmap[conn] = c;
+            }
 
-    WsGate *m_parent;
-    conn_map m_cmap;
-    handler_map m_hmap;
+            virtual void OnDisconnect(EHSConnection *conn)
+            {
+                log::debug << "GOT WS DISCONNECT" << endl;
+                conn_map::iterator ic = m_cmap.find(conn);
+                if (m_cmap.end() != ic) {
+                    m_cmap.erase(ic);
+                }
+                handler_map::iterator ih = m_hmap.find(conn);
+                if (m_hmap.end() != ih) {
+                    m_hmap.erase(ih);
+                }
+            }
 
-};
+        private:
+            MyRawSocketHandler(const MyRawSocketHandler&);
+            MyRawSocketHandler& operator=(const MyRawSocketHandler&);
+
+            WsGate *m_parent;
+            conn_map m_cmap;
+            handler_map m_hmap;
+
+    };
+
+}
 
 // basic main that creates a threaded EHS object and then
 //   sleeps forever and lets the EHS thread do its job.
 int main (int argc, char **argv)
 {
+    wsgate::logger log("wsgate");
+
     po::options_description desc("Supported options");
     desc.add_options()
         ("help,h", "Show this message and exit.")
@@ -356,6 +364,8 @@ int main (int argc, char **argv)
         ("global.hostname", po::value<string>(), "specify host name")
         ("global.port", po::value<uint16_t>(), "specify listening port")
         ("global.bindaddr", po::value<string>(), "specify bind address")
+        ("global.logmask", po::value<string>(), "specify syslog mask")
+        ("global.logfacility", po::value<string>(), "specify syslog facility")
         ("ssl.port", po::value<uint16_t>(), "specify listening port for SSL")
         ("ssl.bindaddr", po::value<string>(), "specify bind address for SSL")
         ("ssl.certfile", po::value<string>(), "specify certificate file")
@@ -401,6 +411,12 @@ int main (int argc, char **argv)
         cerr << "Mandatory option --config <filename> is missing." << endl;
         return -1;
     }
+    if (vm.count("global.logmask")) {
+        log.setmaskByName(to_upper_copy(vm["global.logmask"].as<string>()));
+    }
+    if (vm.count("global.logfacility")) {
+        log.setfacilityByName(to_upper_copy(vm["global.logfacility"].as<string>()));
+    }
     if (0 == (vm.count("global.port") + vm.count("ssl.port"))) {
         cerr << "No listening ports defined." << endl;
         return -1;
@@ -414,7 +430,7 @@ int main (int argc, char **argv)
         return -1;
     }
 
-    WsGate srv;
+    wsgate::WsGate srv;
 
     string hostname(vm["global.hostname"].as<string>());
     int port = -1;
@@ -429,14 +445,14 @@ int main (int argc, char **argv)
         port = vm["ssl.port"].as<uint16_t>();
         https = true;
     }
-    srv.SetHostname(hostname + ":" + boost::lexical_cast<string>(port));
+    srv.SetHostname(hostname);
     srv.SetDocumentRoot(vm["http.documentroot"].as<string>());
 
 #ifndef _WIN32
-    MyBindHelper h;
+    wsgate::MyBindHelper h;
     srv.SetBindHelper(&h);
 #endif
-    MyRawSocketHandler sh(&srv);
+    wsgate::MyRawSocketHandler sh(&srv);
     srv.SetRawSocketHandler(&sh);
 
     EHSServerParameters oSP;
@@ -486,6 +502,7 @@ int main (int argc, char **argv)
     }
 
     try {
+        wsgate::log::info << "wsgate v" << VERSION << " starting" << endl;
         srv.StartServer(oSP);
 
         kbdio kbd;

@@ -12,9 +12,11 @@
 #include <string>
 #include <boost/thread.hpp>
 #include "wsframe.h"
+#include "wsgate.h"
 
 #ifndef HAVE_BOOST_LOCK_GUARD
 #include <pthread.h>
+
 /**
  * Automatically unlocks a mutex if destroyed.
  */
@@ -70,6 +72,8 @@ class MutexHelper {
 
 namespace wspp {
     class wsendpoint;
+
+    using wsgate::log;
 
     /**
      * Event handler interface for the server-side
@@ -203,7 +207,7 @@ namespace wspp {
                                 return;
                             default:
                                 // Fatal error, forcibly end connection immediately.
-                                std::cerr
+                                log::warn
                                     << "Dropping TCP due to unrecoverable exception: " << e.code()
                                     << " (" << e.what() << ")" << std::endl;
                                 shutdown();
@@ -318,16 +322,16 @@ namespace wspp {
                 // if (m_detached) {return;}
 
                 if (m_state != session::state::OPEN) {
-                    std::cerr << "Tried to disconnect a session that wasn't open" << std::endl;
+                    log::err << "Tried to disconnect a session that wasn't open" << std::endl;
                     return;
                 }
 
                 if (close::status::invalid(code)) {
-                    std::cerr << "Tried to close a connection with invalid close code: " 
+                    log::err << "Tried to close a connection with invalid close code: " 
                         << code << std::endl;
                     return;
                 } else if (close::status::reserved(code)) {
-                    std::cerr << "Tried to close a connection with reserved close code: " 
+                    log::err << "Tried to close a connection with reserved close code: " 
                         << code << std::endl;
                     return;
                 }
@@ -417,13 +421,13 @@ namespace wspp {
                         // check that the codes we got over the wire are valid
                         if (m_state == session::state::OPEN) {
                             // other end is initiating
-                            std::cerr << "sending close ack" << std::endl;
+                            log::debug << "sending close ack" << std::endl;
 
                             // TODO:
                             send_close_ack(m_parser.get_close_code(), m_parser.get_close_reason());
                         } else if (m_state == session::state::CLOSING) {
                             // ack of our close
-                            std::cerr << "got close ack" << std::endl;
+                            log::debug << "got close ack" << std::endl;
                             shutdown();
                         }
                         break;

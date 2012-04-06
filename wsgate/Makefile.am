@@ -12,6 +12,7 @@ bindhelper_SOURCES = bindhelper.c
 wsgate_SOURCES = \
 	base64.cpp \
 	btexception.cpp \
+	logging.cpp \
 	sha1.cpp \
 	wsgate_main.cpp
 
@@ -26,8 +27,10 @@ noinst_HEADERS = \
 	base64.h \
 	btexception.h \
 	common.h \
+	logging.h \
 	sha1.h \
 	wscommon.h \
+	wsgate.h \
 	wsendpoint.h \
 	wsframe.h \
 	wsutf8.h
