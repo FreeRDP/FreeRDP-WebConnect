@@ -7,6 +7,7 @@
 
 #include <cstdio>
 #include <cstring>
+#include <cstdlib>
 #include <iostream>
 #include <string>
 #include <vector>
@@ -65,7 +66,7 @@ namespace wsgate {
             virtual int overflow(int c = EOF) {
                 if (c == '\n') {
 #ifdef _WIN32
-                    if (LOG_MASK(_level) & current_log_mask) {
+                    if (LOG_MASK(level) & current_log_mask) {
                         OutputDebugStringA(linebuf.c_str());
                     }
 #else

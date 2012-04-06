@@ -372,7 +372,7 @@ int main (int argc, char **argv)
         ("ssl.certpass", po::value<string>(), "specify certificate passphrase")
         ("threading.mode", po::value<string>(), "specify threading mode")
         ("threading.poolsize", po::value<int>(), "specify threading pool size")
-        ("http.maxrequestsize", po::value<size_t>(), "specify maximum http request size")
+        ("http.maxrequestsize", po::value<unsigned long>(), "specify maximum http request size")
         ("http.documentroot", po::value<string>(), "specify http document root")
         ;
 
@@ -474,7 +474,7 @@ int main (int argc, char **argv)
         }
     }
     if (vm.count("http.maxrequestsize")) {
-        oSP["maxrequestsize"] = vm["http.maxrequestsize"].as<size_t>();
+        oSP["maxrequestsize"] = vm["http.maxrequestsize"].as<unsigned long>();
     }
     if (vm.count("threading.mode")) {
         string mode(vm["threading.mode"].as<string>());

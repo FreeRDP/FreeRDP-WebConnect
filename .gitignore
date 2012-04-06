@@ -1,6 +1,8 @@
 .*.swp
+.libs
 .deps
 *.o
+*.lo
 *.rc
 *.exe
 *.rpm
@@ -28,6 +30,7 @@ ltoptions.m4
 ltsugar.m4
 ltversion.m4
 lt~obsolete.m4
+mingw32-config.cache
 missing
 Makefile
 Makefile.in
