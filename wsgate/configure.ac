@@ -89,16 +89,17 @@ dnl AC_CHECK_LIB for pcrecpp, ssl and crypto in order for those
 dnl checks to work correctly in mingw
 AC_CHECK_HEADERS([openssl/ssl.h openssl/err.h pcre.h pcrecpp.h])
 
+WSGATE_LDADD=
 AC_LANG_PUSH([C++])
-AC_CHECK_LIB(pcrecpp, main)
+AC_CHECK_LIB(pcrecpp, main,[WSGATE_LDADD="$WSGATE_LDADD -lpcrecpp"])
 AC_LANG_POP
-AC_CHECK_LIB(pthread, pthread_create)
-AC_CHECK_LIB(sokt, socket)
-AC_CHECK_LIB(z, inflate)
-AC_CHECK_LIB(dl, dlopen)
-AC_CHECK_LIB(crypto, ERR_free_strings)
-AC_CHECK_LIB(ssl, SSL_library_init)
-AC_CHECK_LIB(ws2_32, main)
+AC_CHECK_LIB(pthread, pthread_create,[WSGATE_LDADD="$WSGATE_LDADD -lpthread"])
+AC_CHECK_LIB(sokt, socket,[WSGATE_LDADD="$WSGATE_LDADD -lsokt"])
+AC_CHECK_LIB(z, inflate,[WSGATE_LDADD="$WSGATE_LDADD -lz"])
+dnl AC_CHECK_LIB(dl, dlopen)
+AC_CHECK_LIB(crypto, ERR_free_strings,[WSGATE_LDADD="$WSGATE_LDADD -lcrypto"])
+AC_CHECK_LIB(ssl, SSL_library_init,[WSGATE_LDADD="$WSGATE_LDADD -lssl"])
+AC_CHECK_LIB(ws2_32, main,[WSGATE_LDADD="$WSGATE_LDADD -lws2_32"])
 AC_CHECK_LIB(dw, dwfl_begin, DWLIB="-ldw")
 AC_CHECK_LIB(bfd, bfd_openr, [BFDLIB1="-lbfd"])
 AC_CHECK_LIB(iberty, cplus_demangle, [BFDLIB2="-liberty"])
@@ -251,6 +252,7 @@ BOOST_STATIC
 BOOST_REQUIRE([1.33.1])
 BOOST_REGEX([mt])
 BOOST_PROGRAM_OPTIONS([mt])
+BOOST_FILESYSTEM([mt])
 
 dnl Check for boost::lock_guard
 
@@ -282,7 +284,7 @@ AC_SUBST([USE_UNIQUE_PTR])
 
 CPPFLAGS="-I/usr/include/ehs $CPPFLAGS"
 AC_LANG_PUSH([C++])
-AC_CHECK_LIB(ehs,getEHSconfig,,,$BOOST_REGEX_LIBS)
+AC_CHECK_LIB(ehs,getEHSconfig,[WSGATE_LDADD="$WSGATE_LDADD -lehs"],,$BOOST_REGEX_LIBS)
 AC_CHECK_HEADERS([ehs.h])
 AC_LANG_POP
 
@@ -376,6 +378,8 @@ AC_SUBST(SETUP)
 AC_SUBST(DLLPATH)
 AC_SUBST(PLATFORMDIST)
 AC_SUBST(INSTALL_SAMPLES)
+WSGATE_LDADD="$WSGATE_LDADD  $BOOST_REGEX_LIBS $BOOST_FILESYSTEM_LIBS $BOOST_SYSTEM_LIBS $BOOST_PROGRAM_OPTIONS_LIBS $TRACE_LIBS"
+AC_SUBST(WSGATE_LDADD)
 
 dnl
 dnl doxygen setup

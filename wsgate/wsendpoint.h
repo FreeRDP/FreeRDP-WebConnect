@@ -128,6 +128,11 @@ namespace wspp {
      * This class implements a server-side WebSockets endpoint.
      */
     class wsendpoint {
+        private:
+            // Non-copyable
+            wsendpoint(const wspp::wsendpoint&);
+            wsendpoint& operator=(const wspp::wsendpoint&);
+
         public:
             /**
              * Constructor

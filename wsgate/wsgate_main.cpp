@@ -39,6 +39,10 @@
 #include <cerrno>
 #include <boost/algorithm/string.hpp>
 #include <boost/program_options.hpp>
+#include <boost/filesystem.hpp>
+#include <boost/filesystem/fstream.hpp>
+#include <boost/date_time/posix_time/posix_time.hpp>
+#include <boost/tuple/tuple.hpp>
 
 #ifdef HAVE_SYS_TYPES_H
 # include <sys/types.h>
@@ -63,13 +67,19 @@
 #include "logging.h"
 #include "wsendpoint.h"
 #include "wsgate.h"
+#include "myrawsocket.h"
 
 using namespace std;
 using boost::algorithm::to_lower_copy;
 using boost::algorithm::ends_with;
 using boost::algorithm::replace_all;
 using boost::algorithm::to_upper_copy;
+using boost::algorithm::trim_right_copy_if;
+using boost::algorithm::is_any_of;
 namespace po = boost::program_options;
+namespace fs = boost::filesystem;
+namespace pt = boost::posix_time;
+using boost::filesystem::path;
 
 namespace wsgate {
 
@@ -78,11 +88,41 @@ namespace wsgate {
     // subclass of EHS that defines a custom HTTP response.
     class WsGate : public EHS
     {
+        private:
+            typedef enum {
+                TEXT,
+                HTML,
+                PNG,
+                ICO,
+                JAVASCRIPT,
+                CSS,
+                BINARY
+            } MimeType;
+
+            MimeType simpleMime(const string & filename)
+            {
+                if (ends_with(filename, ".txt"))
+                    return TEXT;
+                if (ends_with(filename, ".html"))
+                    return HTML;
+                if (ends_with(filename, ".png"))
+                    return PNG;
+                if (ends_with(filename, ".ico"))
+                    return ICO;
+                if (ends_with(filename, ".js"))
+                    return JAVASCRIPT;
+                if (ends_with(filename, ".css"))
+                    return CSS;
+                return BINARY;
+            }
+
         public:
 
             WsGate(EHS *parent = NULL, std::string registerpath = "")
                 : EHS(parent, registerpath)
                 , m_sHostname("localhost")
+                , m_sDocumentRoot()
+                , m_bDebug(false)
                 {
                 }
 
@@ -111,11 +151,28 @@ namespace wsgate {
             // generates a page for each http request
             ResponseCode HandleRequest(HttpRequest *request, HttpResponse *response)
             {
-                if (0 == request->Uri().compare("/wsgate")) {
-                    response->SetBody("", 0);
-                    if (REQUESTMETHOD_GET != request->Method()) {
-                        return HTTPRESPONSECODE_400_BADREQUEST;
+                if (REQUESTMETHOD_GET != request->Method()) {
+                    // We cuurently need to support GET requests only.
+                    return HTTPRESPONSECODE_400_BADREQUEST;
+                }
+
+                string uri(request->Uri());
+                size_t pos = uri.find('?');
+                if (uri.npos != pos) {
+                    uri.erase(pos);
+                }
+                log::debug << "Request from " << request->RemoteAddress()
+                    << ": " << uri << endl;
+
+                if (0 == uri.compare("/wsgate")) {
+                    string rdphost(request->FormValues("host").m_sBody);
+                    string rdpuser(request->FormValues("user").m_sBody);
+                    string rdppass(request->FormValues("pass").m_sBody);
+                    string mode(request->FormValues("mode").m_sBody);
+                    if (mode.empty()) {
+                        mode = "echo";
                     }
+                    response->SetBody("", 0);
                     if (0 != request->HttpVersion().compare("1.1")) {
                         return HTTPRESPONSECODE_400_BADREQUEST;
                     }
@@ -167,15 +224,48 @@ namespace wsgate {
                     response->SetHeader("Connection", "Upgrade");
                     response->SetHeader("Sec-WebSocket-Accept",
                             base64_encode(reinterpret_cast<const unsigned char *>(digest), 20));
+                    MyRawSocketHandler *sh = dynamic_cast<MyRawSocketHandler*>(GetRawSocketHandler());
+                    if (!sh) {
+                        throw tracing::runtime_error("No raw socket handler available");
+                    }
+                    sh->Prepare(request->Connection(), mode, rdphost, rdpuser,rdppass);
                     return HTTPRESPONSECODE_101_SWITCHING_PROTOCOLS;
                 }
-                std::string path(m_sDocumentRoot);
-                path.append(request->Uri());
-                if (ends_with(path, "/")) {
-                    path.append("index.html");
+
+                path p(m_sDocumentRoot);
+                p /= uri;
+                if (ends_with(uri, "/")) {
+                    p /= "/index.html";
                 }
-                ifstream f(path.c_str(), ios::binary);
+                p.normalize();
+
+                if (!exists(p)) {
+                    log::warn << "Does not exist: '" << p << "'" << endl;
+                    return HTTPRESPONSECODE_404_NOTFOUND;
+                }
+                time_t mtime = last_write_time(p);
+
+                string ifms(request->Headers("if-modified-since"));
+                if (!ifms.empty()) {
+                    pt::ptime file_time(pt::from_time_t(mtime));
+                    pt::ptime req_time;
+                    istringstream iss(ifms);
+                    iss.imbue(locale(locale::classic(),
+                                new pt::time_input_facet("%a, %d %b %Y %H:%M:%S GMT")));
+                    iss >> req_time;
+                    if (file_time <= req_time) {
+                        response->RemoveHeader("Content-Type");
+                        response->RemoveHeader("Content-Length");
+                        response->RemoveHeader("Last-Modified");
+                        response->RemoveHeader("Cache-Control");
+                        return HTTPRESPONSECODE_304_NOT_MODIFIED;
+                    }
+                }
+                response->SetLastModified(mtime);
+
+                fs::ifstream f(p, ios::binary);
                 if (f.fail()) {
+                    log::warn << "Could not open '" << p << "'" << endl;
                     return HTTPRESPONSECODE_404_NOTFOUND;
                 }
                 f.seekg (0, ios::end);
@@ -186,10 +276,37 @@ namespace wsgate {
                 f.close();
                 string rbuf(buf, fsize);
                 delete buf;
-                ostringstream oss;
-                oss << (request->Secure() ? "wss://" : "ws://")
-                    << m_sHostname << ":" << request->LocalPort() << "/wsgate";
-                replace_all(rbuf, "%WSURI%", oss.str());
+                MimeType mt = simpleMime(to_lower_copy(p.filename().generic_string()));
+                if (HTML == mt) {
+                    ostringstream oss;
+                    oss << (request->Secure() ? "wss://" : "ws://")
+                        << m_sHostname << ":" << request->LocalPort() << "/wsgate";
+                    replace_all(rbuf, "%WSURI%", oss.str());
+                    replace_all(rbuf, "%JSDEBUG%", (m_bDebug ? "-debug" : ""));
+                }
+                switch (mt) {
+                    case TEXT:
+                        response->SetHeader("Content-Type", "text/plain");
+                        break;
+                    case HTML:
+                        response->SetHeader("Content-Type", "text/html");
+                        break;
+                    case PNG:
+                        response->SetHeader("Content-Type", "image/png");
+                        break;
+                    case ICO:
+                        response->SetHeader("Content-Type", "image/x-icon");
+                        break;
+                    case JAVASCRIPT:
+                        response->SetHeader("Content-Type", "text/javascript");
+                        break;
+                    case CSS:
+                        response->SetHeader("Content-Type", "text/css");
+                        break;
+                    case BINARY:
+                        response->SetHeader("Content-Type", "application/octet-stream");
+                        break;
+                }
                 response->SetBody(rbuf.data(), rbuf.length());
                 return HTTPRESPONSECODE_200_OK;
             }
@@ -202,9 +319,14 @@ namespace wsgate {
                 m_sDocumentRoot = name;
             }
 
+            void SetDebug(const bool debug) {
+                m_bDebug = debug;
+            }
+
         private:
             string m_sHostname;
             string m_sDocumentRoot;
+            bool m_bDebug;
     };
 
 #ifndef _WIN32
@@ -237,7 +359,7 @@ namespace wsgate {
                         if (waitpid(pid, &status, 0) != -1) {
                             ret = (0 == status);
                             if (0 != status)
-                                log::err << "bind: " << strerror(WEXITSTATUS(status)) << endl;
+                                log::err << BINDHELPER_PATH << ": " << strerror(WEXITSTATUS(status)) << endl;
                         }
                         break;
                 }
@@ -250,23 +372,38 @@ namespace wsgate {
     };
 #endif
 
-    typedef boost::shared_ptr<wspp::wsendpoint> conn_ptr;
-    typedef boost::shared_ptr<wspp::wshandler> handler_ptr;
-    typedef std::map<EHSConnection *, conn_ptr> conn_map;
-    typedef std::map<EHSConnection *, handler_ptr> handler_map;
-
     class MyWsHandler : public wspp::wshandler
     {
         public:
+            typedef enum {
+                SimpleEcho,
+                SpeedTest,
+                Rdp
+            } Mode;
+
             MyWsHandler(EHSConnection *econn, EHS *ehs)
                 : m_econn(econn)
                   , m_ehs(ehs)
+                  , m_emode(SimpleEcho)
         {}
 
+            void SetMode(Mode mode) {
+                m_emode = mode;
+            }
             virtual void on_message(std::string, std::string data) {
-                log::debug << "GOT Message: '" << data << "'" << endl;
-                data.insert(0, "Yes, ");
-                send_text(data);
+                switch (m_emode) {
+                    case SimpleEcho:
+                        log::debug << "GOT Message: '" << data << "'" << endl;
+                        data.insert(0, "Yes, ");
+                        send_text(data);
+                        break;
+                    case SpeedTest:
+                        log::debug << "GOT Message, size: " << data.length() << endl;
+                        send_binary(data);
+                        break;
+                    case Rdp:
+                        break;
+                }
             }
             virtual void on_close() {
                 log::debug << "GOT Close" << endl;
@@ -281,7 +418,16 @@ namespace wsgate {
                 log::debug << "GOT Pong: '" << data << "'" << endl;
             }
             virtual void do_response(const std::string data) {
-                log::debug << "Send WS response '" << data << "'" << endl;
+                switch (m_emode) {
+                    case SimpleEcho:
+                        log::debug << "Send WS response '" << data << "'" << endl;
+                        break;
+                    case SpeedTest:
+                        log::debug << "Send WS response, size: " << data.length() << endl;
+                        break;
+                    case Rdp:
+                        break;
+                }
                 ehs_autoptr<GenericResponse> r(new GenericResponse(0, m_econn));
                 r->SetBody(data.data(), data.length());
                 m_ehs->AddResponse(ehs_move(r));
@@ -292,57 +438,60 @@ namespace wsgate {
             MyWsHandler& operator=(const MyWsHandler&);
             EHSConnection *m_econn;
             EHS *m_ehs;
+            Mode m_emode;
     };
 
-    class MyRawSocketHandler : public RawSocketHandler
+    MyRawSocketHandler::MyRawSocketHandler(WsGate *parent)
+        : m_parent(parent)
+          , m_cmap(conn_map())
+    { }
+
+    bool MyRawSocketHandler::OnData(EHSConnection *conn, std::string data)
     {
-        public:
-            MyRawSocketHandler(WsGate *parent)
-                : m_parent(parent)
-                  , m_cmap(conn_map())
-                  , m_hmap(handler_map())
-        { }
+        if (m_cmap.end() != m_cmap.find(conn)) {
+            m_cmap[conn].get<0>()->AddRxData(data);
+            return true;
+        }
+        return false;
+    }
 
-            virtual bool OnData(EHSConnection *conn, std::string data)
-            {
-                if (m_cmap.end() != m_cmap.find(conn)) {
-                    m_cmap[conn]->AddRxData(data);
-                    return true;
-                }
-                return false;
-            }
+    void MyRawSocketHandler::OnConnect(EHSConnection * /* conn */)
+    {
+        log::debug << "GOT WS CONNECT" << endl;
+    }
 
-            virtual void OnConnect(EHSConnection *conn)
-            {
-                log::debug << "GOT WS CONNECT" << endl;
-                handler_ptr h(new MyWsHandler(conn, m_parent));
-                conn_ptr c(new wspp::wsendpoint(h.get()));
-                m_hmap[conn] = h;
-                m_cmap[conn] = c;
-            }
+    void MyRawSocketHandler:: OnDisconnect(EHSConnection *conn)
+    {
+        log::debug << "GOT WS DISCONNECT" << endl;
+        m_cmap.erase(conn);
+#if 0
+        conn_map::iterator ic = m_cmap.find(conn);
+        if (m_cmap.end() != ic) {
+            m_cmap.erase(ic);
+        }
+#endif
+    }
 
-            virtual void OnDisconnect(EHSConnection *conn)
-            {
-                log::debug << "GOT WS DISCONNECT" << endl;
-                conn_map::iterator ic = m_cmap.find(conn);
-                if (m_cmap.end() != ic) {
-                    m_cmap.erase(ic);
-                }
-                handler_map::iterator ih = m_hmap.find(conn);
-                if (m_hmap.end() != ih) {
-                    m_hmap.erase(ih);
-                }
-            }
-
-        private:
-            MyRawSocketHandler(const MyRawSocketHandler&);
-            MyRawSocketHandler& operator=(const MyRawSocketHandler&);
-
-            WsGate *m_parent;
-            conn_map m_cmap;
-            handler_map m_hmap;
-
-    };
+    void MyRawSocketHandler::Prepare(EHSConnection *conn, const string mode,
+            const string rdphost, const string rdpuser, const string rdppass)
+    {
+        log::debug << "Mode:         '" << mode << "'" << endl;
+        log::debug << "RDP Host:     '" << rdphost << "'" << endl;
+        log::debug << "RDP User:     '" << rdpuser << "'" << endl;
+        log::debug << "RDP Password: '" << rdppass << "'" << endl;
+        handler_ptr h(new MyWsHandler(conn, m_parent));
+        if (0 == mode.compare("echo")) {
+            dynamic_cast<MyWsHandler*>(h.get())->SetMode(MyWsHandler::SimpleEcho);
+        }
+        if (0 == mode.compare("speed")) {
+            dynamic_cast<MyWsHandler*>(h.get())->SetMode(MyWsHandler::SpeedTest);
+        }
+        if (0 == mode.compare("rdp")) {
+            dynamic_cast<MyWsHandler*>(h.get())->SetMode(MyWsHandler::Rdp);
+        }
+        conn_ptr c(new wspp::wsendpoint(h.get()));
+        m_cmap[conn] = conn_tuple(c, h, rdphost, rdpuser, rdppass);
+    }
 
 }
 
@@ -361,6 +510,7 @@ int main (int argc, char **argv)
 
     po::options_description cfg("");
     cfg.add_options()
+        ("global.debug", po::value<string>(), "enable/disable debugging")
         ("global.hostname", po::value<string>(), "specify host name")
         ("global.port", po::value<uint16_t>(), "specify listening port")
         ("global.bindaddr", po::value<string>(), "specify bind address")
@@ -411,6 +561,14 @@ int main (int argc, char **argv)
         cerr << "Mandatory option --config <filename> is missing." << endl;
         return -1;
     }
+
+    wsgate::WsGate srv;
+
+    // Examine values from config file
+    if (vm.count("global.debug")) {
+        srv.SetDebug(0 == vm["global.debug"].as<string>().compare("true"));
+    }
+
     if (vm.count("global.logmask")) {
         log.setmaskByName(to_upper_copy(vm["global.logmask"].as<string>()));
     }
@@ -430,7 +588,6 @@ int main (int argc, char **argv)
         return -1;
     }
 
-    wsgate::WsGate srv;
 
     string hostname(vm["global.hostname"].as<string>());
     int port = -1;
@@ -457,6 +614,8 @@ int main (int argc, char **argv)
 
     EHSServerParameters oSP;
     oSP["port"] = port;
+    oSP["bindaddress"] = "0.0.0.0";
+    oSP["norouterequest"] = 1;
     if (https) {
         if (vm.count("ssl.bindaddr")) {
             oSP["bindaddress"] = vm["ssl.bindaddr"].as<string>();
@@ -476,10 +635,12 @@ int main (int argc, char **argv)
     if (vm.count("http.maxrequestsize")) {
         oSP["maxrequestsize"] = vm["http.maxrequestsize"].as<unsigned long>();
     }
+    bool sleepInLoop = true;
     if (vm.count("threading.mode")) {
         string mode(vm["threading.mode"].as<string>());
         if (0 == mode.compare("single")) {
             oSP["mode"] = "singlethreaded";
+            sleepInLoop = false;
         } else if (0 == mode.compare("pool")) {
             oSP["mode"] = "threadpool";
             if (vm.count("threading.poolsize")) {
@@ -505,10 +666,16 @@ int main (int argc, char **argv)
         wsgate::log::info << "wsgate v" << VERSION << " starting" << endl;
         srv.StartServer(oSP);
 
+        wsgate::log::info << "Listening on " << oSP["bindaddress"].GetCharString() << ":" << oSP["port"].GetInt() << endl;
+
         kbdio kbd;
         cout << "Press q to terminate ..." << endl;
         while (!(srv.ShouldTerminate() || kbd.qpressed())) {
-            srv.HandleData(1000);
+            if (sleepInLoop) {
+                usleep(1000);
+            } else {
+                srv.HandleData(1000);
+            }
         }
 
         srv.StopServer();

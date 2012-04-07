@@ -19,7 +19,7 @@ wsgate_SOURCES = \
 wsgate_CPPFLAGS = \
 	-DBINDHELPER_PATH=\"$(pkglibexecdir)/bindhelper$(EXEEXT)\" \
 	-DDEFAULTCFG=\"$(sysconfdir)/wsgate.ini\"
-wsgate_LDADD = $(WSGATE_RES) $(BOOST_REGEX_LIBS) $(BOOST_PROGRAM_OPTIONS_LIBS) $(TRACE_LIBS)
+wsgate_LDADD = $(WSGATE_RES) $(WSGATE_LDADD)
 wsgate_DEPENDENCIES = $(WSGATE_RES)
 EXTRA_wsgate_SOURCES = wsgate.rc
 
@@ -28,6 +28,7 @@ noinst_HEADERS = \
 	btexception.h \
 	common.h \
 	logging.h \
+	myrawsocket.h \
 	sha1.h \
 	wscommon.h \
 	wsgate.h \

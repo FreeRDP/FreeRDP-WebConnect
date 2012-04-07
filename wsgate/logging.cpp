@@ -179,6 +179,7 @@ namespace wsgate {
 
     logger::logger(const string & _ident, const Facility facility /*= DAEMON*/, const string & _mask /*= "11111111"*/)
         : ident(strdup(_ident.c_str()))
+        , mask()
     {
         string mtmp(_mask);
         if (mtmp.empty()) {
@@ -194,6 +195,7 @@ namespace wsgate {
 
     logger::logger(const logger &other)
         : ident(strdup(other.ident))
+        , mask(other.mask)
     {
     }
 

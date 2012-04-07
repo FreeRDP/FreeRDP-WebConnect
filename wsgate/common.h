@@ -90,18 +90,4 @@ class kbdio {
 #endif
 };
 
-std::string basename(const std::string & s)
-{
-    std::string ret(s);
-    size_t pos = ret.rfind("/");
-    if (pos != ret.npos)
-        ret.erase(0, pos);
-#ifdef _WIN32
-    pos = ret.rfind("\\");
-    if (pos != ret.npos)
-        ret.erase(0, pos);
-#endif
-    return ret;
-}
-
 #endif

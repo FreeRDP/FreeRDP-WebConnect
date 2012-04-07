@@ -48,10 +48,13 @@ m4_define([_BOOST_SERIAL], [m4_translit([
 m4_pattern_forbid([^_?(BOOST|Boost)_])
 m4_pattern_allow([BOOST_ROOT])
 m4_pattern_allow([BOOST_CPPFLAGS])
+m4_pattern_allow([BOOST_LDPATH])
 m4_pattern_allow([BOOST_REGEX_LDPATH])
 m4_pattern_allow([BOOST_REGEX_LDFLAGS])
 m4_pattern_allow([BOOST_REGEX_LIBS])
-m4_pattern_allow([BOOST_LDPATH])
+m4_pattern_allow([BOOST_FILESYSTEM_LDPATH])
+m4_pattern_allow([BOOST_FILESYSTEM_LDFLAGS])
+m4_pattern_allow([BOOST_FILESYSTEM_LIBS])
 m4_pattern_allow([BOOST_PROGRAM_OPTIONS_LDPATH])
 m4_pattern_allow([BOOST_PROGRAM_OPTIONS_LDFLAGS])
 m4_pattern_allow([BOOST_PROGRAM_OPTIONS_LIBS])
@@ -1049,6 +1052,7 @@ if test x$boost_cv_inc_path != xno; then
   # I'm not sure about my test for `il' (be careful: Intel's ICC pre-defines
   # the same defines as GCC's).
   for i in \
+    _BOOST_gcc_test(4, 7) \
     _BOOST_gcc_test(4, 6) \
     _BOOST_gcc_test(4, 5) \
     _BOOST_gcc_test(4, 4) \
