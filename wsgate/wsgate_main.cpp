@@ -168,6 +168,13 @@ namespace wsgate {
                     string rdphost(request->FormValues("host").m_sBody);
                     string rdpuser(request->FormValues("user").m_sBody);
                     string rdppass(request->FormValues("pass").m_sBody);
+                    uint16_t rdpport = 3389;
+                    if (!request->FormValues("port").m_sBody.empty()) {
+                        try {
+                            int tmp = boost::lexical_cast<int>(request->FormValues("port").m_sBody);
+                            rdpport = tmp;
+                        } catch (const boost::bad_lexical_cast & e) { }
+                    }
                     string mode(request->FormValues("mode").m_sBody);
                     if (mode.empty()) {
                         mode = "echo";
@@ -208,15 +215,24 @@ namespace wsgate {
                         digest[i] = htonl(digest[i]);
                     }
 
+                    if (!MultivalHeaderContains(wsver, "13")) {
+                        response->SetHeader("Sec-WebSocket-Version", "13");
+                        return HTTPRESPONSECODE_426_UPGRADE_REQUIRED;
+                    }
+
+                    MyRawSocketHandler *sh = dynamic_cast<MyRawSocketHandler*>(GetRawSocketHandler());
+                    if (!sh) {
+                        throw tracing::runtime_error("No raw socket handler available");
+                    }
+                    if (!sh->Prepare(request->Connection(), mode, rdphost, rdpport, rdpuser,rdppass)) {
+                        return HTTPRESPONSECODE_503_SERVICEUNAVAILABLE;
+                    }
+
                     response->RemoveHeader("Content-Type");
                     response->RemoveHeader("Content-Length");
                     response->RemoveHeader("Last-Modified");
                     response->RemoveHeader("Cache-Control");
 
-                    if (!MultivalHeaderContains(wsver, "13")) {
-                        response->SetHeader("Sec-WebSocket-Version", "13");
-                        return HTTPRESPONSECODE_426_UPGRADE_REQUIRED;
-                    }
                     if (0 < wsproto.length()) {
                         response->SetHeader("Sec-WebSocket-Protocol", wsproto);
                     }
@@ -224,11 +240,6 @@ namespace wsgate {
                     response->SetHeader("Connection", "Upgrade");
                     response->SetHeader("Sec-WebSocket-Accept",
                             base64_encode(reinterpret_cast<const unsigned char *>(digest), 20));
-                    MyRawSocketHandler *sh = dynamic_cast<MyRawSocketHandler*>(GetRawSocketHandler());
-                    if (!sh) {
-                        throw tracing::runtime_error("No raw socket handler available");
-                    }
-                    sh->Prepare(request->Connection(), mode, rdphost, rdpuser,rdppass);
                     return HTTPRESPONSECODE_101_SWITCHING_PROTOCOLS;
                 }
 
@@ -402,6 +413,7 @@ namespace wsgate {
                         send_binary(data);
                         break;
                     case Rdp:
+                        log::debug << "GOT Message, size: " << data.length() << endl;
                         break;
                 }
             }
@@ -426,6 +438,7 @@ namespace wsgate {
                         log::debug << "Send WS response, size: " << data.length() << endl;
                         break;
                     case Rdp:
+                        log::debug << "Send WS response, size: " << data.length() << endl;
                         break;
                 }
                 ehs_autoptr<GenericResponse> r(new GenericResponse(0, m_econn));
@@ -464,22 +477,21 @@ namespace wsgate {
     {
         log::debug << "GOT WS DISCONNECT" << endl;
         m_cmap.erase(conn);
-#if 0
-        conn_map::iterator ic = m_cmap.find(conn);
-        if (m_cmap.end() != ic) {
-            m_cmap.erase(ic);
-        }
-#endif
     }
 
-    void MyRawSocketHandler::Prepare(EHSConnection *conn, const string mode,
-            const string rdphost, const string rdpuser, const string rdppass)
+    bool MyRawSocketHandler::Prepare(EHSConnection *conn, const string mode,
+            const string host, uint16_t port, const string user, const string pass)
     {
         log::debug << "Mode:         '" << mode << "'" << endl;
-        log::debug << "RDP Host:     '" << rdphost << "'" << endl;
-        log::debug << "RDP User:     '" << rdpuser << "'" << endl;
-        log::debug << "RDP Password: '" << rdppass << "'" << endl;
+        log::debug << "RDP Host:     '" << host << "'" << endl;
+        log::debug << "RDP Port:     '" << port << "'" << endl;
+        log::debug << "RDP User:     '" << user << "'" << endl;
+        log::debug << "RDP Password: '" << pass << "'" << endl;
+
         handler_ptr h(new MyWsHandler(conn, m_parent));
+        conn_ptr c(new wspp::wsendpoint(h.get()));
+        rdp_ptr r(new RDP(h.get()));
+        m_cmap[conn] = conn_tuple(c, h, r);
         if (0 == mode.compare("echo")) {
             dynamic_cast<MyWsHandler*>(h.get())->SetMode(MyWsHandler::SimpleEcho);
         }
@@ -488,9 +500,9 @@ namespace wsgate {
         }
         if (0 == mode.compare("rdp")) {
             dynamic_cast<MyWsHandler*>(h.get())->SetMode(MyWsHandler::Rdp);
+            r->Connect(host, port, user, string() /*domain*/, pass);
         }
-        conn_ptr c(new wspp::wsendpoint(h.get()));
-        m_cmap[conn] = conn_tuple(c, h, rdphost, rdpuser, rdppass);
+        return true;
     }
 
 }
@@ -591,12 +603,12 @@ int main (int argc, char **argv)
 
     string hostname(vm["global.hostname"].as<string>());
     int port = -1;
-    bool need2 = false;
     bool https = false;
+    // bool need2 = false;
     if (vm.count("global.port")) {
         port = vm["global.port"].as<uint16_t>();
         if (vm.count("ssl.port")) {
-            need2 = true;
+            // need2 = true;
         }
     } else if (vm.count("ssl.port")) {
         port = vm["ssl.port"].as<uint16_t>();

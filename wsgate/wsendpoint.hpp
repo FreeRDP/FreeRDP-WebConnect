@@ -13,6 +13,7 @@
 #include <boost/thread.hpp>
 #include "wsframe.h"
 #include "wsgate.h"
+#include "wshandler.hpp"
 
 #ifndef HAVE_BOOST_LOCK_GUARD
 #include <pthread.h>
@@ -71,58 +72,8 @@ class MutexHelper {
 #endif
 
 namespace wspp {
-    class wsendpoint;
 
     using wsgate::log;
-
-    /**
-     * Event handler interface for the server-side
-     * WebSockets endpoint.
-     *
-     * This class is used as the API for working with a server-side
-     * WebSockets endpoint. An application has to derive a specific
-     * implementation from this class, implementing the various pure
-     * virtual methods.
-     */
-    class wshandler {
-        public:
-            /**
-             * Send a text message to the remote client.
-             * @param data The payload to send.
-             */
-            void send_text(const std::string data) {
-                send(data, frame::opcode::TEXT);
-            }
-
-            /**
-             * Send a binary message to the remote client.
-             * @param data The payload to send.
-             */
-            void send_binary(const std::string data) {
-                send(data, frame::opcode::BINARY);
-            }
-
-            /// Constructor
-            wshandler() : m_endpoint(0) {}
-
-            /// Destructor
-            virtual ~wshandler() {}
-
-        private:
-            virtual void on_message(std::string header, std::string data) = 0;
-            virtual void on_close() = 0;
-            virtual bool on_ping(const std::string data) = 0;
-            virtual void on_pong(const std::string data) = 0;
-            virtual void do_response(const std::string data) = 0;
-
-            void send(const std::string& payload, frame::opcode::value op);
-
-            wshandler(const wspp::wshandler&);
-            wshandler& operator=(const wspp::wshandler&);
-
-            wsendpoint *m_endpoint;
-            friend class wsendpoint;
-    };
 
     /**
      * This class implements a server-side WebSockets endpoint.
@@ -230,6 +181,16 @@ namespace wspp {
              * @param op The opcode according to RFC6455
              */
             void send(const std::string& payload, frame::opcode::value op) {
+#ifdef HAVE_BOOST_LOCK_GUARD
+                boost::lock_guard<boost::recursive_mutex> lock(m_lock);
+#else
+                MutexHelper((pthread_mutex_t *)&m_lock);
+#endif
+
+                if (m_state != session::state::OPEN) {
+                    log::err << "send: enpoint-state not OPEN";
+                    return;
+                }
                 frame::parser<simple_rng> control(m_rng);
                 control.set_opcode(op);
                 control.set_fin(true);
@@ -290,7 +251,6 @@ namespace wspp {
 #endif
 
                 if (m_state != session::state::OPEN) {return;}
-                // if (m_detached) {return;}
 
                 // TODO: optimize control messages and handle case where 
                 // endpoint is out of messages
@@ -323,8 +283,6 @@ namespace wspp {
 #else
                 MutexHelper((pthread_mutex_t *)&m_lock);
 #endif
-
-                // if (m_detached) {return;}
 
                 if (m_state != session::state::OPEN) {
                     log::err << "Tried to disconnect a session that wasn't open" << std::endl;
@@ -455,10 +413,14 @@ namespace wspp {
             wshandler *m_handler;
     };
 
-    void wshandler::send(const std::string& payload, frame::opcode::value op)
-    {
+    void wshandler::send_text(const std::string data) {
         if (m_endpoint) {
-            m_endpoint->send(payload, op);
+            m_endpoint->send(data, frame::opcode::TEXT);
+        }
+    }
+    void wshandler::send_binary(const std::string data) {
+        if (m_endpoint) {
+            m_endpoint->send(data, frame::opcode::BINARY);
         }
     }
 

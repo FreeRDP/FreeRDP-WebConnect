@@ -10,6 +10,7 @@
         var wsBase = "%WSURI%";
     </script>
     <script src="js/modernizr%JSDEBUG%.js"></script>
+    <script src="js/mootools%JSDEBUG%.js"></script>
     <script src="js/wsgate%JSDEBUG%.js"></script>
 </head>
 <body>
@@ -21,11 +22,11 @@
         <fieldset>
             <legend>Session parameters:</legend>
             <label for="host">Hostname:</label>
-            <input id="rdphost" type="text" name="host" />
+            <input id="rdphost" type="text" name="host" value="192.168.2.134" />
             <label for="user">User:</label>
-            <input id="rdpuser" type="text" name="user" />
+            <input id="rdpuser" type="text" name="user" value="Administrator" />
             <label for="pass">Password:</label>
-            <input id="rdppass" type="password" name="user" />
+            <input id="rdppass" type="password" name="pass" value="install" />
             <input id="rdpconnect" type="button" value="Connect" />
         </fieldset>
         <input id="echotest" type="button" value="Echo Test" />
@@ -36,115 +37,32 @@
         var output;
         function init() {
             output = document.getElementById("output");
-            document.getElementById("echotest").addEventListener("click", testWebSocket, false);
+            document.getElementById("echotest").addEventListener("click", EchoTest, false);
             document.getElementById("speedtest").addEventListener("click", SpeedTest, false);
-            document.getElementById("rdpconnect").addEventListener("click", testWebSocket, false);
+            document.getElementById("rdpconnect").addEventListener("click", RDPrun, false);
         }
 
-function testWebSocket() {
+function EchoTest() {
+    wsUri = wsBase + '?mode=echo';
+    var etest = new wsgate.EchoTest(wsUri);
+    etest.Run();
+}
+
+function RDPrun() {
     wsUri = wsBase
         + '?host=' + document.getElementById('rdphost').value
         + '&user=' + document.getElementById('rdpuser').value
         + '&pass=' + document.getElementById('rdppass').value
-        + '&mode=echo';
-    websocket = new WebSocket(wsUri);
-    websocket.onopen = function(evt) { onEchoOpen(evt) };
-    websocket.onclose = function(evt) { onEchoClose(evt) };
-    websocket.onmessage = function(evt) { onEchoMessage(evt) };
-    websocket.onerror = function(evt) { onEchoError(evt) };
-}
-
-function onEchoOpen(evt) {
-    writeToScreen("CONNECTED");
-    doEchoSend("WebSocket rocks");
-}
-
-function onEchoClose(evt) {
-    writeToScreen("DISCONNECTED");
-}
-
-function onEchoMessage(evt) {
-    writeToScreen('<span style="color: blue;">RESPONSE: ' + evt.data+'</span>');
-    websocket.close();
-}
-
-function onEchoError(evt) {
-    writeToScreen('<span style="color: red;">ERROR:</span> ' + evt.data);
-}
-
-function doEchoSend(message) {
-    writeToScreen("SENT: " + message); 
-    websocket.send(message);
-}
-
-function writeToScreen(message) {
-    var pre = document.createElement("p");
-    pre.style.wordWrap = "break-word";
-    pre.innerHTML = message;
-    output.appendChild(pre);
+        + '&mode=rdp';
+    var rdp = new wsgate.RDP(wsUri);
+    rdp.addEvent('alert', function(msg) { alert(msg); });
+    rdp.Run();
 }
 
 function SpeedTest() {
-    wsUri = wsBase
-        + '?host=' + document.getElementById('rdphost').value
-        + '&user=' + document.getElementById('rdpuser').value
-        + '&pass=' + document.getElementById('rdppass').value
-        + '&mode=speed';
-    websocket = new WebSocket(wsUri);
-    websocket.onopen = function(evt) { onSpeedOpen(evt) };
-    websocket.onclose = function(evt) { onSpeedClose(evt) };
-    websocket.onmessage = function(evt) { onSpeedMessage(evt) };
-    websocket.onerror = function(evt) { onSpeedError(evt) };
-}
-
-var ChunkSize =  1 * 1048576;
-var MaxIter = 20;
-
-var start = undefined;
-var totalTime = 0;
-var si = MaxIter;
-
-var bb = new BlobBuilder();
-var ab = new ArrayBuffer(ChunkSize);
-
-function onSpeedOpen(evt) {
-    writeToScreen("CONNECTED");
-    start = undefined;
-    totalTime = 0;
-    si = MaxIter;
-    doSpeedChunk();
-}
-
-function onSpeedClose(evt) {
-    writeToScreen("DISCONNECTED");
-}
-
-function onSpeedMessage(evt) {
-    var time = Date.now() - start;
-    writeToScreen('Data size: ' + evt.data.size + ', roundtrip time: ' + time + 'ms');
-    totalTime += time;
-    if (--si) {
-        doSpeedChunk()
-    } else {
-        var ave = totalTime / MaxIter;
-        writeToScreen('Transfer ratio: ' + (ChunkSize / ave * 2000).toFixed(1) + '[Bytes per Second] = '
-                + (ChunkSize / ave * 0.0152587890625).toFixed(1) + '[Mbps]');
-
-        websocket.close();
-    }
-}
-
-function onSpeedError(evt) {
-    writeToScreen('<span style="color: red;">ERROR:</span> ' + evt.data);
-}
-
-function doSpeedChunk() {
-    start = Date.now();
-    // FF appears to empty the Blob, while RIM does not.
-    if (0 == bb.getBlob().size) {
-        bb.append(ab);
-    }
-    websocket.send(bb.getBlob());
+    wsUri = wsBase + '?mode=speed';
+    var stest = new wsgate.SpeedTest(wsUri, 1 * 1048576, 20);
+    stest.Run();
 }
 
 window.addEventListener("load", init, false);

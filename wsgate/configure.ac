@@ -295,6 +295,12 @@ if test "$ac_cv_header_elfutils_libdwfl_h" = "yes" ; then
 CPPFLAGS="-I/usr/include/elfutils $CPPFLAGS"
 fi
 
+dnl FreeRDP
+AC_CHECK_LIB(freerdp-core, freerdp_new,[WSGATE_LDADD="$WSGATE_LDADD -lfreerdp-core"])
+
+dnl Required for js and css compression: java
+AC_CHECK_TOOL([JAVA],[java],[])
+
 dnl Required for findrequires.pl script
 AC_CHECK_TARGET_TOOL([OBJDUMP],[objdump],[no])
 case ${OBJDUMP}-${target_os} in
@@ -394,7 +400,7 @@ DX_PDF_FEATURE(OFF)
 DX_PS_FEATURE(OFF)
 DX_INIT_DOXYGEN([wsgate], [conf/doxygen.cfg], [doc])
 
-AC_CONFIG_FILES([Makefile setup/Makefile
+AC_CONFIG_FILES([Makefile setup/Makefile webroot/Makefile
                  conf/doxygen.cfg conf/wsgate.spec
                  setup/findrequires.pl setup/isccwrap.sh wsgate.rc])
 AC_OUTPUT
