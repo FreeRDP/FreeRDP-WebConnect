@@ -39,3 +39,8 @@ stamp-h1
 wsgate/wsgate
 wsgate/bindhelper
 wsgate/doc/
+wsgate/webroot/index.html
+wsgate/webroot/css/style.css
+wsgate/webroot/js/modernizr.js
+wsgate/webroot/js/mootools.js
+wsgate/webroot/js/wsgate.js

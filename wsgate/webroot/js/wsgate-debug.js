@@ -41,6 +41,7 @@ wsgate.RDP = new Class( {
         this.cctx = canvas.getContext('2d');
     },
     onWSmsg: function(evt) {
+        var op, hdr, data;
         switch (typeof(evt.data)) {
             case 'string':
                 wsgate.log.debug(evt.data);
@@ -62,7 +63,6 @@ wsgate.RDP = new Class( {
                 }
                 break;
             case 'object':
-                // wsgate.log.debug('BINRESP: ', evt.data);
                 op = new Uint32Array(evt.data, 0, 1);
                 switch (op[0]) {
                     case 0:
@@ -74,26 +74,35 @@ wsgate.RDP = new Class( {
                         wsgate.log.debug('EndPaint');
                         break;
                     case 2:
-                        // Bitmap
-                        var hdr = new Uint32Array(evt.data, 4, 13);
-                        var bmdata = new Uint8Array(evt.data, 56);
-                        var comp = 1; //bmdata[bmdata.length - 1];
+                        /// Single bitmap
+                        //
+                        //  0 uint32 Destination X
+                        //  1 uint32 Destination Y
+                        //  2 uint32 Width
+                        //  3 uint32 Height
+                        //  4 uint32 Bits per Pixel
+                        //  5 uint32 Flag: Compressed
+                        //  6 uint32 DataSize
+                        //
+                        hdr = new Uint32Array(evt.data, 4, 7);
+                        bmdata = new Uint8Array(evt.data, 32);
+                        compressed =  (hdr[5] != 0);
                         wsgate.log.debug('Bitmap:',
-                                (comp ? ' C ' : ' U '),
+                                (compressed ? ' C ' : ' U '),
                                 ' x: ', hdr[0], ' y: ', hdr[1],
-                                ' w: ', hdr[4], ' h: ', hdr[5],
-                                ' bpp: ', hdr[6]
+                                ' w: ', hdr[2], ' h: ', hdr[3],
+                                ' bpp: ', hdr[4]
                                 );
-                        if ((hdr[6] == 16) || (hdr[6] == 15)) {
-                            if (comp) {
-                                var outB = this.cctx.createImageData(hdr[4], hdr[5]);
-                                if (!wsgate.dRLE16(bmdata, hdr[8], hdr[4], outB.data)) {
+                        if ((hdr[4] == 16) || (hdr[4] == 15)) {
+                            if (compressed) {
+                                var outB = this.cctx.createImageData(hdr[2], hdr[3]);
+                                if (!wsgate.dRLE16(bmdata, hdr[6], hdr[2], outB.data)) {
                                     this.cctx.putImageData(outB, hdr[0], hdr[1]);
                                 } else {
                                     wsgate.log.warn('Decompression error');
                                 }
                             } else {
-                                wsgate.log.warn('Not yet implemented');
+                                wsgate.log.warn('Uncompressed not yet implemented');
                             }
                         } else {
                             wsgate.log.warn('BPP <> 15/16 not yet implemented');
@@ -116,7 +125,7 @@ wsgate.RDP = new Class( {
         wsgate.log.warn(evt);
     }
 });
-
+/* DEBUG */
 wsgate.EchoTest = new Class( {
     Extends: wsgate.WSrunner,
     onWSmsg: function(evt) {
@@ -188,6 +197,7 @@ wsgate.SpeedTest = new Class( {
         this.sock.send(this.bb.getBlob());
     }
 });
+/* /DEBUG */
 
 wsgate.log = {
     debug: function() {
@@ -204,260 +214,335 @@ wsgate.log = {
     }
 }
 
-wsgate.getRGB16 = function(inA, inI, outA) {
-    var pix = inA[inI] + (inA[inI + 1] * 0x0100);
-    outA[0] = (pix & 0xF800) >> 11; // red
-    outA[1] = (pix & 0x7E0) >> 5;   // green
-    outA[2] = (pix & 0x1F);         // blue
+wsgate.copyRGBA = function(inA, inI, outA, outI) {
+    outA[outI++] = inA[inI++];
+    outA[outI++] = inA[inI++];
+    outA[outI++] = inA[inI++];
+    outA[outI] = inA[inI];
 }
+wsgate.xorbufRGBAPel16 = function(inA, inI, outA, outI, pel) {
+    var pelR = (pel & 0xF800) >> 11;
+    var pelG = (pel & 0x7E0) >> 5;
+    var pelB = pel & 0x1F;
+    // 656 -> 888
+    pelR = (pelR << 3 & ~0x7) | (pelR >> 2);
+    pelG = (pelG << 2 & ~0x3) | (pelG >> 4);
+    pelB = (pelB << 3 & ~0x7) | (pelB >> 2);
+
+    outA[outI++] = inA[inI] ^ pelR;
+    outA[outI++] = inA[inI] ^ pelG;
+    outA[outI++] = inA[inI] ^ pelB;
+    outA[outI] = 255;                                 // alpha
+}
+wsgate.buf2RGBA = function(inA, inI, outA, outI) {
+    var pel = inA[inI] | (inA[inI + 1] << 8);
+    var pelR = (pel & 0xF800) >> 11;
+    var pelG = (pel & 0x7E0) >> 5;
+    var pelB = pel & 0x1F;
+    // 656 -> 888
+    pelR = (pelR << 3 & ~0x7) | (pelR >> 2);
+    pelG = (pelG << 2 & ~0x3) | (pelG >> 4);
+    pelB = (pelB << 3 & ~0x7) | (pelB >> 2);
+
+    outA[outI++] = pelR;
+    outA[outI++] = pelG;
+    outA[outI++] = pelB;
+    outA[outI] = 255;                    // alpha
+}
+wsgate.pel2RGBA = function (pel, outA, outI) {
+    var pelR = (pel & 0xF800) >> 11;
+    var pelG = (pel & 0x7E0) >> 5;
+    var pelB = pel & 0x1F;
+    // 656 -> 888
+    pelR = (pelR << 3 & ~0x7) | (pelR >> 2);
+    pelG = (pelG << 2 & ~0x3) | (pelG >> 4);
+    pelB = (pelB << 3 & ~0x7) | (pelB >> 2);
+
+    outA[outI++] = pelR;
+    outA[outI++] = pelG;
+    outA[outI++] = pelB;
+    outA[outI] = 255;                    // alpha
+}
+
+wsgate.ExtractCodeId = function(bOrderHdr) {
+    var code;
+    switch (bOrderHdr) {
+        case 0xF0:
+        case 0xF1:
+        case 0xF6:
+        case 0xF8:
+        case 0xF3:
+        case 0xF2:
+        case 0xF7:
+        case 0xF4:
+        case 0xF9:
+        case 0xFA:
+        case 0xFD:
+        case 0xFE:
+            return bOrderHdr;
+    }
+    code = bOrderHdr >> 5;
+    switch (code) {
+        case 0x00:
+        case 0x01:
+        case 0x03:
+        case 0x02:
+        case 0x04:
+            return code;
+    }
+    return bOrderHdr >> 4;
+}
+wsgate.ExtractRunLength = function(code, inA, inI, advance) {
+    var runLength = 0;
+    var ladvance = 1;
+    switch (code) {
+        case 0x02:
+            runLength = inA[inI] & 0x1F;
+            if (0 == runLength) {
+                runLength = inA[inI + 1] + 1;
+                ladvance += 1;
+            } else {
+                runLength *= 8;
+            }
+            break;
+        case 0x0D:
+            runLength = inA[inI] & 0x0F;
+            if (0 == runLength) {
+                runLength = inA[inI + 1] + 1;
+                ladvance += 1;
+            } else {
+                runLength *= 8;
+            }
+            break;
+        case 0x00:
+        case 0x01:
+        case 0x03:
+        case 0x04:
+            runLength = inA[inI] & 0x1F;
+            if (0 == runLength) {
+                runLength = inA[inI + 1] + 32;
+                ladvance += 1;
+            }
+            break;
+        case 0x0C:
+        case 0x0E:
+            runLength = inA[inI] & 0x0F;
+            if (0 == runLength) {
+                runLength = inA[inI + 1] + 16;
+                ladvance += 1;
+            }
+            break;
+        case 0xF0:
+        case 0xF1:
+        case 0xF6:
+        case 0xF8:
+        case 0xF3:
+        case 0xF2:
+        case 0xF7:
+        case 0xF4:
+            runLength = inA[inI + 1] | (inA[inI + 2] << 8);
+            ladvance += 2;
+            break;
+    }
+    advance.val = ladvance;
+    return runLength;
+}
+
+wsgate.WriteFgBgImage16to16 = function(outA, outI, rowDelta, bitmask, fgPel, cBits) {
+    var cmpMask = 0x01;
+
+    while (cBits-- > 0) {
+        if (bitmask & cmpMask) {
+            wsgate.xorbufRGBAPel16(outA, outI - rowDelta, outA, outI, fgPel);
+        } else {
+            wsgate.copyRGBA(outA, outI - rowDelta, outA, outI);
+        }
+        outI += 4;
+        cmpMask <<= 1;
+    }
+    return outI;
+}
+
+wsgate.WriteFirstLineFgBgImage16to16 = function(outA, outI, bitmask, fgPel, cBits) {
+    var cmpMask = 0x01;
+
+    while (cBits-- > 0) {
+        if (bitmask & cmpMask) {
+            wsgate.pel2RGBA(fgPel, outA, outI);
+        } else {
+            wsgate.pel2RGBA(0, outA, outI);
+        }
+        outI += 4;
+        cmpMask <<= 1;
+    }
+    return outI;
+}
+
 wsgate.dRLE16 = function(inA, inLength, width, outA) {
+    var runLength;
+    var code, pixelA, pixelB, bitmask;
     var inI = 0;
     var outI = 0;
-    var maxI = (width * 4);
-    var alpha = 255;
-    var rlen;
-    var rgb = new Uint8Array(3);
-    var rgb2 = new Uint8Array(3);
-    var copyI;
+    var fInsertFgPel = false;
+    var fFirstLine = true;
+    var fgPel = 0xFFFFFF;
+    var rowDelta = width * 4;
+    var advance = {val: 0};
+
     while (inI < inLength) {
-        switch (inA[inI]) {
-            case 254:
-                inI++;
-                outA[outI++] = 0;
-                outA[outI++] = 0;
-                outA[outI++] = 0;
-                outA[outI++] = alpha;
-                break;
-            case 253:
-                inI++;
-                outA[outI++] = 255;
-                outA[outI++] = 255;
-                outA[outI++] = 255;
-                outA[outI++] = alpha;
-                break;
-            case 0:
-                inI++;
-                rlen = inA[inI++] + 32;
-                while ((outI < maxI) && (rlen > 0)) {
-                    outA[outI++] = 0;
-                    outA[outI++] = 0;
-                    outA[outI++] = 0;
-                    outA[outI++] = alpha;
+        if (fFirstLine) {
+            if (outI >= rowDelta) {
+                fFirstLine = false;
+                fInsertFgPel = false;
+            }
+        }
+        code = wsgate.ExtractCodeId(inA[inI]);
+        if (code == 0x00 || code == 0xF0) {
+            runLength = wsgate.ExtractRunLength(code, inA, inI, advance);
+            inI += advance.val;
+            if (fFirstLine) {
+                if (fInsertFgPel) {
+                    wsgate.pel2RGBA(fgPel, outA, outI);
+                    outI += 4;
+                    runLength -= 1;
                 }
-                if (rlen <= 0) {
-                    break;
+                while (runLength-- > 0) {
+                    wsgate.pel2RGBA(0, outA, outI);
+                    outI += 4;
                 }
-                copyI = outI - maxI;
-                while (rlen--) {
-                    outA[outI++] = outA[copyI++];
-                    outA[outI++] = outA[copyI++];
-                    outA[outI++] = outA[copyI++];
-                    outA[outI++] = outA[copyI++];
+            } else {
+                if (fInsertFgPel) {
+                    wsgate.xorbufRGBAPel16(outA, outI - rowDelta, outA, outI, fgPel);
+                    outI += 4;
+                    runLength -= 1;
                 }
-                break;
-            case 240:
-                inI++;
-                rlen = inA[inI] + (inA[inI + 1] * 0x0100);
-                inI += 2;
-                while ((outI < maxI) && (rlen > 0)) {
-                    outA[outI++] = 0;
-                    outA[outI++] = 0;
-                    outA[outI++] = 0;
-                    outA[outI++] = alpha;
+                while (runLength-- > 0) {
+                    wsgate.copyRGBA(outA, outI - rowDelta, outA, outI);
+                    outI += 4;
                 }
-                if (rlen <= 0) {
-                    break;
-                }
-                copyI = outI - maxI;
-                while (rlen--) {
-                    outA[outI++] = outA[copyI++];
-                    outA[outI++] = outA[copyI++];
-                    outA[outI++] = outA[copyI++];
-                    outA[outI++] = outA[copyI++];
-                }
-                break;
-            case 96:
-                inI++;
-                rlen = inA[inI++] + 32;
-                wsgate.getRGB16(inA, inI, rgb);
-                inI += 2;
-                while (rlen--) {
-                    outA[outI++] = rgb[0];
-                    outA[outI++] = rgb[1];
-                    outA[outI++] = rgb[2];
-                    outA[outI++] = alpha;
-                }
-                break;
-            case 243:
-                inI++;
-                rlen = inA[inI] + (inA[inI + 1] * 0x0100);
-                inI += 2;
-                wsgate.getRGB16(inA, inI, rgb);
-                inI += 2;
-                while (rlen--) {
-                    outA[outI++] = rgb[0];
-                    outA[outI++] = rgb[1];
-                    outA[outI++] = rgb[2];
-                    outA[outI++] = alpha;
-                }
-                break;
-            case 128:
-                inI++;
-                rlen = inA[inI] + 32;
-                inI++;
-                while (rlen--) {
-                    wsgate.getRGB16(inA, inI, rgb);
+            }
+            fInsertFgPel = true;
+            continue;
+        }
+        fInsertFgPel = false;
+        switch (code) {
+            case 0x01:
+            case 0xF1:
+            case 0x0C:
+            case 0xF6:
+                runLength = wsgate.ExtractRunLength(code, inA, inI, advance);
+                inI += advance.val;
+                if (code == 0x0C || code == 0xF6) {
+                    fgPel = inA[inI] | (inA[inI + 1] << 8);
                     inI += 2;
-                    outA[outI++] = rgb[0];
-                    outA[outI++] = rgb[1];
-                    outA[outI++] = rgb[2];
-                    outA[outI++] = alpha;
                 }
-                break;
-            case 244:
-                inI++;
-                rlen = inA[inI] + (inA[inI + 1] * 0x0100);
-                inI += 2;
-                while (rlen--) {
-                    wsgate.getRGB16(inA, inI, rgb);
-                    inI += 2;
-                    outA[outI++] = rgb[0];
-                    outA[outI++] = rgb[1];
-                    outA[outI++] = rgb[2];
-                    outA[outI++] = alpha;
-                }
-                break;
-            case 224:
-                inI++;
-                rlen = inA[inI++] + 16;
-                wsgate.getRGB16(inA, inI, rgb);
-                inI += 2;
-                wsgate.getRGB16(inA, inI, rgb2);
-                inI = (inI + 2);
-                while (rlen--) {
-                    outA[outI++] = rgb[0];
-                    outA[outI++] = rgb[1];
-                    outA[outI++] = rgb[2];
-                    outA[outI++] = alpha;
-                    outA[outI++] = rgb2[0];
-                    outA[outI++] = rgb2[1];
-                    outA[outI++] = rgb2[2];
-                    outA[outI++] = alpha;
-                }
-                break;
-            case 248:
-                inI++;
-                rlen = inA[inI] + (inA[inI + 1] * 0x0100);
-                inI += 2;
-                wsgate.getRGB16(inA, inI, rgb);
-                inI += 2;
-                wsgate.getRGB16(inA, inI, rgb2);
-                inI += 2;
-                while (rlen--) {
-                    outA[outI++] = rgb[0];
-                    outA[outI++] = rgb[1];
-                    outA[outI++] = rgb[2];
-                    outA[outI++] = alpha;
-                    outA[outI++] = rgb2[0];
-                    outA[outI++] = rgb2[1];
-                    outA[outI++] = rgb2[2];
-                    outA[outI++] = alpha;
-                }
-                break;
-            case 241:
-            case 242:
-            case 245:
-            case 246:
-            case 247:
-            case 250:
-            case 251:
-            case 252:
-            case 0xFF:
-                return false;
-            case 192:
-            case 193:
-                return false;
-            case 32:
-            case 64:
-            case 160:
-                return false;
-            default:
-                if (inA[inI] < 192) {
-                    switch (inA[inI] & 224) {
-                        case 0:
-                            rlen = inA[inI++] & 31;
-                            while ((outI < maxI) && (rlen > 0)) {
-                                outA[outI++] = 0;
-                                outA[outI++] = 0;
-                                outA[outI++] = 0;
-                                outA[outI++] = alpha;
-                            }
-                            if (rlen <= 0) {
-                                break;
-                            }
-                            copyI = outI - maxI;
-                            while (rlen--) {
-                                outA[outI++] = outA[copyI++];
-                                outA[outI++] = outA[copyI++];
-                                outA[outI++] = outA[copyI++];
-                                outA[outI++] = outA[copyI++];
-                            }
-                            break;
-                        case 96:
-                            rlen = inA[inI++] & 31;
-                            wsgate.getRGB16(inA, inI, rgb);
-                            inI += 2;
-                            while (rlen--) {
-                                outA[outI++] = rgb[0];
-                                outA[outI++] = rgb[1];
-                                outA[outI++] = rgb[2];
-                                outA[outI++] = alpha;
-                            }
-                            break;
-                        case 128:
-                            rlen = inA[inI++] & 31;
-                            while (rlen--) {
-                                wsgate.getRGB16(inA, inI, rgb);
-                                inI += 2;
-                                outA[outI++] = rgb[0];
-                                outA[outI++] = rgb[1];
-                                outA[outI++] = rgb[2];
-                                outA[outI++] = alpha;
-                            }
-                            break;
-                        case 32:
-                        case 64:
-                        case 160:
-                        default:
-                            return false;
+                if (fFirstLine) {
+                    while (runLength-- > 0) {
+                        wsgate.pel2RGBA(fgPel, outA, outI);
+                        outI += 4;
                     }
                 } else {
-                    switch (inA[inI] & 240) {
-                        case 224:
-                            rlen = inA[inI++] & 15;
-                            wsgate.getRGB16(inA, inI, rgb);
-                            inI += 2;
-                            wsgate.getRGB16(inA, inI, rgb2);
-                            inI += 2;
-                            while (rlen--) {
-                                outA[outI++] = rgb[0];
-                                outA[outI++] = rgb[1];
-                                outA[outI++] = rgb[2];
-                                outA[outI++] = alpha;
-                                outA[outI++] = rgb2[0];
-                                outA[outI++] = rgb2[1];
-                                outA[outI++] = rgb2[2];
-                                outA[outI++] = alpha;
-                            }
-                            break;
-                        case 192:
-                        case 193:
-                        default:
-                            return false;
+                    while (runLength-- > 0) {
+                        wsgate.xorbufRGBAPel16(outA, outI - rowDelta, outA, outI, fgPel);
+                        outI += 4;
                     }
                 }
+                break;
+            case 0x0E:
+            case 0xF8:
+                runLength = wsgate.ExtractRunLength(code, inA, inI, advance);
+                inI += advance.val;
+                pixelA = inA[inI] | (inA[inI + 1] << 8);
+                inI += 2;
+                pixelB = inA[inI] | (inA[inI + 1] << 8);
+                inI += 2;
+                while (runLength-- > 0) {
+                    wsgate.pel2RGBA(pixelA, outA, outI);
+                    outI += 4;
+                    wsgate.pel2RGBA(pixelB, outA, outI);
+                    outI += 4;
+                }
+                break;
+            case 0x03:
+            case 0xF3:
+                runLength = wsgate.ExtractRunLength(code, inA, inI, advance);
+                inI += advance.val;
+                pixelA = inA[inI] | (inA[inI + 1] << 8);
+                inI += 2;
+                while (runLength-- > 0) {
+                    wsgate.pel2RGBA(pixelA, outA, outI);
+                    outI += 4;
+                }
+                break;
+            case 0x02:
+            case 0xF2:
+            case 0x0D:
+            case 0xF7:
+                runLength = wsgate.ExtractRunLength(code, inA, inI, advance);
+                inI += advance.val;
+                if (code == 0x0D || code == 0xF7) {
+                    fgPel = inA[inI] | (inA[inI + 1] << 8);
+                    inI += 2;
+                }
+                if (fFirstLine) {
+                    while (runLength > 8) {
+                        bitmask = inA[inI++];
+                        outI = wsgate.WriteFirstLineFgBgImage16to16(outA, outI, bitmask, fgPel, 8);
+                        runLength -= 8;
+                    }
+                } else {
+                    while (runLength > 8) {
+                        bitmask = inA[inI++];
+                        outI = wsgate.WriteFgBgImage16to16(outA, outI, rowDelta, bitmask, fgPel, 8);
+                        runLength = runLength - 8;
+                    }
+                }
+                if (runLength-- > 0) {
+                    bitmask = inA[inI++];
+                    if (fFirstLine) {
+                        outI = wsgate.WriteFirstLineFgBgImage16to16(outA, outI, bitmask, fgPel, runLength);
+                    } else {
+                        pbDest = wsgate.WriteFgBgImage16to16(outA, outI, rowDelta, bitmask, fgPel, runLength);
+                    }
+                }
+                break;
+            case 0x04:
+            case 0xF4:
+                runLength = wsgate.ExtractRunLength(code, inA, inI, advance);
+                inI += advance.val;
+                while (runLength-- > 0) {
+                    wsgate.pel2RGBA(inA[inI] | (inA[inI + 1] << 8), outA, outI);
+                    inI += 2;
+                    outI += 4;
+                }
+                break;
+            case 0xF9:
+                inI += 1;
+                if (fFirstLine) {
+                    outI = wsgate.WriteFirstLineFgBgImage16to16(outA, outI, 0x03, fgPel, 8);
+                } else {
+                    pbDest = wsgate.WriteFgBgImage16to16(outA, outI, rowDelta, 0x03, fgPel, 8);
+                }
+                break;
+            case 0xFA:
+                inI += 1;
+                if (fFirstLine) {
+                    outI = wsgate.WriteFirstLineFgBgImage16to16(outA, outI, 0x05, fgPel, 8);
+                } else {
+                    pbDest = wsgate.WriteFgBgImage16to16(outA, outI, rowDelta, 0x05, fgPel, 8);
+                }
+                break;
+            case 0xFD:
+                inI += 1;
+                wsgate.pel2RGBA(0xFFFF, outA, outI);
+                outI += 4;
+                break;
+            case 0xFE:
+                inI += 1;
+                wsgate.pel2RGBA(0, outA, outI);
+                outI += 4;
+                break;
         }
     }
-    return true;
 }
 

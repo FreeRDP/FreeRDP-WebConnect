@@ -1,31 +1,23 @@
 pkgdata_DATA = \
-	index.html favicon.ico \
+	index-debug.html index.html favicon.ico \
 	css/style-debug.css css/style.css \
 	js/modernizr.js  js/mootools.js  js/wsgate.js \
 	js/modernizr-debug.js  js/mootools-debug.js  js/wsgate-debug.js
 
+%.html: %-debug.html
+	$(AM_V_GEN)$(STRIP_DEBUG) $< > $@
+
 %.js: %-debug.js
-	@$(MKDIR_P) js
-	@if [ -n "$(JAVA)" ] ; then \
-		echo "Compressing $< -> $@" ; \
-		$(JAVA) -jar $(top_srcdir)/tools/yuicompressor-2.4.7.jar -o $@ $< ; \
-	else \
-		cp $< $@ ; \
-	fi
+	$(AM_V_GEN)$(MKDIR_P) js && $(STRIP_DEBUG) $< | $(JS_COMPRESS) > $@
 
 %.css: %-debug.css
-	@$(MKDIR_P) css
-	@if [ -n "$(JAVA)" ] ; then \
-		echo "Compressing $< -> $@" ; \
-		$(JAVA) -jar $(top_srcdir)/tools/yuicompressor-2.4.7.jar -o $@ $< ; \
-	else \
-		cp $< $@ ; \
-	fi
+	$(AM_V_GEN)$(MKDIR_P) css && $(STRIP_DEBUG) $< | $(CSS_COMPRESS) > $@
 
-DISTCLEANFILES = -r js css
+CLEANFILES = index.html css/style.css \
+	js/modernizr.js  js/mootools.js  js/wsgate.js
 
 MAINTAINERCLEANFILES = Makefile.in
 
-EXTRA_DIST = index.html favicon.ico \
+EXTRA_DIST = index-debug.html favicon.ico \
 	css/style-debug.css \
 	js/modernizr-debug.js  js/mootools-debug.js  js/wsgate-debug.js

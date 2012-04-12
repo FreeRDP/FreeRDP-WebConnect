@@ -246,7 +246,7 @@ namespace wsgate {
                 path p(m_sDocumentRoot);
                 p /= uri;
                 if (ends_with(uri, "/")) {
-                    p /= "/index.html";
+                    p /= (m_bDebug ? "/index-debug.html" : "/index.html");
                 }
                 p.normalize();
 
@@ -438,7 +438,7 @@ namespace wsgate {
                         log::debug << "Send WS response, size: " << data.length() << endl;
                         break;
                     case Rdp:
-                        log::debug << "Send WS response, size: " << data.length() << endl;
+                        // log::debug << "Send WS response, size: " << data.length() << endl;
                         break;
                 }
                 ehs_autoptr<GenericResponse> r(new GenericResponse(0, m_econn));

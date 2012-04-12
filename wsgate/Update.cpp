@@ -11,6 +11,7 @@ namespace wsgate {
 
     Update::Update(wspp::wshandler *h)
         : m_wshandler(h)
+        , m_nBmCount(0)
     { }
 
     Update::~Update()
@@ -61,14 +62,30 @@ namespace wsgate {
         size_t sz = sizeof(BITMAP_DATA) - sizeof(uint8*) - sizeof(boolean);
         for (i = 0; i < (int) bitmap->number; i++) {
             bitmap_data = &bitmap->rectangles[i];
-            uint32_t op = WSOP_BITMAP;
-            bool comp = (bitmap_data->compressed != 0);
-            string buf(reinterpret_cast<const char *>(&op), sizeof(op));
-            buf.append(reinterpret_cast<const char *>(bitmap_data), sz);
+            struct {
+                uint32_t op;
+                uint32_t x;
+                uint32_t y;
+                uint32_t w;
+                uint32_t h;
+                uint32_t bpp;
+                uint32_t cf;
+                uint32_t sz;
+            } wxbm = {
+                WSOP_BITMAP,
+                bitmap_data->destLeft, bitmap_data->destTop,
+                bitmap_data->width, bitmap_data->height,
+                bitmap_data->bitsPerPixel,
+                bitmap_data->compressed, bitmap_data->bitmapLength
+            };
+            string buf(reinterpret_cast<const char *>(&wxbm), sizeof(wxbm));
             buf.append(reinterpret_cast<const char *>(bitmap_data->bitmapDataStream),
                     bitmap_data->bitmapLength);
-            buf.append(reinterpret_cast<const char *>(&comp), sizeof(comp));
+            log::debug << "Bitmap " << (wxbm.cf ? "C " : "U ") << "x: "
+                << wxbm.x << " y: " << wxbm.y << " w:"
+                << wxbm.w << " h: " << wxbm.h << " bpp: " << wxbm.bpp << endl;
             m_wshandler->send_binary(buf);
+            m_nBmCount++;
         }
     }
 

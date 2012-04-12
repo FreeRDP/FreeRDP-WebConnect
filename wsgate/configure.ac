@@ -302,6 +302,14 @@ AC_CHECK_LIB([freerdp-core],[freerdp_input_send_keyboard_event],
 
 dnl Required for js and css compression: java
 AC_CHECK_TOOL([JAVA],[java],[])
+JS_COMPRESS='$(JAVA) -jar $(top_srcdir)/tools/yuicompressor.jar --type js'
+CSS_COMPRESS='$(JAVA) -jar $(top_srcdir)/tools/yuicompressor.jar --type css'
+if test -z "${JAVA}" ; then
+    JS_COMPRESS=cat
+    CSS_COMPRESS=cat
+fi
+AC_SUBST(JS_COMPRESS)
+AC_SUBST(CSS_COMPRESS)
 
 dnl Required for findrequires.pl script
 AC_CHECK_TARGET_TOOL([OBJDUMP],[objdump],[no])
@@ -312,12 +320,17 @@ case ${OBJDUMP}-${target_os} in
 esac
 AC_ARG_VAR([OBJDUMP],[Path to objdump binary. (required for mingw32 builds only)])
 dnl For the same reason, we require perl
+STRIP_DEBUG='$(PERL) $(top_srcdir)/tools/strip-debug.pl'
 AC_CHECK_TOOL([PERL],[perl],[no])
 case ${PERL}-${target_os} in
     no-mingw*)
         AC_MSG_ERROR([Could not find required tool 'perl'])
         ;;
+    no-*)
+        STRIP_DEBUG='cat'
+        ;;
 esac
+AC_SUBST(STRIP_DEBUG)
 
 # ISCC env variable
 AC_ARG_VAR([ISCC],[Full path of InnoSetup compiler iscc.exe.])dnl

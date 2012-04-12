@@ -5,7 +5,7 @@
     <title>FreeRDP WebConnect</title>
     <meta name="description" content="A HTM5 based RDP client">
     <meta name="viewport" content="width=device-width">
-    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="css/style%JSDEBUG%.css">
     <script language="javascript" type="text/javascript">
         var wsBase = "%WSURI%";
     </script>
@@ -28,26 +28,31 @@
             <label for="pass">Password:</label>
             <input id="rdppass" type="password" name="pass" value="install" />
             <input id="rdpconnect" type="button" value="Connect" />
-        </fieldset>
+        </fieldset><!-- DEBUG -->
         <input id="echotest" type="button" value="Echo Test" />
-        <input id="speedtest" type="button" value="Speed Test" />
+        <input id="speedtest" type="button" value="Speed Test" /><!-- /DEBUG -->
     </form>
 
     <script language="javascript" type="text/javascript">
-        var output;
-        function init() {
-            output = document.getElementById("output");
+        function init() {/* DEBUG */
             document.getElementById("echotest").addEventListener("click", EchoTest, false);
-            document.getElementById("speedtest").addEventListener("click", SpeedTest, false);
+            document.getElementById("speedtest").addEventListener("click", SpeedTest, false);/* /DEBUG */
             document.getElementById("rdpconnect").addEventListener("click", RDPrun, false);
         }
-
+/* DEBUG */
 function EchoTest() {
     wsUri = wsBase + '?mode=echo';
     var etest = new wsgate.EchoTest(wsUri);
     etest.Run();
 }
 
+function SpeedTest() {
+    wsUri = wsBase + '?mode=speed';
+    var stest = new wsgate.SpeedTest(wsUri, 1 * 1048576, 20);
+    stest.Run();
+}
+
+/* /DEBUG */
 function RDPrun() {
     wsUri = wsBase
         + '?host=' + document.getElementById('rdphost').value
@@ -59,14 +64,7 @@ function RDPrun() {
     rdp.Run();
 }
 
-function SpeedTest() {
-    wsUri = wsBase + '?mode=speed';
-    var stest = new wsgate.SpeedTest(wsUri, 1 * 1048576, 20);
-    stest.Run();
-}
-
 window.addEventListener("load", init, false);
 </script>
-<div id="output"></div>
 </body>
 </html> 

@@ -20,6 +20,7 @@ namespace wsgate {
 
         private:
             wspp::wshandler *m_wshandler;
+            int m_nBmCount;
 
             // Non-copyable
             Update(const Update &);
