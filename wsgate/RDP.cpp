@@ -2,27 +2,19 @@
 # include "config.h"
 #endif
 
-extern "C" {
-#include <freerdp/input.h>
-}
-#include <freerdp/freerdp.h>
 #include <pthread.h>
 
 #include "RDP.hpp"
+#include "Update.hpp"
+#include "Primary.hpp"
 
-#include "btexception.h"
-#include "wsgate.h"
+#include "btexception.hpp"
 
 namespace wsgate {
 
     using namespace std;
 
     map<freerdp *, RDP *> RDP::m_instances;
-
-    typedef struct {
-        rdpContext _p;
-        RDP *pRDP;
-    } wsgContext;
 
     RDP::RDP(wspp::wshandler *h)
         : m_freerdp(freerdp_new())
@@ -34,6 +26,8 @@ namespace wsgate {
           , m_wshandler(h)
           , m_errMsg()
           , m_State(STATE_INITIAL)
+          , m_pUpdate(new Update(h))
+          , m_pPrimary(new Primary(h))
     {
         if (!m_freerdp) {
             throw tracing::runtime_error("Could not create freerep instance");
@@ -47,6 +41,8 @@ namespace wsgate {
 
         freerdp_context_new(m_freerdp);
         reinterpret_cast<wsgContext *>(m_freerdp->context)->pRDP = this;
+        reinterpret_cast<wsgContext *>(m_freerdp->context)->pUpdate = m_pUpdate;
+        reinterpret_cast<wsgContext *>(m_freerdp->context)->pPrimary = m_pPrimary;
         // create worker thread
         m_bThreadLoop = true;
         if (0 != pthread_create(&m_worker, NULL, cbThreadFunc, reinterpret_cast<void *>(this))) {
@@ -59,9 +55,12 @@ namespace wsgate {
 
     RDP::~RDP()
     {
+        log::debug << __PRETTY_FUNCTION__ << endl;
         Disconnect();
         m_instances.erase(m_freerdp);
         freerdp_free(m_freerdp);
+        delete m_pUpdate;
+        delete m_pPrimary;
     }
 
     bool RDP::Connect(string host, int port, string user, string domain, string pass)
@@ -92,10 +91,10 @@ namespace wsgate {
     {
         if (m_bThreadLoop) {
             m_bThreadLoop = false;
+            if (STATE_CONNECTED == m_State) {
+                return (freerdp_disconnect(m_freerdp) != 0);
+            }
             pthread_join(m_worker, NULL);
-        }
-        if (STATE_CONNECTED == m_State) {
-            return (freerdp_disconnect(m_freerdp) != 0);
         }
         return true;
     }
@@ -163,26 +162,15 @@ namespace wsgate {
     }
 
     // private
-    boolean RDP::PreConnect(freerdp *)
+    boolean RDP::PreConnect(freerdp *rdp)
     {
         log::debug << "RDP::PreConnect" << endl;
-#if 0
-        if (iUpdate != null)
-        {
-            update = new Update(instance->context);
-            update.RegisterInterface(iUpdate);
-        }
+        m_pUpdate->Register(rdp);
+        m_pPrimary->Register(rdp);
 
-        if (iPrimaryUpdate != null)
-        {
-            primary = new PrimaryUpdate(instance->context);
-            primary.RegisterInterface(iPrimaryUpdate);
-        }
-#endif
-
-        m_rdpSettings->rfx_codec = 1;
-        m_rdpSettings->fastpath_output = 1;
-        m_rdpSettings->color_depth = 32;
+        m_rdpSettings->rfx_codec = 0;
+        m_rdpSettings->fastpath_output = 0;
+        m_rdpSettings->color_depth = 16;
         m_rdpSettings->frame_acknowledge = 0;
         m_rdpSettings->performance_flags = 0;
         m_rdpSettings->large_pointer = 1;
@@ -196,7 +184,7 @@ namespace wsgate {
     // private
     boolean RDP::PostConnect(freerdp *rdp)
     {
-        log::debug << "RDP::PostConnect" << hex << rdp << dec << endl;
+        log::debug << "RDP::PostConnect " << hex << rdp << dec << endl;
         return 1;
     }
 
@@ -229,10 +217,13 @@ namespace wsgate {
                 case STATE_CONNECT:
                     if (freerdp_connect(m_freerdp)) {
                         m_State = STATE_CONNECTED;
-                        return;
+                        continue;
                     }
                     m_State = STATE_INITIAL;
                     m_errMsg = "E:Could not connect to RDP backend.";
+                    break;
+                case STATE_INITIAL:
+                case STATE_CLOSED:
                     break;
             }
             usleep(100);

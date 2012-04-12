@@ -4,12 +4,8 @@
 #include <pthread.h>
 #include <map>
 #include <string>
-#include "wshandler.hpp"
 
-typedef struct rdp_freerdp freerdp;
-typedef struct rdp_context rdpContext;
-typedef struct rdp_input rdpInput;
-typedef struct rdp_settings rdpSettings;
+#include "rdpcommon.hpp"
 
 namespace wsgate {
 
@@ -64,6 +60,8 @@ namespace wsgate {
             wspp::wshandler *m_wshandler;
             std::string m_errMsg;
             State m_State;
+            Update *m_pUpdate;
+            Primary *m_pPrimary;
 
             // Callbacks from C pthreads - Must be static in order t be assigned to C fnPtrs.
             static void *cbThreadFunc(void *ctx);

@@ -11,8 +11,8 @@
 #include <iostream>
 #include <string>
 #include <boost/thread.hpp>
-#include "wsframe.h"
-#include "wsgate.h"
+#include "wsframe.hpp"
+#include "wsgate.hpp"
 #include "wshandler.hpp"
 
 #ifndef HAVE_BOOST_LOCK_GUARD

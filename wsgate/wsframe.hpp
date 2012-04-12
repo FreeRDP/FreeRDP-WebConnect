@@ -31,9 +31,9 @@
 #ifndef WEBSOCKET_FRAME_HPP
 #define WEBSOCKET_FRAME_HPP
 
-#include "wscommon.h"
-#include "wsutf8.h"
-#include "btexception.h"
+#include "wscommon.hpp"
+#include "wsutf8.hpp"
+#include "btexception.hpp"
 
 #if defined(_WIN32)
 #include <winsock2.h>

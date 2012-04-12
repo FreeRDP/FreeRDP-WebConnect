@@ -2,7 +2,7 @@
 # include "config.h"
 #endif
 
-#include "btexception.h"
+#include "btexception.hpp"
 #include <string>
 #include <iostream>
 #include <iomanip>

@@ -296,7 +296,9 @@ CPPFLAGS="-I/usr/include/elfutils $CPPFLAGS"
 fi
 
 dnl FreeRDP
-AC_CHECK_LIB(freerdp-core, freerdp_new,[WSGATE_LDADD="$WSGATE_LDADD -lfreerdp-core"])
+AC_CHECK_LIB([freerdp-core],[freerdp_input_send_keyboard_event],
+    [WSGATE_LDADD="$WSGATE_LDADD -lfreerdp-core"],
+    [AC_MSG_ERROR([You need freerdp from GIT!])])
 
 dnl Required for js and css compression: java
 AC_CHECK_TOOL([JAVA],[java],[])

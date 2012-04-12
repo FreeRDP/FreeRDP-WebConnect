@@ -1,7 +1,7 @@
 #ifndef _WSGATE_H_
 #define _WSGATE_H_
 
-#include "logging.h"
+#include "logging.hpp"
 
 namespace wsgate {
 

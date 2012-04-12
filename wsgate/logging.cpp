@@ -1,5 +1,5 @@
 /* vim: set et ts=4 sw=4 cindent: */
-#include "logging.h"
+#include "logging.hpp"
 
 #ifdef HAVE_CONFIG_H
 # include "config.h"

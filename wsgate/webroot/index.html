@@ -14,7 +14,7 @@
     <script src="js/wsgate%JSDEBUG%.js"></script>
 </head>
 <body>
-    <canvas id="screen" width="640px" height="480px">
+    <canvas id="screen" width="1024px" height="768px">
     <strong>Sorry, It looks as though your browser does not support the canvas tag...</strong> If you can, I suggest that you try Chrome or Safari.
     </canvas>
 
@@ -54,7 +54,7 @@ function RDPrun() {
         + '&user=' + document.getElementById('rdpuser').value
         + '&pass=' + document.getElementById('rdppass').value
         + '&mode=rdp';
-    var rdp = new wsgate.RDP(wsUri);
+    var rdp = new wsgate.RDP(wsUri, document.getElementById('screen'));
     rdp.addEvent('alert', function(msg) { alert(msg); });
     rdp.Run();
 }

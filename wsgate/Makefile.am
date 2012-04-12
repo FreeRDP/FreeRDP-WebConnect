@@ -15,7 +15,9 @@ wsgate_SOURCES = \
 	logging.cpp \
 	sha1.cpp \
 	wsgate_main.cpp \
-	RDP.cpp
+	RDP.cpp \
+	Update.cpp \
+	Primary.cpp
 
 wsgate_CPPFLAGS = \
 	-DBINDHELPER_PATH=\"$(pkglibexecdir)/bindhelper$(EXEEXT)\" \
@@ -25,18 +27,21 @@ wsgate_DEPENDENCIES = $(WSGATE_RES)
 EXTRA_wsgate_SOURCES = wsgate.rc
 
 noinst_HEADERS = \
-	base64.h \
-	btexception.h \
-	common.h \
-	logging.h \
-	myrawsocket.h \
-	sha1.h \
-	wscommon.h \
-	wsgate.h \
-	wsendpoint.h \
-	wsframe.h \
-	wsutf8.h \
-	RDP.hpp
+	base64.hpp \
+	btexception.hpp \
+	common.hpp \
+	logging.hpp \
+	myrawsocket.hpp \
+	sha1.hpp \
+	wscommon.hpp \
+	wsgate.hpp \
+	wsendpoint.hpp \
+	wsframe.hpp \
+	wshandler.hpp \
+	wsutf8.hpp \
+	RDP.hpp \
+	Update.hpp \
+	Primary.hpp
 
 # Extra stuff to distribute in tarball 
 EXTRA_DIST = $(DX_CONFIG) conf/wsgate.spec tools/yuicompressor-2.4.7.jar

@@ -2,7 +2,7 @@
 #define WSHANDLER_H
 
 #include <string>
-#include "wsgate.h"
+#include "wsgate.hpp"
 
 namespace wspp {
     class wsendpoint;

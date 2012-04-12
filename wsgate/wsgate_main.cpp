@@ -60,14 +60,14 @@
 #include <arpa/inet.h>
 #endif
 
-#include "common.h"
-#include "btexception.h"
-#include "base64.h"
-#include "sha1.h"
-#include "logging.h"
-#include "wsendpoint.h"
-#include "wsgate.h"
-#include "myrawsocket.h"
+#include "common.hpp"
+#include "btexception.hpp"
+#include "base64.hpp"
+#include "sha1.hpp"
+#include "logging.hpp"
+#include "wsendpoint.hpp"
+#include "wsgate.hpp"
+#include "myrawsocket.hpp"
 
 using namespace std;
 using boost::algorithm::to_lower_copy;
