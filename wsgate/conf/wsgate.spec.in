@@ -30,6 +30,8 @@ A WebSockets gateway for FreeRDP-WebConnect
 %files
 %defattr(-,root,root,-)
 %{_sbindir}/*
+%{_datadir}/*
+%{_sysconfdir}/*
 %defattr(4755,root,root,-)
 %{_libexecdir}/%{name}/bindhelper
 

@@ -228,6 +228,17 @@ namespace wsgate {
                         return HTTPRESPONSECODE_503_SERVICEUNAVAILABLE;
                     }
 
+                    CookieParameters cookie;
+                    cookie["name"] = "lasthost";
+                    cookie["value"] = rdphost;
+                    response->SetCookie(cookie);
+                    cookie["name"] = "lastuser";
+                    cookie["value"] = rdpuser;
+                    response->SetCookie(cookie);
+                    cookie["name"] = "lastpass";
+                    cookie["value"] = rdppass;
+                    response->SetCookie(cookie);
+
                     response->RemoveHeader("Content-Type");
                     response->RemoveHeader("Content-Length");
                     response->RemoveHeader("Last-Modified");
@@ -294,6 +305,12 @@ namespace wsgate {
                         << m_sHostname << ":" << request->LocalPort() << "/wsgate";
                     replace_all(rbuf, "%WSURI%", oss.str());
                     replace_all(rbuf, "%JSDEBUG%", (m_bDebug ? "-debug" : ""));
+                    string tmp(request->Cookies("last_user"));
+                    replace_all(rbuf, "%COOKIE_LASTUSER%", tmp);
+                    tmp = request->Cookies("last_pass");
+                    replace_all(rbuf, "%COOKIE_LASTPASS%", tmp);
+                    tmp = request->Cookies("last_host");
+                    replace_all(rbuf, "%COOKIE_LASTHOST%", tmp);
                 }
                 switch (mt) {
                     case TEXT:

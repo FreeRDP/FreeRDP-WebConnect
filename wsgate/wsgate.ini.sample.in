@@ -1,0 +1,37 @@
+[global]
+# Enable debug logging. Possible values: true, false
+debug = true
+
+# Set non-SSL listener port. If omitted, no listener will be started.
+port = 80
+
+# Set bind address of non-SSL listener.
+bindaddr = 127.0.0.1
+
+# Set hostname (for HTTP 1.1 host header comparison)
+hostname = localhost
+
+# Set syslog logging facility. See: syslog(3)
+logfacility = LOCAL6
+
+# Set syslog mask. See: syslog(3). If omitted, ALL levels are enabled.
+#logmask = WARN|ERR|INFO
+
+[http]
+# Set doecument root of web service.
+documentroot = %pkgdatadir%
+
+[ssl]
+# Set SSL listener port. If omitted, no SSL listener will be started.
+#port = 443
+
+# Set bind address of non-SSL listener.
+#bindaddr = 127.0.0.1
+
+# Set server cert filename. This option is mandatory, if SSL an listener
+# is enabled. It must contain a PEM encoded certificate and the corresponding
+# private key.
+#certfile = %sysconfdir%/%PACKAGE%/test.pem
+
+# Set password of SSL private key.
+#certpass = verysecret

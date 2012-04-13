@@ -22,11 +22,11 @@
         <fieldset>
             <legend>Session parameters:</legend>
             <label for="host">Hostname:</label>
-            <input id="rdphost" type="text" name="host" value="192.168.2.134" />
+            <input id="rdphost" type="text" name="host" value="%COOKIE_LASTHOST%" />
             <label for="user">User:</label>
-            <input id="rdpuser" type="text" name="user" value="Administrator" />
+            <input id="rdpuser" type="text" name="user" value="%COOKIE_LASTUSER%" />
             <label for="pass">Password:</label>
-            <input id="rdppass" type="password" name="pass" value="install" />
+            <input id="rdppass" type="password" name="pass" value="%COOKIE_LASTPASS%" />
             <input id="rdpconnect" type="button" value="Connect" />
         </fieldset><!-- DEBUG -->
         <input id="echotest" type="button" value="Echo Test" />

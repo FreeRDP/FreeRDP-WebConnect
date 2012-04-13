@@ -1,4 +1,4 @@
-pkgdata_DATA = \
+nobase_pkgdata_DATA = \
 	index-debug.html index.html favicon.ico \
 	css/style-debug.css css/style.css \
 	js/modernizr.js  js/mootools.js  js/wsgate.js \
