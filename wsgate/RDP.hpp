@@ -27,6 +27,9 @@ namespace wsgate {
                     std::string pass);
             bool Disconnect();
             bool CheckFileDescriptor();
+
+            void OnWsMessage(const std::string & data);
+
             void SendInputSynchronizeEvent(uint32_t flags);
             void SendInputKeyboardEvent(uint16_t flags, uint16_t code);
             void SendInputUnicodeKeyboardEvent(uint16_t flags, uint16_t code);

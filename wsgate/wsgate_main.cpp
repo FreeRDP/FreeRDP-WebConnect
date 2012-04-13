@@ -392,15 +392,17 @@ namespace wsgate {
                 Rdp
             } Mode;
 
-            MyWsHandler(EHSConnection *econn, EHS *ehs)
+            MyWsHandler(EHSConnection *econn, EHS *ehs, MyRawSocketHandler *rsh)
                 : m_econn(econn)
                   , m_ehs(ehs)
+                  , m_rsh(rsh)
                   , m_emode(SimpleEcho)
         {}
 
             void SetMode(Mode mode) {
                 m_emode = mode;
             }
+
             virtual void on_message(std::string, std::string data) {
                 switch (m_emode) {
                     case SimpleEcho:
@@ -413,7 +415,8 @@ namespace wsgate {
                         send_binary(data);
                         break;
                     case Rdp:
-                        log::debug << "GOT Message, size: " << data.length() << endl;
+                        // log::debug << "GOT Message, size: " << data.length() << endl;
+                        m_rsh->OnMessage(m_econn, data);
                         break;
                 }
             }
@@ -447,10 +450,13 @@ namespace wsgate {
             }
 
         private:
+            // Non-copyable
             MyWsHandler(const MyWsHandler&);
             MyWsHandler& operator=(const MyWsHandler&);
+
             EHSConnection *m_econn;
             EHS *m_ehs;
+            MyRawSocketHandler *m_rsh;
             Mode m_emode;
     };
 
@@ -479,6 +485,13 @@ namespace wsgate {
         m_cmap.erase(conn);
     }
 
+    void MyRawSocketHandler::OnMessage(EHSConnection *conn, const std::string & data)
+    {
+        if (m_cmap.end() != m_cmap.find(conn)) {
+            m_cmap[conn].get<2>()->OnWsMessage(data);
+        }
+    }
+
     bool MyRawSocketHandler::Prepare(EHSConnection *conn, const string mode,
             const string host, uint16_t port, const string user, const string pass)
     {
@@ -488,7 +501,7 @@ namespace wsgate {
         log::debug << "RDP User:     '" << user << "'" << endl;
         log::debug << "RDP Password: '" << pass << "'" << endl;
 
-        handler_ptr h(new MyWsHandler(conn, m_parent));
+        handler_ptr h(new MyWsHandler(conn, m_parent, this));
         conn_ptr c(new wspp::wsendpoint(h.get()));
         rdp_ptr r(new RDP(h.get()));
         m_cmap[conn] = conn_tuple(c, h, r);

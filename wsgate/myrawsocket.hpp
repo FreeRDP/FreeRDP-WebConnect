@@ -29,6 +29,8 @@ namespace wsgate {
                     const std::string host, uint16_t port,
                     const std::string user, const std::string pass);
 
+            void OnMessage(EHSConnection *conn, const std::string & data);
+
         private:
             MyRawSocketHandler(const MyRawSocketHandler&);
             MyRawSocketHandler& operator=(const MyRawSocketHandler&);

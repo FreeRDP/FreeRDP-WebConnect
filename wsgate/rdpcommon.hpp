@@ -21,10 +21,14 @@ namespace wsgate {
     class Primary;
 
     typedef enum {
-        WSOP_BEGINPAINT,
-        WSOP_ENDPAINT,
-        WSOP_BITMAP
-    } WsOP;
+        WSOP_SC_BEGINPAINT,
+        WSOP_SC_ENDPAINT,
+        WSOP_SC_BITMAP
+    } WsOPsc;
+
+    typedef enum {
+        WSOP_CS_MOUSE
+    } WsOPcs;
 
     typedef struct {
         rdpContext _p;

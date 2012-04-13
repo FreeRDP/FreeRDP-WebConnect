@@ -35,9 +35,9 @@
 
     <script language="javascript" type="text/javascript">
         function init() {/* DEBUG */
-            document.getElementById("echotest").addEventListener("click", EchoTest, false);
-            document.getElementById("speedtest").addEventListener("click", SpeedTest, false);/* /DEBUG */
-            document.getElementById("rdpconnect").addEventListener("click", RDPrun, false);
+            document.id("echotest").addEvent("click", EchoTest);
+            document.id("speedtest").addEvent("click", SpeedTest);/* /DEBUG */
+            document.id("rdpconnect").addEvent('click', RDPrun);
         }
 /* DEBUG */
 function EchoTest() {
@@ -55,12 +55,26 @@ function SpeedTest() {
 /* /DEBUG */
 function RDPrun() {
     wsUri = wsBase
-        + '?host=' + document.getElementById('rdphost').value
-        + '&user=' + document.getElementById('rdpuser').value
-        + '&pass=' + document.getElementById('rdppass').value
+        + '?host=' + document.id('rdphost').value
+        + '&user=' + document.id('rdpuser').value
+        + '&pass=' + document.id('rdppass').value
         + '&mode=rdp';
     var rdp = new wsgate.RDP(wsUri, document.getElementById('screen'));
     rdp.addEvent('alert', function(msg) { alert(msg); });
+    rdp.addEvent('connected', function() {
+            button = document.id("rdpconnect");
+            button.removeEvents();
+            button.value = 'Disconnect';
+            button.addEvent('click', rdp.Disconnect.bind(rdp));
+
+    });
+    rdp.addEvent('disconnected', function() {
+            button = document.id("rdpconnect");
+            button.removeEvents();
+            button.value = 'Connect';
+            button.addEvent('click', RDPrun);
+
+    });
     rdp.Run();
 }
 

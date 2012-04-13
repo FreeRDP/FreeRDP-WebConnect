@@ -11,7 +11,6 @@ namespace wsgate {
 
     Update::Update(wspp::wshandler *h)
         : m_wshandler(h)
-        , m_nBmCount(0)
     { }
 
     Update::~Update()
@@ -28,18 +27,23 @@ namespace wsgate {
         rdp->update->Palette = cbPalette;
         rdp->update->PlaySound = cbPlaySound;
         rdp->update->SurfaceBits = cbSurfaceBits;
+
+        rdp->update->RefreshRect = cbRefreshRect;
+        rdp->update->SuppressOutput = cbSuppressOutput;
+        rdp->update->SurfaceCommand = cbSurfaceCommand;
+        rdp->update->SurfaceFrameMarker = cbSurfaceFrameMarker;
     }
 
     void Update::BeginPaint(rdpContext* context) {
         // log::debug << __PRETTY_FUNCTION__ << endl;
-        uint32_t op = WSOP_BEGINPAINT;
+        uint32_t op = WSOP_SC_BEGINPAINT;
         string buf(reinterpret_cast<const char *>(&op), sizeof(op));
         m_wshandler->send_binary(buf);
     }
 
     void Update::EndPaint(rdpContext* context) {
         // log::debug << __PRETTY_FUNCTION__ << endl;
-        uint32_t op = WSOP_ENDPAINT;
+        uint32_t op = WSOP_SC_ENDPAINT;
         string buf(reinterpret_cast<const char *>(&op), sizeof(op));
         m_wshandler->send_binary(buf);
     }
@@ -59,7 +63,6 @@ namespace wsgate {
     void Update::BitmapUpdate(rdpContext* context, BITMAP_UPDATE* bitmap) {
         int i;
         BITMAP_DATA* bitmap_data;
-        size_t sz = sizeof(BITMAP_DATA) - sizeof(uint8*) - sizeof(boolean);
         for (i = 0; i < (int) bitmap->number; i++) {
             bitmap_data = &bitmap->rectangles[i];
             struct {
@@ -72,7 +75,7 @@ namespace wsgate {
                 uint32_t cf;
                 uint32_t sz;
             } wxbm = {
-                WSOP_BITMAP,
+                WSOP_SC_BITMAP,
                 bitmap_data->destLeft, bitmap_data->destTop,
                 bitmap_data->width, bitmap_data->height,
                 bitmap_data->bitsPerPixel,
@@ -85,7 +88,6 @@ namespace wsgate {
                 << wxbm.x << " y: " << wxbm.y << " w:"
                 << wxbm.w << " h: " << wxbm.h << " bpp: " << wxbm.bpp << endl;
             m_wshandler->send_binary(buf);
-            m_nBmCount++;
         }
     }
 

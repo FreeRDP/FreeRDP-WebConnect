@@ -99,6 +99,28 @@ namespace wsgate {
         return true;
     }
 
+    void RDP::OnWsMessage(const string & data)
+    {
+        if ((STATE_CONNECTED == m_State) && (data.length() >= 4)) {
+            const uint32_t *op = reinterpret_cast<const uint32_t *>(data.data());
+            switch (*op) {
+                case WSOP_CS_MOUSE:
+                    {
+                        typedef struct {
+                            uint32_t op;
+                            uint32_t flags;
+                            uint32_t x;
+                            uint32_t y;
+                        } wsmsg;
+                        const wsmsg *m = reinterpret_cast<const wsmsg *>(data.data());
+                        // log::debug << "MM: x=" << m->x << " y=" << m->y << endl;
+                        m_freerdp->input->MouseEvent(m_freerdp->input, m->flags, m->x, m->y);
+                    }
+                    break;
+            }
+        }
+    }
+
     bool RDP::CheckFileDescriptor()
     {
         return ((freerdp_check_fds(m_freerdp) == 0) ? false : true);
