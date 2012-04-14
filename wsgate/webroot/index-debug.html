@@ -55,9 +55,9 @@ function SpeedTest() {
 /* /DEBUG */
 function RDPrun() {
     wsUri = wsBase
-        + '?host=' + document.id('rdphost').value
-        + '&user=' + document.id('rdpuser').value
-        + '&pass=' + document.id('rdppass').value
+        + '?host=' + encodeURIComponent(document.id('rdphost').value)
+        + '&user=' + encodeURIComponent(document.id('rdpuser').value)
+        + '&pass=' + encodeURIComponent(document.id('rdppass').value.toBase64())
         + '&mode=rdp';
     var rdp = new wsgate.RDP(wsUri, document.getElementById('screen'));
     rdp.addEvent('alert', function(msg) { alert(msg); });

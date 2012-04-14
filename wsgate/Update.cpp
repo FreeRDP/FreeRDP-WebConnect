@@ -11,6 +11,7 @@ namespace wsgate {
 
     Update::Update(wspp::wshandler *h)
         : m_wshandler(h)
+        , m_nBmCount(0)
     { }
 
     Update::~Update()
@@ -26,12 +27,12 @@ namespace wsgate {
         rdp->update->BitmapUpdate = cbBitmapUpdate;
         rdp->update->Palette = cbPalette;
         rdp->update->PlaySound = cbPlaySound;
-        rdp->update->SurfaceBits = cbSurfaceBits;
+        // rdp->update->SurfaceBits = cbSurfaceBits;
 
         rdp->update->RefreshRect = cbRefreshRect;
         rdp->update->SuppressOutput = cbSuppressOutput;
-        rdp->update->SurfaceCommand = cbSurfaceCommand;
-        rdp->update->SurfaceFrameMarker = cbSurfaceFrameMarker;
+        // rdp->update->SurfaceCommand = cbSurfaceCommand;
+        // rdp->update->SurfaceFrameMarker = cbSurfaceFrameMarker;
     }
 
     void Update::BeginPaint(rdpContext* context) {
@@ -62,9 +63,9 @@ namespace wsgate {
 
     void Update::BitmapUpdate(rdpContext* context, BITMAP_UPDATE* bitmap) {
         int i;
-        BITMAP_DATA* bitmap_data;
+        BITMAP_DATA* bmd;
         for (i = 0; i < (int) bitmap->number; i++) {
-            bitmap_data = &bitmap->rectangles[i];
+            bmd = &bitmap->rectangles[i];
             struct {
                 uint32_t op;
                 uint32_t x;
@@ -76,18 +77,25 @@ namespace wsgate {
                 uint32_t sz;
             } wxbm = {
                 WSOP_SC_BITMAP,
-                bitmap_data->destLeft, bitmap_data->destTop,
-                bitmap_data->width, bitmap_data->height,
-                bitmap_data->bitsPerPixel,
-                bitmap_data->compressed, bitmap_data->bitmapLength
+                bmd->destLeft, bmd->destTop,
+                bmd->width, bmd->height,
+                bmd->bitsPerPixel,
+                bmd->compressed, bmd->bitmapLength
             };
+            if (!bmd->compressed) {
+                freerdp_image_flip(bmd->bitmapDataStream, bmd->bitmapDataStream,
+                        bmd->width, bmd->height, bmd->bitsPerPixel);
+            }
             string buf(reinterpret_cast<const char *>(&wxbm), sizeof(wxbm));
-            buf.append(reinterpret_cast<const char *>(bitmap_data->bitmapDataStream),
-                    bitmap_data->bitmapLength);
-            log::debug << "Bitmap " << (wxbm.cf ? "C " : "U ") << "x: "
+            buf.append(reinterpret_cast<const char *>(bmd->bitmapDataStream),
+                    bmd->bitmapLength);
+#if 0
+            log::debug << "BM #" << m_nBmCount << (wxbm.cf ? " C " : " U ") << "x: "
                 << wxbm.x << " y: " << wxbm.y << " w:"
                 << wxbm.w << " h: " << wxbm.h << " bpp: " << wxbm.bpp << endl;
+#endif
             m_wshandler->send_binary(buf);
+            m_nBmCount++;
         }
     }
 

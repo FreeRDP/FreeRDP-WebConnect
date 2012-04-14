@@ -18,22 +18,33 @@ namespace wsgate {
 
     void Primary::Register(freerdp *rdp) {
         log::debug << __PRETTY_FUNCTION__ << endl;
+        rdp->update->primary->OpaqueRect = cbOpaqueRect;
+        rdp->update->primary->DstBlt = cbDstBlt;
+        rdp->update->primary->PatBlt = cbPatBlt;
+        rdp->update->primary->ScrBlt = cbScrBlt;
     }
 
     void Primary::DstBlt(rdpContext* context, DSTBLT_ORDER* dstblt) {
         log::debug << __PRETTY_FUNCTION__ << endl;
     }
 
-    void Primary::PatBlt(rdpContext* context, PATBLT_ORDER* patblt) {
+    void Primary::PatBlt(rdpContext* context, PATBLT_ORDER* po) {
+        // log::debug << __PRETTY_FUNCTION__ << endl;
+        log::debug << "PAT " << po->brush.style << " " << hex << po->bRop << dec << endl;
+    }
+
+    void Primary::ScrBlt(rdpContext* context, SCRBLT_ORDER* srcblt) {
         log::debug << __PRETTY_FUNCTION__ << endl;
     }
 
-    void Primary::ScrBlt(rdpContext* context, SCRBLT_ORDER* scrblt) {
-        log::debug << __PRETTY_FUNCTION__ << endl;
-    }
-
-    void Primary::OpaqueRect(rdpContext* context, OPAQUE_RECT_ORDER* opaque_rect) {
-        log::debug << __PRETTY_FUNCTION__ << endl;
+    void Primary::OpaqueRect(rdpContext* context, OPAQUE_RECT_ORDER* oro) {
+        // log::debug << __PRETTY_FUNCTION__ << endl;
+        HCLRCONV hclrconv = reinterpret_cast<wsgContext *>(context)->clrconv;
+        oro->color = freerdp_color_convert_var(oro->color, 16, 32, hclrconv);
+        uint32_t op = WSOP_SC_OPAQUERECT;
+        string buf(reinterpret_cast<const char *>(&op), sizeof(op));
+        buf.append(reinterpret_cast<const char *>(oro), sizeof(OPAQUE_RECT_ORDER));
+        m_wshandler->send_binary(buf);
     }
 
     void Primary::DrawNineGrid(rdpContext* context, DRAW_NINE_GRID_ORDER* draw_nine_grid) {
@@ -109,6 +120,13 @@ namespace wsgate {
     }
 
     // static callbacks
+    void Primary::cbDstBlt(rdpContext* context, DSTBLT_ORDER* dstblt) {
+        Primary *self = reinterpret_cast<wsgContext *>(context)->pPrimary;
+        if (self) {
+            self->DstBlt(context, dstblt);
+        }
+    }
+
     void Primary::cbPatBlt(rdpContext* context, PATBLT_ORDER* patblt) {
         Primary *self = reinterpret_cast<wsgContext *>(context)->pPrimary;
         if (self) {

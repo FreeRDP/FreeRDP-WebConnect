@@ -3,8 +3,10 @@
 
 extern "C" {
 #include <freerdp/input.h>
+#include <freerdp/gdi/gdi.h>
 }
 #include <freerdp/freerdp.h>
+#include <freerdp/codec/color.h>
 
 #include "wsgate.hpp"
 #include "wshandler.hpp"
@@ -19,11 +21,14 @@ namespace wsgate {
     class RDP;
     class Update;
     class Primary;
+    struct CLRCONV;
 
     typedef enum {
         WSOP_SC_BEGINPAINT,
         WSOP_SC_ENDPAINT,
-        WSOP_SC_BITMAP
+        WSOP_SC_BITMAP,
+        WSOP_SC_OPAQUERECT,
+        WSOP_SC_PATBLT
     } WsOPsc;
 
     typedef enum {
@@ -35,6 +40,7 @@ namespace wsgate {
         RDP *pRDP;
         Update *pUpdate;
         Primary *pPrimary;
+        HCLRCONV clrconv;
     } wsgContext;
 }
 

@@ -57,8 +57,9 @@ namespace wsgate {
     {
         log::debug << __PRETTY_FUNCTION__ << endl;
         Disconnect();
-        m_instances.erase(m_freerdp);
+        freerdp_context_free(m_freerdp);
         freerdp_free(m_freerdp);
+        m_instances.erase(m_freerdp);
         delete m_pUpdate;
         delete m_pPrimary;
     }
@@ -178,9 +179,10 @@ namespace wsgate {
     }
 
     // private
-    void RDP::ContextFree(freerdp *, rdpContext *)
+    void RDP::ContextFree(freerdp *rdp, rdpContext *)
     {
         log::debug << "RDP::ContextFree" << endl;
+        // gdi_free(rdp);
     }
 
     // private
@@ -191,7 +193,7 @@ namespace wsgate {
         m_pPrimary->Register(rdp);
 
         m_rdpSettings->rfx_codec = 0;
-        m_rdpSettings->fastpath_output = 0;
+        // m_rdpSettings->fastpath_output = 1;
         m_rdpSettings->color_depth = 16;
         m_rdpSettings->frame_acknowledge = 0;
         m_rdpSettings->performance_flags = 0;
@@ -200,6 +202,24 @@ namespace wsgate {
         m_rdpSettings->bitmap_cache = 0;
         m_rdpSettings->offscreen_bitmap_cache = 0;
 
+        m_rdpSettings->order_support[NEG_DRAWNINEGRID_INDEX] = 0;
+        m_rdpSettings->order_support[NEG_MULTI_DRAWNINEGRID_INDEX] = 0;
+        m_rdpSettings->order_support[NEG_MULTIDSTBLT_INDEX] = 0;
+        m_rdpSettings->order_support[NEG_MULTIPATBLT_INDEX] = 0;
+        m_rdpSettings->order_support[NEG_MULTISCRBLT_INDEX] = 0;
+
+        m_rdpSettings->order_support[NEG_SAVEBITMAP_INDEX] = 0;
+        m_rdpSettings->order_support[NEG_MEM3BLT_V2_INDEX] = 0;
+        m_rdpSettings->order_support[NEG_MEMBLT_V2_INDEX] = 0;
+
+        // memset(m_rdpSettings->order_support, 0, sizeof(m_rdpSettings->order_support));
+        // m_rdpSettings->order_support[NEG_DSTBLT_INDEX] = 0;
+        // m_rdpSettings->order_support[NEG_PATBLT_INDEX] = 0;
+        // m_rdpSettings->order_support[NEG_SCRBLT_INDEX] = 0;
+
+        reinterpret_cast<wsgContext *>(m_freerdp->context)->clrconv =
+            freerdp_clrconv_new(CLRCONV_ALPHA|CLRCONV_INVERT);
+
         return 1;
     }
 
@@ -207,6 +227,7 @@ namespace wsgate {
     boolean RDP::PostConnect(freerdp *rdp)
     {
         log::debug << "RDP::PostConnect " << hex << rdp << dec << endl;
+        // gdi_init(rdp, CLRCONV_ALPHA | CLRCONV_INVERT | CLRBUF_16BPP | CLRBUF_32BPP, NULL);
         return 1;
     }
 
@@ -228,6 +249,11 @@ namespace wsgate {
     void RDP::ThreadFunc()
     {
         while (m_bThreadLoop) {
+            if (freerdp_shall_disconnect(m_freerdp)) {
+                uint32_t e = freerdp_error_info(m_freerdp);
+                log::debug << "Shall Disconnect: " << e << endl;
+                break;
+            }
             if (!m_errMsg.empty()) {
                 m_wshandler->send_text(m_errMsg);
                 m_errMsg.clear();

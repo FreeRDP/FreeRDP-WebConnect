@@ -167,7 +167,7 @@ namespace wsgate {
                 if (0 == uri.compare("/wsgate")) {
                     string rdphost(request->FormValues("host").m_sBody);
                     string rdpuser(request->FormValues("user").m_sBody);
-                    string rdppass(request->FormValues("pass").m_sBody);
+                    string rdppass(base64_decode(request->FormValues("pass").m_sBody));
                     uint16_t rdpport = 3389;
                     if (!request->FormValues("port").m_sBody.empty()) {
                         try {
@@ -228,16 +228,51 @@ namespace wsgate {
                         return HTTPRESPONSECODE_503_SERVICEUNAVAILABLE;
                     }
 
-                    CookieParameters cookie;
-                    cookie["name"] = "lasthost";
-                    cookie["value"] = rdphost;
-                    response->SetCookie(cookie);
-                    cookie["name"] = "lastuser";
-                    cookie["value"] = rdpuser;
-                    response->SetCookie(cookie);
-                    cookie["name"] = "lastpass";
-                    cookie["value"] = rdppass;
-                    response->SetCookie(cookie);
+                    CookieParameters setcookie;
+                    setcookie["path"] = "/";
+                    setcookie["host"] = m_sHostname;
+                    setcookie["max-age"] = "864000";
+                    if (request->Secure()) {
+                        setcookie["secure"] = "";
+                    }
+                    CookieParameters delcookie;
+                    delcookie["path"] = "/";
+                    delcookie["host"] = m_sHostname;
+                    delcookie["max-age"] = "0";
+                    if (request->Secure()) {
+                        delcookie["secure"] = "";
+                    }
+
+                    if (rdphost.empty()) {
+                        delcookie["name"] = "lasthost";
+                        delcookie["value"] = "%20";
+                        response->SetCookie(delcookie);
+                    } else {
+                        setcookie["name"] = "lasthost";
+                        setcookie["value"] = rdphost;
+                        response->SetCookie(setcookie);
+                    }
+                    if (rdpuser.empty()) {
+                        delcookie["name"] = "lastuser";
+                        delcookie["value"] = "%20";
+                        response->SetCookie(delcookie);
+                    } else {
+                        setcookie["name"] = "lastuser";
+                        setcookie["value"] = rdpuser;
+                        response->SetCookie(setcookie);
+                    }
+                    if (rdppass.empty()) {
+                        delcookie["name"] = "lastpass";
+                        delcookie["value"] = base64_encode(
+                                reinterpret_cast<const unsigned char *>("%20"), 3);
+                        response->SetCookie(delcookie);
+                    } else {
+                        setcookie["name"] = "lastpass";
+                        setcookie["value"] = base64_encode(
+                                reinterpret_cast<const unsigned char *>(rdppass.c_str()),
+                                rdppass.length());
+                        response->SetCookie(setcookie);
+                    }
 
                     response->RemoveHeader("Content-Type");
                     response->RemoveHeader("Content-Length");
@@ -305,11 +340,11 @@ namespace wsgate {
                         << m_sHostname << ":" << request->LocalPort() << "/wsgate";
                     replace_all(rbuf, "%WSURI%", oss.str());
                     replace_all(rbuf, "%JSDEBUG%", (m_bDebug ? "-debug" : ""));
-                    string tmp(request->Cookies("last_user"));
+                    string tmp(request->Cookies("lastuser"));
                     replace_all(rbuf, "%COOKIE_LASTUSER%", tmp);
-                    tmp = request->Cookies("last_pass");
+                    tmp = base64_decode(request->Cookies("lastpass"));
                     replace_all(rbuf, "%COOKIE_LASTPASS%", tmp);
-                    tmp = request->Cookies("last_host");
+                    tmp = request->Cookies("lasthost");
                     replace_all(rbuf, "%COOKIE_LASTHOST%", tmp);
                 }
                 switch (mt) {

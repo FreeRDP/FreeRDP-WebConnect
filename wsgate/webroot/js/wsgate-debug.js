@@ -41,9 +41,16 @@ wsgate.RDP = new Class( {
         this.parent(url);
         this.canvas = canvas;
         this.cctx = canvas.getContext('2d');
+        this.bmcount = 0;
+        this.ccnt = 0;
     },
     Disconnect: function() {
-        this.sock.close();
+        if (this.sock.readyState == this.sock.OPEN) {
+            this.sock.close();
+        }
+        while (this.ccnt--) {
+            this.cctx.restore();
+        }
         this.cctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
     },
     onMouseMove: function(evt) {
@@ -93,7 +100,7 @@ wsgate.RDP = new Class( {
            */
     },
     onWSmsg: function(evt) {
-        var op, hdr, data;
+        var op, hdr, data, rgba;
         switch (typeof(evt.data)) {
             case 'string':
                 wsgate.log.debug(evt.data);
@@ -101,6 +108,7 @@ wsgate.RDP = new Class( {
                     case "E:":
                             wsgate.log.err(evt.data.substring(2));
                             this.sock.close();
+                            this.fireEvent('disconnected');
                             this.fireEvent('alert', evt.data.substring(2));
                             break;
                     case 'I:':
@@ -120,10 +128,12 @@ wsgate.RDP = new Class( {
                     case 0:
                         // BeginPaint
                         // wsgate.log.debug('BeginPaint');
+                        this.ctxS();
                         break;
                     case 1:
                         // EndPaint
                         // wsgate.log.debug('EndPaint');
+                        this.ctxR();
                         break;
                     case 2:
                         /// Single bitmap
@@ -136,34 +146,44 @@ wsgate.RDP = new Class( {
                         //  5 uint32 Flag: Compressed
                         //  6 uint32 DataSize
                         //
+                        // wsgate.log.debug('BM #', this.bmcount++);
                         hdr = new Uint32Array(evt.data, 4, 7);
                         bmdata = new Uint8Array(evt.data, 32);
                         compressed =  (hdr[5] != 0);
-                        /*
-                           wsgate.log.debug('Bitmap:',
-                           (compressed ? ' C ' : ' U '),
-                           ' x: ', hdr[0], ' y: ', hdr[1],
-                           ' w: ', hdr[2], ' h: ', hdr[3],
-                           ' bpp: ', hdr[4]
-                           );
-                           */
+                        wsgate.log.drop('Bitmap:',
+                                (compressed ? ' C ' : ' U '),
+                                ' x: ', hdr[0], ' y: ', hdr[1],
+                                ' w: ', hdr[2], ' h: ', hdr[3],
+                                ' bpp: ', hdr[4]
+                                );
                         if ((hdr[4] == 16) || (hdr[4] == 15)) {
                             var outB = this.cctx.createImageData(hdr[2], hdr[3]);
                             if (compressed) {
-                                if (!wsgate.dRLE16(bmdata, hdr[6], hdr[2], outB.data)) {
-                                    this.cctx.putImageData(outB, hdr[0], hdr[1]);
-                                } else {
-                                    wsgate.log.warn('Decompression error');
-                                }
+                                // var tmp = new Uint8Array(hdr[2] * hdr[3] * 2);
+                                // wsgate.dRLE16(bmdata, hdr[6], hdr[2], tmp);
+                                // wsgate.dRGB162RGBA(tmp, hdr[6], outB.data);
+                                wsgate.dRLE16_RGBA(bmdata, hdr[6], hdr[2], outB.data);
+                                wsgate.flipV(outB.data, hdr[2], hdr[3]);
                             } else {
-                                wsgate.dRGB162RGPA(bmdata, hdr[6], outB.data);
-                                this.cctx.putImageData(outB, hdr[0], hdr[1]);
-                                wsgate.log.warn('Uncompressed not yet implemented');
+                                wsgate.dRGB162RGBA(bmdata, hdr[6], outB.data);
                             }
+                            this.cctx.putImageData(outB, hdr[0], hdr[1]);
                         } else {
                             wsgate.log.warn('BPP <> 15/16 not yet implemented');
                         }
                         break;
+                    case 3:
+                        // Primary: OPAQUE_RECT_ORDER
+                        // x, y , w, h, color
+                        hdr = new Int32Array(evt.data, 4, 4);
+                        rgba = new Uint8Array(evt.data, 20, 4);
+                        wsgate.log.drop('Fill:',hdr[0], hdr[1], hdr[2], hdr[3], this.c2s(rgba));
+                        this.cctx.fillStyle = this.c2s(rgba);
+                        this.cctx.fillRect(hdr[0], hdr[1], hdr[2], hdr[3]);
+                        break;
+                    case 4:
+                        // PatBlt
+                        // 
                     default:
                         wsgate.log.warn('Unknown BINRESP: ', evt.data.byteLength);
                 }
@@ -183,9 +203,23 @@ wsgate.RDP = new Class( {
     },
     onWSerr: function (evt) {
         this.canvas.removeEvents();
-        wsgate.log.warn(evt);
         this.fireEvent('disconnected');
-        this.fireEvent('error', evt);
+        switch (this.sock.readyState) {
+            case this.sock.CONNECTING:
+                this.fireEvent('alert', 'Could not connect to WebSockets gateway');
+                break;
+        }
+    },
+    c2s: function(c) {
+        return 'rgba' + '(' + c[0] + ',' + c[1] + ',' + c[2] + ',' + ((0.0 + c[3]) / 255) + ')';
+    },
+    ctxS: function() {
+            this.cctx.save();
+            this.ccnt += 1;
+    },
+    ctxR: function() {
+        this.cctx.restore();
+        this.ccnt -= 1;
     }
 });
 /* DEBUG */
@@ -263,6 +297,8 @@ wsgate.SpeedTest = new Class( {
 /* /DEBUG */
 
 wsgate.log = {
+    drop: function() {
+    },
     debug: function() {
         console.debug.apply(this, arguments);
     },
@@ -277,11 +313,22 @@ wsgate.log = {
     }
 }
 
-wsgate.copyRGBA = function(inA, inI, outA, outI) {
-    outA[outI++] = inA[inI++];
-    outA[outI++] = inA[inI++];
+wsgate.copy16 = function(inA, inI, outA, outI) {
     outA[outI++] = inA[inI++];
     outA[outI] = inA[inI];
+}
+wsgate.xorbuf16 = function(inA, inI, outA, outI, pel) {
+    var newPEL = (inA[inI] | (inA[inI + 1] << 8)) ^ pel;
+    outA[outI++] = newPEL & 0xFF;
+    outA[outI] = (newPEL >> 8) & 0xFF;
+}
+wsgate.pel16 = function (pel, outA, outI) {
+    outA[outI++] = pel & 0xFF;
+    outA[outI] = (pel >> 8) & 0xFF;
+}
+
+wsgate.copyRGBA = function(inA, inI, outA, outI) {
+    outA.set(inA.subarray(inI, inI + 4), outI);
 }
 wsgate.xorbufRGBAPel16 = function(inA, inI, outA, outI, pel) {
     var pelR = (pel & 0xF800) >> 11;
@@ -312,15 +359,6 @@ wsgate.buf2RGBA = function(inA, inI, outA, outI) {
     outA[outI++] = pelB;
     outA[outI] = 255;                    // alpha
 }
-wsgate.dRGB162RGPA = function(inA, inLength, outA) {
-    var inI = 0;
-    var outI = 0;
-    while (inI < inLength) {
-        wsgate.buf2RGBA(inA, inI, outA, outI);
-        inI += 2;
-        outI += 4;
-    }
-}
 wsgate.pel2RGBA = function (pel, outA, outI) {
     var pelR = (pel & 0xF800) >> 11;
     var pelG = (pel & 0x7E0) >> 5;
@@ -334,6 +372,32 @@ wsgate.pel2RGBA = function (pel, outA, outI) {
     outA[outI++] = pelG;
     outA[outI++] = pelB;
     outA[outI] = 255;                    // alpha
+}
+
+wsgate.flipV = function(inA, width, height) {
+    var sll = width * 4;
+    var half = height / 2;
+    var lbot = sll * (height - 1);
+    var ltop = 0;
+    var tmp;
+    var i;
+    for (i = 0; i < half ; ++i) {
+        tmp = inA.subarray(ltop, ltop + sll)
+        inA.set(inA.subarray(lbot, lbot + sll), ltop);
+        inA.set(tmp, lbot);
+        ltop += sll;
+        lbot -= sll;
+    }
+}
+
+wsgate.dRGB162RGBA = function(inA, inLength, outA) {
+    var inI = 0;
+    var outI = 0;
+    while (inI < inLength) {
+        wsgate.buf2RGBA(inA, inI, outA, outI);
+        inI += 2;
+        outI += 4;
+    }
 }
 
 wsgate.ExtractCodeId = function(bOrderHdr) {
@@ -420,7 +484,7 @@ wsgate.ExtractRunLength = function(code, inA, inI, advance) {
     return runLength;
 }
 
-wsgate.WriteFgBgImage16to16 = function(outA, outI, rowDelta, bitmask, fgPel, cBits) {
+wsgate.WriteFgBgImage16toRGBA = function(outA, outI, rowDelta, bitmask, fgPel, cBits) {
     var cmpMask = 0x01;
 
     while (cBits-- > 0) {
@@ -435,7 +499,7 @@ wsgate.WriteFgBgImage16to16 = function(outA, outI, rowDelta, bitmask, fgPel, cBi
     return outI;
 }
 
-wsgate.WriteFirstLineFgBgImage16to16 = function(outA, outI, bitmask, fgPel, cBits) {
+wsgate.WriteFirstLineFgBgImage16toRGBA = function(outA, outI, bitmask, fgPel, cBits) {
     var cmpMask = 0x01;
 
     while (cBits-- > 0) {
@@ -450,7 +514,205 @@ wsgate.WriteFirstLineFgBgImage16to16 = function(outA, outI, bitmask, fgPel, cBit
     return outI;
 }
 
+wsgate.WriteFgBgImage16to16 = function(outA, outI, rowDelta, bitmask, fgPel, cBits) {
+    var cmpMask = 0x01;
+
+    while (cBits-- > 0) {
+        if (bitmask & cmpMask) {
+            wsgate.xorbuf16(outA, outI - rowDelta, outA, outI, fgPel);
+        } else {
+            wsgate.copy16(outA, outI - rowDelta, outA, outI);
+        }
+        outI += 2;
+        cmpMask <<= 1;
+    }
+    return outI;
+}
+
+wsgate.WriteFirstLineFgBgImage16to16 = function(outA, outI, bitmask, fgPel, cBits) {
+    var cmpMask = 0x01;
+
+    while (cBits-- > 0) {
+        if (bitmask & cmpMask) {
+            wsgate.pel16(fgPel, outA, outI);
+        } else {
+            wsgate.pel16(0, outA, outI);
+        }
+        outI += 2;
+        cmpMask <<= 1;
+    }
+    return outI;
+}
+
 wsgate.dRLE16 = function(inA, inLength, width, outA) {
+    var runLength;
+    var code, pixelA, pixelB, bitmask;
+    var inI = 0;
+    var outI = 0;
+    var fInsertFgPel = false;
+    var fFirstLine = true;
+    var fgPel = 0xFFFFFF;
+    var rowDelta = width * 2;
+    var advance = {val: 0};
+
+    while (inI < inLength) {
+        if (fFirstLine) {
+            if (outI >= rowDelta) {
+                fFirstLine = false;
+                fInsertFgPel = false;
+            }
+        }
+        code = wsgate.ExtractCodeId(inA[inI]);
+        if (code == 0x00 || code == 0xF0) {
+            runLength = wsgate.ExtractRunLength(code, inA, inI, advance);
+            inI += advance.val;
+            if (fFirstLine) {
+                if (fInsertFgPel) {
+                    wsgate.pel16(fgPel, outA, outI);
+                    outI += 2;
+                    runLength -= 1;
+                }
+                while (runLength-- > 0) {
+                    wsgate.pel16(0, outA, outI);
+                    outI += 2;
+                }
+            } else {
+                if (fInsertFgPel) {
+                    wsgate.xorbuf16(outA, outI - rowDelta, outA, outI, fgPel);
+                    outI += 2;
+                    runLength -= 1;
+                }
+                while (runLength-- > 0) {
+                    wsgate.copy16(outA, outI - rowDelta, outA, outI);
+                    outI += 2;
+                }
+            }
+            fInsertFgPel = true;
+            continue;
+        }
+        fInsertFgPel = false;
+        switch (code) {
+            case 0x01:
+            case 0xF1:
+            case 0x0C:
+            case 0xF6:
+                runLength = wsgate.ExtractRunLength(code, inA, inI, advance);
+                inI += advance.val;
+                if (code == 0x0C || code == 0xF6) {
+                    fgPel = inA[inI] | (inA[inI + 1] << 8);
+                    inI += 2;
+                }
+                if (fFirstLine) {
+                    while (runLength-- > 0) {
+                        wsgate.pel16(fgPel, outA, outI);
+                        outI += 2;
+                    }
+                } else {
+                    while (runLength-- > 0) {
+                        wsgate.xorbuf16(outA, outI - rowDelta, outA, outI, fgPel);
+                        outI += 2;
+                    }
+                }
+                break;
+            case 0x0E:
+            case 0xF8:
+                runLength = wsgate.ExtractRunLength(code, inA, inI, advance);
+                inI += advance.val;
+                pixelA = inA[inI] | (inA[inI + 1] << 8);
+                inI += 2;
+                pixelB = inA[inI] | (inA[inI + 1] << 8);
+                inI += 2;
+                while (runLength-- > 0) {
+                    wsgate.pel16(pixelA, outA, outI);
+                    outI += 2;
+                    wsgate.pel16(pixelB, outA, outI);
+                    outI += 2;
+                }
+                break;
+            case 0x03:
+            case 0xF3:
+                runLength = wsgate.ExtractRunLength(code, inA, inI, advance);
+                inI += advance.val;
+                pixelA = inA[inI] | (inA[inI + 1] << 8);
+                inI += 2;
+                while (runLength-- > 0) {
+                    wsgate.pel16(pixelA, outA, outI);
+                    outI += 2;
+                }
+                break;
+            case 0x02:
+            case 0xF2:
+            case 0x0D:
+            case 0xF7:
+                runLength = wsgate.ExtractRunLength(code, inA, inI, advance);
+                inI += advance.val;
+                if (code == 0x0D || code == 0xF7) {
+                    fgPel = inA[inI] | (inA[inI + 1] << 8);
+                    inI += 2;
+                }
+                if (fFirstLine) {
+                    while (runLength >= 8) {
+                        bitmask = inA[inI++];
+                        outI = wsgate.WriteFirstLineFgBgImage16to16(outA, outI, bitmask, fgPel, 8);
+                        runLength -= 8;
+                    }
+                } else {
+                    while (runLength >= 8) {
+                        bitmask = inA[inI++];
+                        outI = wsgate.WriteFgBgImage16to16(outA, outI, rowDelta, bitmask, fgPel, 8);
+                        runLength -= 8;
+                    }
+                }
+                if (runLength-- > 0) {
+                    bitmask = inA[inI++];
+                    if (fFirstLine) {
+                        outI = wsgate.WriteFirstLineFgBgImage16to16(outA, outI, bitmask, fgPel, runLength);
+                    } else {
+                        outI = wsgate.WriteFgBgImage16to16(outA, outI, rowDelta, bitmask, fgPel, runLength);
+                    }
+                }
+                break;
+            case 0x04:
+            case 0xF4:
+                runLength = wsgate.ExtractRunLength(code, inA, inI, advance);
+                inI += advance.val;
+                while (runLength-- > 0) {
+                    wsgate.copy16(inA, inI, outA, outI);
+                    inI += 2;
+                    outI += 2;
+                }
+                break;
+            case 0xF9:
+                inI += 1;
+                if (fFirstLine) {
+                    outI = wsgate.WriteFirstLineFgBgImage16to16(outA, outI, 0x03, fgPel, 8);
+                } else {
+                    outI = wsgate.WriteFgBgImage16to16(outA, outI, rowDelta, 0x03, fgPel, 8);
+                }
+                break;
+            case 0xFA:
+                inI += 1;
+                if (fFirstLine) {
+                    outI = wsgate.WriteFirstLineFgBgImage16to16(outA, outI, 0x05, fgPel, 8);
+                } else {
+                    outI = wsgate.WriteFgBgImage16to16(outA, outI, rowDelta, 0x05, fgPel, 8);
+                }
+                break;
+            case 0xFD:
+                inI += 1;
+                wsgate.pel16(0xFFFF, outA, outI);
+                outI += 2;
+                break;
+            case 0xFE:
+                inI += 1;
+                wsgate.pel16(0, outA, outI);
+                outI += 2;
+                break;
+        }
+    }
+}
+
+wsgate.dRLE16_RGBA = function(inA, inLength, width, outA) {
     var runLength;
     var code, pixelA, pixelB, bitmask;
     var inI = 0;
@@ -559,22 +821,22 @@ wsgate.dRLE16 = function(inA, inLength, width, outA) {
                 if (fFirstLine) {
                     while (runLength >= 8) {
                         bitmask = inA[inI++];
-                        outI = wsgate.WriteFirstLineFgBgImage16to16(outA, outI, bitmask, fgPel, 8);
+                        outI = wsgate.WriteFirstLineFgBgImage16toRGBA(outA, outI, bitmask, fgPel, 8);
                         runLength -= 8;
                     }
                 } else {
                     while (runLength >= 8) {
                         bitmask = inA[inI++];
-                        outI = wsgate.WriteFgBgImage16to16(outA, outI, rowDelta, bitmask, fgPel, 8);
+                        outI = wsgate.WriteFgBgImage16toRGBA(outA, outI, rowDelta, bitmask, fgPel, 8);
                         runLength -= 8;
                     }
                 }
                 if (runLength-- > 0) {
                     bitmask = inA[inI++];
                     if (fFirstLine) {
-                        outI = wsgate.WriteFirstLineFgBgImage16to16(outA, outI, bitmask, fgPel, runLength);
+                        outI = wsgate.WriteFirstLineFgBgImage16toRGBA(outA, outI, bitmask, fgPel, runLength);
                     } else {
-                        outI = wsgate.WriteFgBgImage16to16(outA, outI, rowDelta, bitmask, fgPel, runLength);
+                        outI = wsgate.WriteFgBgImage16toRGBA(outA, outI, rowDelta, bitmask, fgPel, runLength);
                     }
                 }
                 break;
@@ -591,17 +853,17 @@ wsgate.dRLE16 = function(inA, inLength, width, outA) {
             case 0xF9:
                 inI += 1;
                 if (fFirstLine) {
-                    outI = wsgate.WriteFirstLineFgBgImage16to16(outA, outI, 0x03, fgPel, 8);
+                    outI = wsgate.WriteFirstLineFgBgImage16toRGBA(outA, outI, 0x03, fgPel, 8);
                 } else {
-                    outI = wsgate.WriteFgBgImage16to16(outA, outI, rowDelta, 0x03, fgPel, 8);
+                    outI = wsgate.WriteFgBgImage16toRGBA(outA, outI, rowDelta, 0x03, fgPel, 8);
                 }
                 break;
             case 0xFA:
                 inI += 1;
                 if (fFirstLine) {
-                    outI = wsgate.WriteFirstLineFgBgImage16to16(outA, outI, 0x05, fgPel, 8);
+                    outI = wsgate.WriteFirstLineFgBgImage16toRGBA(outA, outI, 0x05, fgPel, 8);
                 } else {
-                    outI = wsgate.WriteFgBgImage16to16(outA, outI, rowDelta, 0x05, fgPel, 8);
+                    outI = wsgate.WriteFgBgImage16toRGBA(outA, outI, rowDelta, 0x05, fgPel, 8);
                 }
                 break;
             case 0xFD:

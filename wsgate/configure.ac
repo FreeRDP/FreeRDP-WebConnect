@@ -299,6 +299,12 @@ dnl FreeRDP
 AC_CHECK_LIB([freerdp-core],[freerdp_input_send_keyboard_event],
     [WSGATE_LDADD="$WSGATE_LDADD -lfreerdp-core"],
     [AC_MSG_ERROR([You need freerdp from GIT!])])
+AC_CHECK_LIB([freerdp-codec],[freerdp_color_convert_var],
+    [WSGATE_LDADD="$WSGATE_LDADD -lfreerdp-codec"],
+    [AC_MSG_ERROR([You need freerdp from GIT!])])
+AC_CHECK_LIB([freerdp-gdi],[gdi_init],
+    [WSGATE_LDADD="$WSGATE_LDADD -lfreerdp-gdi"],
+    [AC_MSG_ERROR([You need freerdp from GIT!])])
 
 dnl Required for js and css compression: java
 AC_CHECK_TOOL([JAVA],[java],[])
