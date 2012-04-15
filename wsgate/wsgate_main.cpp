@@ -176,8 +176,6 @@ namespace wsgate {
                 if (uri.npos != pos) {
                     uri.erase(pos);
                 }
-                log::debug << "Request from " << request->RemoteAddress()
-                    << ": " << uri << endl;
 
                 if (0 == uri.compare("/wsgate")) {
                     int dtwidth = 1024;
@@ -212,6 +210,8 @@ namespace wsgate {
                     }
                     response->SetBody("", 0);
                     if (0 != request->HttpVersion().compare("1.1")) {
+                        log::warn << "Request from " << request->RemoteAddress()
+                            << ": " << uri << " => 400 (Not HTTP 1.1)" << endl;
                         return HTTPRESPONSECODE_400_BADREQUEST;
                     }
                     string wshost(to_lower_copy(request->Headers("Host")));
@@ -222,23 +222,32 @@ namespace wsgate {
                     string wsproto(request->Headers("Sec-WebSocket-Protocol"));
                     string wsext(request->Headers("Sec-WebSocket-Extension"));
                     if (!MultivalHeaderContains(wsconn, "upgrade")) {
+                        log::warn << "Request from " << request->RemoteAddress()
+                            << ": " << uri << " => 400 (No upgrade header)" << endl;
                         return HTTPRESPONSECODE_400_BADREQUEST;
                     }
                     if (!MultivalHeaderContains(wsupg, "websocket")) {
+                        log::warn << "Request from " << request->RemoteAddress()
+                            << ": " << uri << " => 400 (Upgrade header does not contain websocket tag)" << endl;
                         return HTTPRESPONSECODE_400_BADREQUEST;
                     }
                     if (0 != wshost.compare(m_sHostname)) {
-                        log::warn << "wshost:'" << wshost << "' hostname:'" << m_sHostname << "'" << endl;
+                        log::warn << "Request from " << request->RemoteAddress()
+                            << ": " << uri << " => 400 (Host header does not match)" << endl;
                         return HTTPRESPONSECODE_400_BADREQUEST;
                     }
                     string wskey_decoded(base64_decode(wskey));
                     if (16 != wskey_decoded.length()) {
+                        log::warn << "Request from " << request->RemoteAddress()
+                            << ": " << uri << " => 400 (Invalid WebSocket key)" << endl;
                         return HTTPRESPONSECODE_400_BADREQUEST;
                     }
                     SHA1 sha1;
                     uint32_t digest[5];
                     sha1 << wskey.c_str() << ws_magic;
                     if (!sha1.Result(digest)) {
+                        log::warn << "Request from " << request->RemoteAddress()
+                            << ": " << uri << " => 500 (Digest calculation failed)" << endl;
                         return HTTPRESPONSECODE_500_INTERNALSERVERERROR;
                     }
                     // Handle endianess
@@ -248,6 +257,8 @@ namespace wsgate {
 
                     if (!MultivalHeaderContains(wsver, "13")) {
                         response->SetHeader("Sec-WebSocket-Version", "13");
+                        log::warn << "Request from " << request->RemoteAddress()
+                            << ": " << uri << " => 426 (Protocol version not 13)" << endl;
                         return HTTPRESPONSECODE_426_UPGRADE_REQUIRED;
                     }
 
@@ -256,6 +267,8 @@ namespace wsgate {
                         throw tracing::runtime_error("No raw socket handler available");
                     }
                     if (!sh->Prepare(request->Connection(), mode, rdphost, rdpport, rdpuser, rdppass, dtwidth, dtheight)) {
+                        log::warn << "Request from " << request->RemoteAddress()
+                            << ": " << uri << " => 503 (RDP backend not available)" << endl;
                         return HTTPRESPONSECODE_503_SERVICEUNAVAILABLE;
                     }
 
@@ -317,6 +330,8 @@ namespace wsgate {
                     response->SetHeader("Connection", "Upgrade");
                     response->SetHeader("Sec-WebSocket-Accept",
                             base64_encode(reinterpret_cast<const unsigned char *>(digest), 20));
+                        log::info << "Request from " << request->RemoteAddress()
+                            << ": " << uri << " => 101" << endl;
                     return HTTPRESPONSECODE_101_SWITCHING_PROTOCOLS;
                 }
 
@@ -328,7 +343,8 @@ namespace wsgate {
                 p.normalize();
 
                 if (!exists(p)) {
-                    log::warn << "Does not exist: '" << p << "'" << endl;
+                    log::warn << "Request from " << request->RemoteAddress()
+                        << ": " << uri << " => 404 Not found" << endl;
                     return HTTPRESPONSECODE_404_NOTFOUND;
                 }
                 time_t mtime = last_write_time(p);
@@ -346,6 +362,8 @@ namespace wsgate {
                         response->RemoveHeader("Content-Length");
                         response->RemoveHeader("Last-Modified");
                         response->RemoveHeader("Cache-Control");
+                        log::info << "Request from " << request->RemoteAddress()
+                            << ": " << uri << " => 304 Not modified" << endl;
                         return HTTPRESPONSECODE_304_NOT_MODIFIED;
                     }
                 }
@@ -353,7 +371,8 @@ namespace wsgate {
 
                 fs::ifstream f(p, ios::binary);
                 if (f.fail()) {
-                    log::warn << "Could not open '" << p << "'" << endl;
+                    log::warn << "Request from " << request->RemoteAddress()
+                        << ": " << uri << " => 404 (file '" << p << "' unreadable)" << endl;
                     return HTTPRESPONSECODE_404_NOTFOUND;
                 }
                 f.seekg (0, ios::end);
@@ -402,6 +421,8 @@ namespace wsgate {
                         break;
                 }
                 response->SetBody(rbuf.data(), rbuf.length());
+                log::info << "Request from " << request->RemoteAddress()
+                    << ": " << uri << " => 200 OK" << endl;
                 return HTTPRESPONSECODE_200_OK;
             }
 
