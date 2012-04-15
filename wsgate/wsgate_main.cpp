@@ -266,9 +266,12 @@ namespace wsgate {
                     if (!sh) {
                         throw tracing::runtime_error("No raw socket handler available");
                     }
+                    response->EnableIdleTimeout(false);
+                    response->EnableKeepAlive(true);
                     if (!sh->Prepare(request->Connection(), mode, rdphost, rdpport, rdpuser, rdppass, dtwidth, dtheight)) {
                         log::warn << "Request from " << request->RemoteAddress()
                             << ": " << uri << " => 503 (RDP backend not available)" << endl;
+                        response->EnableIdleTimeout(true);
                         return HTTPRESPONSECODE_503_SERVICEUNAVAILABLE;
                     }
 

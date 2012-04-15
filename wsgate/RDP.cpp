@@ -99,6 +99,7 @@ namespace wsgate {
         if (m_bThreadLoop) {
             m_bThreadLoop = false;
             if (STATE_CONNECTED == m_State) {
+                m_State = STATE_CLOSED;
                 return (freerdp_disconnect(m_freerdp) != 0);
             }
             pthread_join(m_worker, NULL);
@@ -197,8 +198,25 @@ namespace wsgate {
         m_pUpdate->Register(rdp);
         m_pPrimary->Register(rdp);
 
+        // Settings for RFX:
+#if 0
+        m_rdpSettings->rfx_codec = 1;
+        m_rdpSettings->fastpath_output = 1;
+        m_rdpSettings->color_depth = 32;
+        m_rdpSettings->frame_acknowledge = 0;
+        m_rdpSettings->performance_flags = PERF_FLAG_NONE;
+        m_rdpSettings->large_pointer = true;
+#endif
+
+        // TODO: configurable 
+        m_rdpSettings->disable_wallpaper = 0;
+        m_rdpSettings->disable_full_window_drag = 0;
+        m_rdpSettings->disable_menu_animations = 0;
+        m_rdpSettings->disable_theming = 0;
+        // ? settings->dektop_composition = 0;
+
         m_rdpSettings->rfx_codec = 0;
-        // m_rdpSettings->fastpath_output = 1;
+        m_rdpSettings->fastpath_output = 1;
         m_rdpSettings->color_depth = 16;
         m_rdpSettings->frame_acknowledge = 0;
         m_rdpSettings->performance_flags = 0;
@@ -313,7 +331,9 @@ namespace wsgate {
             usleep(100);
         }
         log::debug << "RDP client thread terminated" << endl;
-        m_wshandler->send_text("T:");
+        if (STATE_CONNECTED == m_State) {
+            m_wshandler->send_text("T:");
+        }
     }
 
     // private C callback
