@@ -22,12 +22,12 @@ namespace wsgate {
         rdp->update->BeginPaint = cbBeginPaint;
         rdp->update->EndPaint = cbEndPaint;
         rdp->update->SetBounds = cbSetBounds;
-        // ignored rdp->update->Synchronize = cbSynchronize;
+        rdp->update->Synchronize = cbSynchronize;
         rdp->update->DesktopResize = cbDesktopResize;
         rdp->update->BitmapUpdate = cbBitmapUpdate;
         rdp->update->Palette = cbPalette;
         rdp->update->PlaySound = cbPlaySound;
-        // rdp->update->SurfaceBits = cbSurfaceBits;
+        rdp->update->SurfaceBits = cbSurfaceBits;
 
         rdp->update->RefreshRect = cbRefreshRect;
         rdp->update->SuppressOutput = cbSuppressOutput;
@@ -35,22 +35,22 @@ namespace wsgate {
         // rdp->update->SurfaceFrameMarker = cbSurfaceFrameMarker;
     }
 
-    void Update::BeginPaint(rdpContext* context) {
+    void Update::BeginPaint(rdpContext*) {
         // log::debug << __PRETTY_FUNCTION__ << endl;
         uint32_t op = WSOP_SC_BEGINPAINT;
         string buf(reinterpret_cast<const char *>(&op), sizeof(op));
         m_wshandler->send_binary(buf);
     }
 
-    void Update::EndPaint(rdpContext* context) {
+    void Update::EndPaint(rdpContext*) {
         // log::debug << __PRETTY_FUNCTION__ << endl;
         uint32_t op = WSOP_SC_ENDPAINT;
         string buf(reinterpret_cast<const char *>(&op), sizeof(op));
         m_wshandler->send_binary(buf);
     }
 
-    void Update::SetBounds(rdpContext* context, rdpBounds* bounds) {
-        log::debug << __PRETTY_FUNCTION__ << endl;
+    void Update::SetBounds(rdpContext*, rdpBounds* bounds) {
+        // log::debug << __PRETTY_FUNCTION__ << endl;
         rdpBounds lB;
         uint32_t op = WSOP_SC_SETBOUNDS;
         if (bounds) {
@@ -58,20 +58,22 @@ namespace wsgate {
         } else {
             memset(&lB, 0, sizeof(rdpBounds));
         }
+        log::debug << "SetBounds l: " << lB.left << " t: " << lB.top
+            << " r: " << lB.right << " b: " << lB.bottom << endl;
         string buf(reinterpret_cast<const char *>(&op), sizeof(op));
         buf.append(reinterpret_cast<const char *>(&lB), sizeof(lB));
         m_wshandler->send_binary(buf);
     }
 
-    void Update::Synchronize(rdpContext* context) {
+    void Update::Synchronize(rdpContext*) {
         log::debug << __PRETTY_FUNCTION__ << endl;
     }
 
-    void Update::DesktopResize(rdpContext* context) {
+    void Update::DesktopResize(rdpContext*) {
         log::debug << __PRETTY_FUNCTION__ << endl;
     }
 
-    void Update::BitmapUpdate(rdpContext* context, BITMAP_UPDATE* bitmap) {
+    void Update::BitmapUpdate(rdpContext*, BITMAP_UPDATE* bitmap) {
         int i;
         BITMAP_DATA* bmd;
         for (i = 0; i < (int) bitmap->number; i++) {
@@ -109,34 +111,35 @@ namespace wsgate {
         }
     }
 
-    void Update::Palette(rdpContext* context, PALETTE_UPDATE* palette) {
+    void Update::Palette(rdpContext*, PALETTE_UPDATE*) {
         log::debug << __PRETTY_FUNCTION__ << endl;
     }
 
-    void Update::PlaySound(rdpContext* context, PLAY_SOUND_UPDATE* play_sound) {
+    void Update::PlaySound(rdpContext*, PLAY_SOUND_UPDATE*) {
         log::debug << __PRETTY_FUNCTION__ << endl;
     }
 
-    void Update::RefreshRect(rdpContext* context, uint8 count, RECTANGLE_16* areas) {
+    void Update::RefreshRect(rdpContext*, uint8, RECTANGLE_16*) {
         log::debug << __PRETTY_FUNCTION__ << endl;
     }
 
-    void Update::SuppressOutput(rdpContext* context, uint8 allow, RECTANGLE_16* area) {
+    void Update::SuppressOutput(rdpContext*, uint8, RECTANGLE_16*) {
         log::debug << __PRETTY_FUNCTION__ << endl;
     }
 
-    void Update::SurfaceCommand(rdpContext* context, STREAM* s) {
+    void Update::SurfaceCommand(rdpContext*, STREAM*) {
         log::debug << __PRETTY_FUNCTION__ << endl;
     }
 
-    void Update::SurfaceBits(rdpContext* context, SURFACE_BITS_COMMAND* surface_bits_command) {
+    void Update::SurfaceBits(rdpContext*, SURFACE_BITS_COMMAND*) {
         log::debug << __PRETTY_FUNCTION__ << endl;
     }
 
-    void Update::SurfaceFrameMarker(rdpContext* context, SURFACE_FRAME_MARKER* surface_frame_marker) {
+    void Update::SurfaceFrameMarker(rdpContext*, SURFACE_FRAME_MARKER*) {
         log::debug << __PRETTY_FUNCTION__ << endl;
     }
 
+    // C callbacks
     void Update::cbBeginPaint(rdpContext* context) {
         Update *self = reinterpret_cast<wsgContext *>(context)->pUpdate;
         if (self) {

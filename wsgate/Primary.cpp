@@ -24,17 +24,17 @@ namespace wsgate {
         rdp->update->primary->ScrBlt = cbScrBlt;
     }
 
-    void Primary::DstBlt(rdpContext* context, DSTBLT_ORDER* dstblt) {
+    void Primary::DstBlt(rdpContext*, DSTBLT_ORDER*) {
         log::debug << __PRETTY_FUNCTION__ << endl;
     }
 
-    void Primary::PatBlt(rdpContext* context, PATBLT_ORDER* po) {
+    void Primary::PatBlt(rdpContext*, PATBLT_ORDER* po) {
         // log::debug << __PRETTY_FUNCTION__ << endl;
         uint32_t rop3 = gdi_rop3_code(po->bRop);
         log::debug << "PAT " << po->brush.style << " " << hex << rop3 << dec << endl;
     }
 
-    void Primary::ScrBlt(rdpContext* context, SCRBLT_ORDER* srcblt) {
+    void Primary::ScrBlt(rdpContext*, SCRBLT_ORDER*) {
         log::debug << __PRETTY_FUNCTION__ << endl;
     }
 
@@ -48,75 +48,75 @@ namespace wsgate {
         m_wshandler->send_binary(buf);
     }
 
-    void Primary::DrawNineGrid(rdpContext* context, DRAW_NINE_GRID_ORDER* draw_nine_grid) {
+    void Primary::DrawNineGrid(rdpContext*, DRAW_NINE_GRID_ORDER*) {
         log::debug << __PRETTY_FUNCTION__ << endl;
     }
 
-    void Primary::MultiDstBlt(rdpContext* context, MULTI_DSTBLT_ORDER* multi_dstblt) {
+    void Primary::MultiDstBlt(rdpContext*, MULTI_DSTBLT_ORDER*) {
         log::debug << __PRETTY_FUNCTION__ << endl;
     }
 
-    void Primary::MultiPatBlt(rdpContext* context, MULTI_PATBLT_ORDER* multi_patblt) {
+    void Primary::MultiPatBlt(rdpContext*, MULTI_PATBLT_ORDER*) {
         log::debug << __PRETTY_FUNCTION__ << endl;
     }
 
-    void Primary::MultiScrBlt(rdpContext* context, MULTI_SCRBLT_ORDER* multi_scrblt) {
+    void Primary::MultiScrBlt(rdpContext*, MULTI_SCRBLT_ORDER*) {
         log::debug << __PRETTY_FUNCTION__ << endl;
     }
 
-    void Primary::MultiOpaqueRect(rdpContext* context, MULTI_OPAQUE_RECT_ORDER* multi_opaque_rect) {
+    void Primary::MultiOpaqueRect(rdpContext*, MULTI_OPAQUE_RECT_ORDER*) {
         log::debug << __PRETTY_FUNCTION__ << endl;
     }
 
-    void Primary::MultiDrawNineGrid(rdpContext* context, MULTI_DRAW_NINE_GRID_ORDER* multi_draw_nine_grid) {
+    void Primary::MultiDrawNineGrid(rdpContext*, MULTI_DRAW_NINE_GRID_ORDER*) {
         log::debug << __PRETTY_FUNCTION__ << endl;
     }
 
-    void Primary::LineTo(rdpContext* context, LINE_TO_ORDER* line_to) {
+    void Primary::LineTo(rdpContext*, LINE_TO_ORDER*) {
         log::debug << __PRETTY_FUNCTION__ << endl;
     }
 
-    void Primary::Polyline(rdpContext* context, POLYLINE_ORDER* polyline) {
+    void Primary::Polyline(rdpContext*, POLYLINE_ORDER*) {
         log::debug << __PRETTY_FUNCTION__ << endl;
     }
 
-    void Primary::MemBlt(rdpContext* context, MEMBLT_ORDER* memblt) {
+    void Primary::MemBlt(rdpContext*, MEMBLT_ORDER*) {
         log::debug << __PRETTY_FUNCTION__ << endl;
     }
 
-    void Primary::Mem3Blt(rdpContext* context, MEM3BLT_ORDER* memblt) {
+    void Primary::Mem3Blt(rdpContext*, MEM3BLT_ORDER*) {
         log::debug << __PRETTY_FUNCTION__ << endl;
     }
 
-    void Primary::SaveBitmap(rdpContext* context, SAVE_BITMAP_ORDER* save_bitmap) {
+    void Primary::SaveBitmap(rdpContext*, SAVE_BITMAP_ORDER*) {
         log::debug << __PRETTY_FUNCTION__ << endl;
     }
 
-    void Primary::GlyphIndex(rdpContext* context, GLYPH_INDEX_ORDER* glyph_index) {
+    void Primary::GlyphIndex(rdpContext*, GLYPH_INDEX_ORDER*) {
         log::debug << __PRETTY_FUNCTION__ << endl;
     }
 
-    void Primary::FastIndex(rdpContext* context, FAST_INDEX_ORDER* fast_index) {
+    void Primary::FastIndex(rdpContext*, FAST_INDEX_ORDER*) {
         log::debug << __PRETTY_FUNCTION__ << endl;
     }
 
-    void Primary::FastGlyph(rdpContext* context, FAST_GLYPH_ORDER* fast_glyph) {
+    void Primary::FastGlyph(rdpContext*, FAST_GLYPH_ORDER*) {
         log::debug << __PRETTY_FUNCTION__ << endl;
     }
 
-    void Primary::PolygonSC(rdpContext* context, POLYGON_SC_ORDER* polygon_sc) {
+    void Primary::PolygonSC(rdpContext*, POLYGON_SC_ORDER*) {
         log::debug << __PRETTY_FUNCTION__ << endl;
     }
 
-    void Primary::PolygonCB(rdpContext* context, POLYGON_CB_ORDER* polygon_cb) {
+    void Primary::PolygonCB(rdpContext*, POLYGON_CB_ORDER*) {
         log::debug << __PRETTY_FUNCTION__ << endl;
     }
 
-    void Primary::EllipseSC(rdpContext* context, ELLIPSE_SC_ORDER* ellipse_sc) {
+    void Primary::EllipseSC(rdpContext*, ELLIPSE_SC_ORDER*) {
         log::debug << __PRETTY_FUNCTION__ << endl;
     }
 
-    void Primary::EllipseCB(rdpContext* context, ELLIPSE_CB_ORDER* ellipse_cb) {
+    void Primary::EllipseCB(rdpContext*, ELLIPSE_CB_ORDER*) {
         log::debug << __PRETTY_FUNCTION__ << endl;
     }
 
