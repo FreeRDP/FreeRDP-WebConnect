@@ -1,8 +1,12 @@
+JS_SOURCES = \
+	js/modernizr-debug.js  js/mootools-debug.js  js/wsgate-debug.js \
+	js/simpletabs-debug.js
+JS_GENERATED = $(JS_SOURCES:%-debug.js=%.js)
+
 nobase_pkgdata_DATA = \
 	index-debug.html index.html favicon.ico \
 	css/style-debug.css css/style.css \
-	js/modernizr.js  js/mootools.js  js/wsgate.js \
-	js/modernizr-debug.js  js/mootools-debug.js  js/wsgate-debug.js
+	$(JS_SOURCES) $(JS_GENERATED)
 
 %.html: %-debug.html
 	$(AM_V_GEN)$(STRIP_DEBUG) $< > $@
@@ -13,11 +17,9 @@ nobase_pkgdata_DATA = \
 %.css: %-debug.css
 	$(AM_V_GEN)$(MKDIR_P) css && $(STRIP_DEBUG) $< | $(CSS_COMPRESS) > $@
 
-CLEANFILES = index.html css/style.css \
-	js/modernizr.js  js/mootools.js  js/wsgate.js
+CLEANFILES = index.html css/style.css $(JS_GENERATED)
 
 MAINTAINERCLEANFILES = Makefile.in
 
 EXTRA_DIST = index-debug.html favicon.ico \
-	css/style-debug.css \
-	js/modernizr-debug.js  js/mootools-debug.js  js/wsgate-debug.js
+	css/style-debug.css $(JS_SOURCES)

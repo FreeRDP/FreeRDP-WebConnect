@@ -1,86 +1,143 @@
 <!DOCTYPE html>
-<head>
-    <meta charset="utf-8" />
-    <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1" />
-    <title>FreeRDP WebConnect: offline</title>
-    <meta name="description" content="A HTM5 based RDP client">
-    <meta name="viewport" content="width=device-width">
-    <link rel="stylesheet" href="css/style%JSDEBUG%.css">
-    <script language="javascript" type="text/javascript">
-        var wsBase = "%WSURI%";
+<html>
+    <head>
+        <meta charset="utf-8" />
+        <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1" />
+        <title>FreeRDP WebConnect: offline</title>
+        <meta name="description" content="A HTM5 based RDP client">
+        <meta name="viewport" content="width=device-width; height=device-height user-scaleable=no">
+        <meta name="cursor-event-mode" content="native">
+        <meta name="touch-event-mode" content="pure-with-mouse-conversion">
+        <link rel="stylesheet" href="css/style%JSDEBUG%.css">
+        <script src="js/modernizr%JSDEBUG%.js"></script>
+        <script src="js/mootools%JSDEBUG%.js"></script>
+        <script src="js/simpletabs%JSDEBUG%.js"></script>
+        <script src="js/wsgate%JSDEBUG%.js"></script>
+        <script language="javascript" type="text/javascript">
+            var wsBase = "%WSURI%";
+            function RDPrun() {
+                var wsUri = wsBase
+                    + '?host=' + encodeURIComponent(document.id('rdphost').value.trim())
+                    + '&user=' + encodeURIComponent(document.id('rdpuser').value.trim())
+                    + '&pass=' + encodeURIComponent(document.id('rdppass').value.toBase64())
+                    + '&dtsize=' + document.id('screen').width + 'x' + document.id('screen').height
+                    + '&mode=rdp';
+                var rdp = new wsgate.RDP(wsUri, document.id('screen'));
+                rdp.addEvent('alert', function(msg) {
+                        alert(msg);
+                        });
+                rdp.addEvent('connected', function() {
+                        document.title = "FreeRDP WebConnect: connected to " +
+                        document.id('rdphost').value.trim();
+                        button = document.id("rdpconnect");
+                        button.removeEvents();
+                        button.value = 'Disconnect';
+                        button.addEvent('click', rdp.Disconnect.bind(rdp));
+
+                        });
+                rdp.addEvent('disconnected', function() {
+                        showDialog(true);
+                        button = document.id("rdpconnect");
+                        button.removeEvents();
+                        button.value = 'Connect';
+                        button.addEvent('click', RDPrun);
+
+                        });
+                showDialog(false);
+                rdp.Run();
+            }
+function ResizeCanvas(sz) {
+    var w, h;
+    if (sz == 'auto') {
+        w = window.getCoordinates().width;
+        h = window.getCoordinates().height;
+    } else {
+        var sza = sz.split('x');
+        var w = sza[0];
+        var h = sza[1];
+    }
+    document.id('screen').width = w;
+    document.id('screen').height = h;
+}
+function OnDesktopSize() {
+    ResizeCanvas(v = document.id('dtsize').value);
+}
+function showDialog(show) {
+    if (show) {
+        var dlg = document.id('maindialog');
+        var x = Math.round((window.getCoordinates().width - dlg.getCoordinates().width) / 2) + 'px';
+        var y = Math.round((window.getCoordinates().height - dlg.getCoordinates().height) / 2) + 'px';
+        dlg.setStyles({
+                'position': 'absolute',
+                'top': y,
+                'left': x,
+                'z-index': 999
+                }).removeClass('invisible');
+    } else {
+        document.id('maindialog').addClass('invisible');
+    }
+}
+window.addEvent('domready', function() {
+        document.id('rdpconnect').addEvent('click', RDPrun);
+        document.id('dtsize').addEvent('change', OnDesktopSize);
+        var tabs = new SimpleTabs('rdpdialog',{selector:'h4'});
+        ResizeCanvas('auto');
+        showDialog(true);
+        });
     </script>
-    <script src="js/modernizr%JSDEBUG%.js"></script>
-    <script src="js/mootools%JSDEBUG%.js"></script>
-    <script src="js/wsgate%JSDEBUG%.js"></script>
 </head>
 <body>
     <canvas id="screen" width="1024px" height="768px">
     <strong>Sorry, It looks as though your browser does not support the canvas tag...</strong> If you can, I suggest that you try Chrome or Safari.
     </canvas>
-
-    <form>
-        <fieldset>
-            <legend>Session parameters:</legend>
-            <label for="host">Hostname:</label>
-            <input id="rdphost" type="text" name="host" value="%COOKIE_LASTHOST%" />
-            <label for="user">User:</label>
-            <input id="rdpuser" type="text" name="user" value="%COOKIE_LASTUSER%" />
-            <label for="pass">Password:</label>
-            <input id="rdppass" type="password" name="pass" value="%COOKIE_LASTPASS%" />
-            <input id="rdpconnect" type="button" value="Connect" />
-        </fieldset><!-- DEBUG -->
-        <input id="echotest" type="button" value="Echo Test" />
-        <input id="speedtest" type="button" value="Speed Test" /><!-- /DEBUG -->
-    </form>
-
-    <script language="javascript" type="text/javascript">
-        function init() {/* DEBUG */
-            document.id("echotest").addEvent("click", EchoTest);
-            document.id("speedtest").addEvent("click", SpeedTest);/* /DEBUG */
-            document.id("rdpconnect").addEvent('click', RDPrun);
-        }
-/* DEBUG */
-function EchoTest() {
-    wsUri = wsBase + '?mode=echo';
-    var etest = new wsgate.EchoTest(wsUri);
-    etest.Run();
-}
-
-function SpeedTest() {
-    wsUri = wsBase + '?mode=speed';
-    var stest = new wsgate.SpeedTest(wsUri, 1 * 1048576, 20);
-    stest.Run();
-}
-
-/* /DEBUG */
-function RDPrun() {
-    wsUri = wsBase
-        + '?host=' + encodeURIComponent(document.id('rdphost').value.trim())
-        + '&user=' + encodeURIComponent(document.id('rdpuser').value.trim())
-        + '&pass=' + encodeURIComponent(document.id('rdppass').value.toBase64())
-        + '&mode=rdp';
-    var rdp = new wsgate.RDP(wsUri, document.getElementById('screen'));
-    rdp.addEvent('alert', function(msg) { alert(msg); });
-    rdp.addEvent('connected', function() {
-            document.title = "FreeRDP WebConnect: connected to " +
-                document.id('rdphost').value.trim();
-            button = document.id("rdpconnect");
-            button.removeEvents();
-            button.value = 'Disconnect';
-            button.addEvent('click', rdp.Disconnect.bind(rdp));
-
-    });
-    rdp.addEvent('disconnected', function() {
-            button = document.id("rdpconnect");
-            button.removeEvents();
-            button.value = 'Connect';
-            button.addEvent('click', RDPrun);
-
-    });
-    rdp.Run();
-}
-
-window.addEventListener("load", init, false);
-</script>
-</body>
-</html> 
+    <table width="300px" id="maindialog" class="invisible">
+        <tr>
+            <td>
+                <div id="rdpdialog" class="dialog">
+                    <h4 title="Main connection settings">General</h4>
+                    <div>
+                        <form>
+                            <fieldset>
+                                <legend>Session parameters</legend>
+                                <table>
+                                    <tr>
+                                        <td class="key"><label for="host">Hostname:</label></td>
+                                        <td><input id="rdphost" type="text" name="host" value="%COOKIE_LASTHOST%" /></td>
+                                    </tr>
+                                    <tr>
+                                        <td class="key"><label for="user">User:</label></td>
+                                        <td><input id="rdpuser" type="text" name="user" value="%COOKIE_LASTUSER%" /></td>
+                                    </tr>
+                                    <tr>
+                                        <td class="key"><label for="pass">Password:</label></td>
+                                        <td><input id="rdppass" type="password" name="pass" value="%COOKIE_LASTPASS%" /></td>
+                                    </tr>
+                                    <tr>
+                                        <td class="key"><label for="dtsize">Desktop size:</label></td>
+                                        <td>
+                                            <select id="dtsize" name="dtsize">
+                                                <option>640x480</option>
+                                                <option>800x600</option>
+                                                <option>1024x768</option>
+                                                <option>1280x960</option>
+                                                <option>1280x1024</option>
+                                                <option value="auto" selected>Available Area</option>
+                                            </select>
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td class="buttons" colspan="2"><input id="rdpconnect" type="button" value="Connect" /></td>
+                                    </tr>
+                                </table>
+                            </fieldset>
+                        </form>
+                    </div>
+                    <h4 title="Currently empty">Advanced</h4>
+                    <div>
+                        This page is intentionally blank ;)
+                    </div>
+                </div>
+            </td>
+        </tr>
+    </table>
+</body></html> 

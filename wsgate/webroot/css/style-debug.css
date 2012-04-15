@@ -217,16 +217,113 @@ td { vertical-align: top; }
    Author:
    ========================================================================== */
 
+html {
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+}
 body {
     font-family: Verdana,Arial,Helvetica,sans-serif;
     font-size: 10pt;
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+    margin:0;
+}
+fieldset {
+    border: 1px solid #CCCCCC;
+    margin: 0 10px 10px;
+    padding: 5px;
+    text-align: left;
+}
+input:focus, select:focus, textarea:focus {
+    background-color: #FFFFDD;
+}
+input, select {
+    border: 1px solid silver;
+    font-size: 10px;
+}
+legend {
+    color: #0B55C4;
+    font-size: 12px;
+    font-weight: bold;
+}
+table td {
+    padding: 3px;
+}
+table td.buttons {
+    margin-top: 10px;
+    text-align: right;
+}
+table td.key {
+    background-color: #F6F6F6;
+    border-bottom: 1px solid #E9E9E9;
+    border-right: 1px solid #E9E9E9;
+    color: #666666;
+    font-weight: bold;
+    text-align: right;
+    width: 140px;
+}
+
+.dialog {
+    background-color: white;
+}
+.tab-wrapper
+{
+	padding:				5px 5px;
+	margin:					0;
+	border:					1px solid #eee;
+	clear:					both;
+}
+.tab-menu
+{
+	margin:					0;
+	padding:				0;
+	list-style:				none;
+	overflow:				auto;
+}
+.tab-menu li
+{
+	margin:					0;
+	padding:				0;
+	float:					left;
+	line-height:			1.5em;
+}
+.tab-menu li a
+{
+    background-color: #DDD;
+	text-decoration:		none;
+	padding:				5px;
+	font-weight:			bold;
+	color:					black;
+	border:					2px solid #fff;
+}
+.tab-menu li a:hover,
+.tab-menu li a:focus
+{
+	border:					2px solid #fff;
+	color:					black;
+	/* your effect here */
+}
+.tab-menu li.tab-selected a
+{
+    background-color: #FFF;
+	text-decoration:		none;
+	color:					black;
+	/* your effect here */
+	border:					2px solid #eee;
+}
+.tab-menu li.tab-selected a:hover
+.tab-menu li.tab-selected a:focus
+{
+	border:					2px solid #eee;
 }
 
 #screen {
-    border: 1px solid #DDD;
-    margin: 5px;
+    border: 0;
+    margin: 0;
     padding: 0;
-    background: black; // #004e98;
+    background: black;
 }
 
 /* ==|== media queries ======================================================

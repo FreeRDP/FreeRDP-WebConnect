@@ -227,11 +227,12 @@ wsgate.RDP = new Class( {
             case 'string':
                 // wsgate.log.debug(evt.data);
                 switch (evt.data.substr(0,2)) {
+                    case "T:":
+                            this._reset();
+                            break;
                     case "E:":
-                            if (evt.data.length > 2) {
-                                wsgate.log.err(evt.data.substring(2));
-                                this.fireEvent('alert', evt.data.substring(2));
-                            }
+                            wsgate.log.err(evt.data.substring(2));
+                            this.fireEvent('alert', evt.data.substring(2));
                             this._reset();
                             break;
                     case 'I:':

@@ -27,7 +27,8 @@ namespace wsgate {
 
             bool Prepare(EHSConnection *conn, const std::string mode,
                     const std::string host, uint16_t port,
-                    const std::string user, const std::string pass);
+                    const std::string user, const std::string pass,
+                    const int &width, const int &height);
 
             void OnMessage(EHSConnection *conn, const std::string & data);
 

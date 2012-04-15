@@ -67,7 +67,8 @@ namespace wsgate {
         delete m_pPrimary;
     }
 
-    bool RDP::Connect(string host, int port, string user, string domain, string pass)
+    bool RDP::Connect(string host, int port, string user, string domain, string pass,
+            const int width, const int height)
     {
         if (!m_rdpSettings) {
             throw tracing::runtime_error("m_rdpSettings is NULL");
@@ -75,6 +76,8 @@ namespace wsgate {
         if (!m_bThreadLoop) {
             throw tracing::runtime_error("worker thread has terminated");
         }
+        m_rdpSettings->width = width;
+        m_rdpSettings->height = height;
         m_rdpSettings->port = port;
         m_rdpSettings->ignore_certificate = 1;
         m_rdpSettings->hostname = strdup(host.c_str());
@@ -268,7 +271,7 @@ namespace wsgate {
                         case 1:
                             // No really an error
                             // (Happens when you invoke Disconnect in Start-Menu)
-                            addError("");
+                            m_bThreadLoop = false;
                             break;
                         case 5:
                             addError("Another user connected to the server,\nforcing the disconnection of the current connection.");
@@ -310,6 +313,7 @@ namespace wsgate {
             usleep(100);
         }
         log::debug << "RDP client thread terminated" << endl;
+        m_wshandler->send_text("T:");
     }
 
     // private C callback

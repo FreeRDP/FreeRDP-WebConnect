@@ -43,4 +43,5 @@ wsgate/webroot/index.html
 wsgate/webroot/css/style.css
 wsgate/webroot/js/modernizr.js
 wsgate/webroot/js/mootools.js
+wsgate/webroot/js/simpletabs.js
 wsgate/webroot/js/wsgate.js

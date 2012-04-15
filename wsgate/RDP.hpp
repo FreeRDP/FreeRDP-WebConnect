@@ -24,7 +24,7 @@ namespace wsgate {
 
             void SetError(std::string msg);
             bool Connect(std::string host, int port, std::string user, std::string domain,
-                    std::string pass);
+                    std::string pass, const int width, const int height);
             bool Disconnect();
             bool CheckFileDescriptor();
 

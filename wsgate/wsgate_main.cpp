@@ -76,6 +76,7 @@ using boost::algorithm::replace_all;
 using boost::algorithm::to_upper_copy;
 using boost::algorithm::trim_right_copy_if;
 using boost::algorithm::is_any_of;
+using boost::algorithm::split;
 namespace po = boost::program_options;
 namespace fs = boost::filesystem;
 namespace pt = boost::posix_time;
@@ -165,6 +166,9 @@ namespace wsgate {
                     << ": " << uri << endl;
 
                 if (0 == uri.compare("/wsgate")) {
+                    int dtwidth = 1024;
+                    int dtheight = 768;
+                    string dtsize(request->FormValues("dtsize").m_sBody);
                     string rdphost(request->FormValues("host").m_sBody);
                     string rdpuser(request->FormValues("user").m_sBody);
                     string rdppass(base64_decode(request->FormValues("pass").m_sBody));
@@ -178,6 +182,19 @@ namespace wsgate {
                     string mode(request->FormValues("mode").m_sBody);
                     if (mode.empty()) {
                         mode = "echo";
+                    }
+                    if (!dtsize.empty()) {
+                        try {
+                            vector<string> wh;
+                            boost::split(wh, dtsize, is_any_of("x"));
+                            if (wh.size() == 2) {
+                                dtwidth = boost::lexical_cast<int>(wh[0]);
+                                dtheight = boost::lexical_cast<int>(wh[1]);
+                            }
+                        } catch (const exception &e) {
+                            dtwidth = 1024;
+                            dtheight = 768;
+                        }
                     }
                     response->SetBody("", 0);
                     if (0 != request->HttpVersion().compare("1.1")) {
@@ -224,7 +241,7 @@ namespace wsgate {
                     if (!sh) {
                         throw tracing::runtime_error("No raw socket handler available");
                     }
-                    if (!sh->Prepare(request->Connection(), mode, rdphost, rdpport, rdpuser,rdppass)) {
+                    if (!sh->Prepare(request->Connection(), mode, rdphost, rdpport, rdpuser, rdppass, dtwidth, dtheight)) {
                         return HTTPRESPONSECODE_503_SERVICEUNAVAILABLE;
                     }
 
@@ -545,13 +562,15 @@ namespace wsgate {
     }
 
     bool MyRawSocketHandler::Prepare(EHSConnection *conn, const string mode,
-            const string host, uint16_t port, const string user, const string pass)
+            const string host, uint16_t port, const string user, const string pass,
+            const int &width, const int &height)
     {
-        log::debug << "Mode:         '" << mode << "'" << endl;
-        log::debug << "RDP Host:     '" << host << "'" << endl;
-        log::debug << "RDP Port:     '" << port << "'" << endl;
-        log::debug << "RDP User:     '" << user << "'" << endl;
-        log::debug << "RDP Password: '" << pass << "'" << endl;
+        log::debug << "Mode:             '" << mode << "'" << endl;
+        log::debug << "RDP Host:         '" << host << "'" << endl;
+        log::debug << "RDP Port:         '" << port << "'" << endl;
+        log::debug << "RDP User:         '" << user << "'" << endl;
+        log::debug << "RDP Password:     '" << pass << "'" << endl;
+        log::debug << "RDP Desktop size: " << width << "x" << height << endl;
 
         handler_ptr h(new MyWsHandler(conn, m_parent, this));
         conn_ptr c(new wspp::wsendpoint(h.get()));
@@ -565,7 +584,7 @@ namespace wsgate {
         }
         if (0 == mode.compare("rdp")) {
             dynamic_cast<MyWsHandler*>(h.get())->SetMode(MyWsHandler::Rdp);
-            r->Connect(host, port, user, string() /*domain*/, pass);
+            r->Connect(host, port, user, string() /*domain*/, pass, width, height);
         }
         return true;
     }
