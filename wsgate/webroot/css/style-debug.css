@@ -241,18 +241,18 @@ input:focus, select:focus, textarea:focus {
 }
 input, select {
     border: 1px solid silver;
-    font-size: 10px;
+    font-size: 10pt;
 }
 legend {
     color: #0B55C4;
-    font-size: 12px;
+    font-size: 12pt;
     font-weight: bold;
 }
 table td {
-    padding: 3px;
+    padding: 5px;
 }
 table td.buttons {
-    margin-top: 10px;
+    margin-top: 20px;
     text-align: right;
 }
 table td.key {
@@ -262,7 +262,7 @@ table td.key {
     color: #666666;
     font-weight: bold;
     text-align: right;
-    width: 140px;
+    width: 160px;
 }
 
 .dialog {
