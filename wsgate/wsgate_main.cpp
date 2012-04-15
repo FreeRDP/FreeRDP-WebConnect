@@ -610,15 +610,11 @@ namespace wsgate {
 
 }
 
-static wsgate::WsGate *g_srv = NULL;
+static bool g_signaled = false;
 
 static void terminate(int)
 {
-    wsgate::log::info << "terminating" << endl;
-    if (g_srv) {
-        g_srv->StopServer();
-        g_srv = NULL;
-    }
+    g_signaled = true;
 }
 
 // basic main that creates a threaded EHS object and then
@@ -842,9 +838,8 @@ int main (int argc, char **argv)
 
         wsgate::log::info << "Listening on " << oSP["bindaddress"].GetCharString() << ":" << oSP["port"].GetInt() << endl;
 
-        g_srv = &srv;
         if (daemon) {
-            while (!(srv.ShouldTerminate())) {
+            while (!(srv.ShouldTerminate() || g_signaled)) {
                 if (sleepInLoop) {
                     usleep(1000);
                 } else {
@@ -854,7 +849,7 @@ int main (int argc, char **argv)
         } else {
             kbdio kbd;
             cout << "Press q to terminate ..." << endl;
-            while (!(srv.ShouldTerminate() || kbd.qpressed())) {
+            while (!(srv.ShouldTerminate() || g_signaled || kbd.qpressed())) {
                 if (sleepInLoop) {
                     usleep(1000);
                 } else {
@@ -862,7 +857,7 @@ int main (int argc, char **argv)
                 }
             }
         }
-        g_srv = NULL;
+        wsgate::log::info << "terminating" << endl;
         srv.StopServer();
     } catch (exception &e) {
         cerr << "ERROR: " << e.what() << endl;
