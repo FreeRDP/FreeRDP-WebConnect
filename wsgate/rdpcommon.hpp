@@ -28,6 +28,7 @@ namespace wsgate {
         WSOP_SC_ENDPAINT,
         WSOP_SC_BITMAP,
         WSOP_SC_OPAQUERECT,
+        WSOP_SC_SETBOUNDS,
         WSOP_SC_PATBLT
     } WsOPsc;
 

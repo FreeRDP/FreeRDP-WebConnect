@@ -1,22 +1,31 @@
-// Provide a generic window.BlobBuilder
-// See: https://developer.mozilla.org/en/DOM/BlobBuilder
-function gBB() {
-    if ('BlobBuilder' in window) {
-        return;
-    }
-    if ('MozBlobBuilder' in window) {
-        window.BlobBuilder = window.MozBlobBuilder;
-    }
-    if ('WebKitBlobBuilder' in window) {
-        window.BlobBuilder = window.WebKitBlobBuilder;
-    }
-    if ('MSBlobBuilder' in window) {
-        window.BlobBuilder = window.MSBlobBuilder;
-    }
-}
-gBB();
-
 var wsgate = wsgate || {}
+
+wsgate.hasconsole = (typeof console !== 'undefined' && 'debug' in console && 'info' in console && 'warn' in console && 'error' in console);
+
+wsgate.log = {
+    drop: function() {
+    },
+    debug: function() {/* DEBUG */
+        if (wsgate.hasconsole) {
+            try { console.debug.apply(this, arguments); } catch (error) { }
+        }
+        /* /DEBUG */},
+    info: function() {/* DEBUG */
+        if (wsgate.hasconsole) {
+            try { console.info.apply(this, arguments); } catch (error) { }
+        }
+        /* /DEBUG */},
+    warn: function() {/* DEBUG */
+        if (wsgate.hasconsole) {
+            try { console.warn.apply(this, arguments); } catch (error) { }
+        }
+        /* /DEBUG */},
+    err: function() {/* DEBUG */
+        if (wsgate.hasconsole) {
+            try { console.error.apply(this, arguments); } catch (error) { }
+        }
+        /* /DEBUG */}
+}
 
 wsgate.WSrunner = new Class( {
     Implements: Events,
@@ -41,75 +50,189 @@ wsgate.RDP = new Class( {
         this.parent(url);
         this.canvas = canvas;
         this.cctx = canvas.getContext('2d');
-        this.bmcount = 0;
         this.ccnt = 0;
+        this.mq = new Array();
+        this.pID = null;
+        this.pMTX = 0;
     },
     Disconnect: function() {
+        this._reset();
+    },
+    _pmsg: function() { // process a binary RDP message from our queue
+        var op, hdr, data, bmdata, rgba, compressed;
+        if (this.pMTX++ > 0) {
+            this.pMTX -= 1;
+            return;
+        }
+        while (data = this.mq.shift()) {
+            op = new Uint32Array(data, 0, 1);
+            switch (op[0]) {
+                case 0:
+                    // BeginPaint
+                    // wsgate.log.debug('BeginPaint');
+                    this._ctxS();
+                    break;
+                case 1:
+                    // EndPaint
+                    // wsgate.log.debug('EndPaint');
+                    this._ctxR();
+                    break;
+                case 2:
+                    /// Single bitmap
+                    //
+                    //  0 uint32 Destination X
+                    //  1 uint32 Destination Y
+                    //  2 uint32 Width
+                    //  3 uint32 Height
+                    //  4 uint32 Bits per Pixel
+                    //  5 uint32 Flag: Compressed
+                    //  6 uint32 DataSize
+                    //
+                    hdr = new Uint32Array(data, 4, 7);
+                    bmdata = new Uint8Array(data, 32);
+                    compressed =  (hdr[5] != 0);
+                    // wsgate.log.debug('Bitmap:', (compressed ? ' C ' : ' U '), ' x: ', hdr[0], ' y: ', hdr[1], ' w: ', hdr[2], ' h: ', hdr[3], ' bpp: ', hdr[4]);
+                    if ((hdr[4] == 16) || (hdr[4] == 15)) {
+                        var outB = this.cctx.createImageData(hdr[2], hdr[3]);
+                        if (compressed) {
+                            // var tmp = new Uint8Array(hdr[2] * hdr[3] * 2);
+                            // wsgate.dRLE16(bmdata, hdr[6], hdr[2], tmp);
+                            // wsgate.dRGB162RGBA(tmp, hdr[6], outB.data);
+                            wsgate.dRLE16_RGBA(bmdata, hdr[6], hdr[2], outB.data);
+                            wsgate.flipV(outB.data, hdr[2], hdr[3]);
+                        } else {
+                            wsgate.dRGB162RGBA(bmdata, hdr[6], outB.data);
+                        }
+                        this.cctx.putImageData(outB, hdr[0], hdr[1]);
+                    } else {
+                        wsgate.log.warn('BPP <> 15/16 not yet implemented');
+                    }
+                    break;
+                case 3:
+                    // Primary: OPAQUE_RECT_ORDER
+                    // x, y , w, h, color
+                    hdr = new Int32Array(data, 4, 4);
+                    rgba = new Uint8Array(data, 20, 4);
+                    // wsgate.log.debug('Fill:',hdr[0], hdr[1], hdr[2], hdr[3], this._c2s(rgba));
+                    this.cctx.fillStyle = this._c2s(rgba);
+                    this.cctx.fillRect(hdr[0], hdr[1], hdr[2], hdr[3]);
+                    break;
+                case 4:
+                    // SetBounds
+                    // left, top, right, bottom
+                    hdr = new Int32Array(data, 4, 4);
+                    // All zero means: reset to full canvas zize
+                    if (hdr[0] == hdr[1] == hdr[2] == hdr[3] == 0) {
+                        hdr[2] = this.canvas.width;
+                        hdr[3] = this.canvas.height;
+                    }
+                    this.cctx.beginPath();
+                    this.cctx.rect(hdr[0], hdr[1], hdr[2] - hdr[0], hdr[3] - hdr[1]);
+                    this.cctx.clip();
+                    break; 
+                case 5:
+                    // PatBlt
+                    break; 
+                default:
+                    wsgate.log.warn('Unknown BINRESP: ', data.byteLength);
+            }
+        }
+        this.pMTX -= 1;
+    },
+    _reset: function() {
+        this.pID && clearTimeout(this.pID);
+        this.pID = null;
+        this.mMTX = 0;
+        this.mq.empty();
         if (this.sock.readyState == this.sock.OPEN) {
+            this.fireEvent('disconnected');
             this.sock.close();
         }
-        while (this.ccnt--) {
+        this.canvas.removeEvents();
+        while (this.ccnt > 0) {
             this.cctx.restore();
+            this.ccnt -= 1;
         }
         this.cctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+        document.title = document.title.replace(/:.*/, ': offline');
     },
     onMouseMove: function(evt) {
-        var buf, a;
-        // wsgate.log.debug('M x: ', evt.client.x, ' y: ', evt.client.y);
+        var buf, a, x, y;
+        evt.preventDefault();
+        x = evt.client.x - evt.target.offsetLeft;
+        y = evt.client.y - evt.target.offsetTop;
+        // wsgate.log.debug('mM x: ', x, ' y: ', y);
         if (this.sock.readyState == this.sock.OPEN) {
             buf = new ArrayBuffer(16);
             a = new Uint32Array(buf);
-            a[0] = 0;
+            a[0] = 0; // WSOP_CS_MOUSE
             a[1] = 0x0800; // PTR_FLAGS_MOVE
-            a[2] = evt.client.x;
-            a[3] = evt.client.y;
+            a[2] = x;
+            a[3] = y;
             this.sock.send(buf);
         }
     },
     onMouseDown: function(evt) {
-        var buf, a;
-        wsgate.log.debug(evt);
-        evt.stop();
-        /*
-           wsgate.log.debug('MC x: ', evt.client.x, ' y: ', evt.client.y);
-           if (this.sock.readyState == this.sock.OPEN) {
-           buf = new ArrayBuffer(16);
-           a = new Uint32Array(buf);
-           a[0] = 0;
-           a[1] = 0x0800; // PTR_FLAGS_DOWN
-           a[2] = evt.client.x;
-           a[3] = evt.client.y;
-           this.sock.send(buf);
-           }
-           */
+        var buf, a, x, y, which;
+        evt.preventDefault();
+        x = evt.client.x - evt.target.offsetLeft;
+        y = evt.client.y - evt.target.offsetTop;
+        which = this._mB(evt);
+        // wsgate.log.debug('mD b: ', which, ' x: ', x, ' y: ', y);
+        if (this.sock.readyState == this.sock.OPEN) {
+            buf = new ArrayBuffer(16);
+            a = new Uint32Array(buf);
+            a[0] = 0; // WSOP_CS_MOUSE
+            a[1] = 0x8000 | which;
+            a[2] = x;
+            a[3] = y;
+            this.sock.send(buf);
+        }
     },
     onMouseUp: function(evt) {
-        wsgate.log.debug(evt);
-        var buf, a;
-        /*
-           wsgate.log.debug('MC x: ', evt.client.x, ' y: ', evt.client.y);
-           if (this.sock.readyState == this.sock.OPEN) {
-           buf = new ArrayBuffer(16);
-           a = new Uint32Array(buf);
-           a[0] = 0;
-           a[1] = 0x0800; // PTR_FLAGS_DOWN
-           a[2] = evt.client.x;
-           a[3] = evt.client.y;
-           this.sock.send(buf);
-           }
-           */
+        var buf, a, x, y, which;
+        evt.preventDefault();
+        x = evt.client.x - evt.target.offsetLeft;
+        y = evt.client.y - evt.target.offsetTop;
+        which = this._mB(evt);
+        // wsgate.log.debug('mU b: ', which, ' x: ', x, ' y: ', y);
+        if (this.sock.readyState == this.sock.OPEN) {
+            buf = new ArrayBuffer(16);
+            a = new Uint32Array(buf);
+            a[0] = 0; // WSOP_CS_MOUSE
+            a[1] = which;
+            a[2] = x;
+            a[3] = y;
+            this.sock.send(buf);
+        }
+    },
+    onMouseWheel: function(evt) {
+        var buf, a, x, y;
+        evt.preventDefault();
+        x = evt.client.x - evt.target.offsetLeft;
+        y = evt.client.y - evt.target.offsetTop;
+        // wsgate.log.debug('mW d: ', evt.wheel, ' x: ', x, ' y: ', y);
+        if (this.sock.readyState == this.sock.OPEN) {
+            buf = new ArrayBuffer(16);
+            a = new Uint32Array(buf);
+            a[0] = 0; // WSOP_CS_MOUSE
+            a[1] = 0x200 | ((evt.wheel > 0) ? 0x087 : 0x188);
+            a[2] = 0;
+            a[3] = 0;
+            this.sock.send(buf);
+        }
     },
     onWSmsg: function(evt) {
-        var op, hdr, data, rgba;
         switch (typeof(evt.data)) {
             case 'string':
-                wsgate.log.debug(evt.data);
+                // wsgate.log.debug(evt.data);
                 switch (evt.data.substr(0,2)) {
                     case "E:":
-                            wsgate.log.err(evt.data.substring(2));
-                            this.sock.close();
-                            this.fireEvent('disconnected');
-                            this.fireEvent('alert', evt.data.substring(2));
+                            if (evt.data.length > 2) {
+                                wsgate.log.err(evt.data.substring(2));
+                                this.fireEvent('alert', evt.data.substring(2));
+                            }
+                            this._reset();
                             break;
                     case 'I:':
                             wsgate.log.info(evt.data.substring(2));
@@ -123,103 +246,59 @@ wsgate.RDP = new Class( {
                 }
                 break;
             case 'object':
-                op = new Uint32Array(evt.data, 0, 1);
-                switch (op[0]) {
-                    case 0:
-                        // BeginPaint
-                        // wsgate.log.debug('BeginPaint');
-                        this.ctxS();
-                        break;
-                    case 1:
-                        // EndPaint
-                        // wsgate.log.debug('EndPaint');
-                        this.ctxR();
-                        break;
-                    case 2:
-                        /// Single bitmap
-                        //
-                        //  0 uint32 Destination X
-                        //  1 uint32 Destination Y
-                        //  2 uint32 Width
-                        //  3 uint32 Height
-                        //  4 uint32 Bits per Pixel
-                        //  5 uint32 Flag: Compressed
-                        //  6 uint32 DataSize
-                        //
-                        // wsgate.log.debug('BM #', this.bmcount++);
-                        hdr = new Uint32Array(evt.data, 4, 7);
-                        bmdata = new Uint8Array(evt.data, 32);
-                        compressed =  (hdr[5] != 0);
-                        wsgate.log.drop('Bitmap:',
-                                (compressed ? ' C ' : ' U '),
-                                ' x: ', hdr[0], ' y: ', hdr[1],
-                                ' w: ', hdr[2], ' h: ', hdr[3],
-                                ' bpp: ', hdr[4]
-                                );
-                        if ((hdr[4] == 16) || (hdr[4] == 15)) {
-                            var outB = this.cctx.createImageData(hdr[2], hdr[3]);
-                            if (compressed) {
-                                // var tmp = new Uint8Array(hdr[2] * hdr[3] * 2);
-                                // wsgate.dRLE16(bmdata, hdr[6], hdr[2], tmp);
-                                // wsgate.dRGB162RGBA(tmp, hdr[6], outB.data);
-                                wsgate.dRLE16_RGBA(bmdata, hdr[6], hdr[2], outB.data);
-                                wsgate.flipV(outB.data, hdr[2], hdr[3]);
-                            } else {
-                                wsgate.dRGB162RGBA(bmdata, hdr[6], outB.data);
-                            }
-                            this.cctx.putImageData(outB, hdr[0], hdr[1]);
-                        } else {
-                            wsgate.log.warn('BPP <> 15/16 not yet implemented');
-                        }
-                        break;
-                    case 3:
-                        // Primary: OPAQUE_RECT_ORDER
-                        // x, y , w, h, color
-                        hdr = new Int32Array(evt.data, 4, 4);
-                        rgba = new Uint8Array(evt.data, 20, 4);
-                        wsgate.log.drop('Fill:',hdr[0], hdr[1], hdr[2], hdr[3], this.c2s(rgba));
-                        this.cctx.fillStyle = this.c2s(rgba);
-                        this.cctx.fillRect(hdr[0], hdr[1], hdr[2], hdr[3]);
-                        break;
-                    case 4:
-                        // PatBlt
-                        // 
-                    default:
-                        wsgate.log.warn('Unknown BINRESP: ', evt.data.byteLength);
-                }
+                this.mq.push(evt.data);
                 break;
         }
 
     },
     onWSopen: function(evt) {
+        this.pID = this._pmsg.periodical(10, this);
         this.canvas.addEvent('mousemove', this.onMouseMove.bind(this));
         this.canvas.addEvent('mousedown', this.onMouseDown.bind(this), true);
         this.canvas.addEvent('mouseup', this.onMouseUp.bind(this), true);
+        this.canvas.addEvent('mousewheel', this.onMouseWheel.bind(this), true);
+        this.canvas.addEvent('contextmenu', function(e) {e.stop();}, true);
         this.fireEvent('connected');
     },
     onWSclose: function(evt) {
-        this.canvas.removeEvents();
+        this._reset();
         this.fireEvent('disconnected');
     },
     onWSerr: function (evt) {
-        this.canvas.removeEvents();
-        this.fireEvent('disconnected');
         switch (this.sock.readyState) {
             case this.sock.CONNECTING:
                 this.fireEvent('alert', 'Could not connect to WebSockets gateway');
                 break;
         }
+        this._reset();
     },
-    c2s: function(c) {
+    _c2s: function(c) {
         return 'rgba' + '(' + c[0] + ',' + c[1] + ',' + c[2] + ',' + ((0.0 + c[3]) / 255) + ')';
     },
-    ctxS: function() {
-            this.cctx.save();
-            this.ccnt += 1;
+    _ctxS: function() {
+        this.cctx.save();
+        this.ccnt += 1;
     },
-    ctxR: function() {
+    _ctxR: function() {
         this.cctx.restore();
         this.ccnt -= 1;
+    },
+    _mB: function(evt) {
+        var bidx;
+        if ('event' in evt && 'button' in evt.event) {
+            bidx = evt.event.button;
+        } else {
+            bidx = evt.rightClick ? 2 : 0;
+        }
+        switch (bidx) {
+            case 0:
+                return 0x1000;
+            case 1:
+                return 0x4000;
+            case 2:
+                return 0x2000;
+        }
+        return 0x1000;
     }
 });
 /* DEBUG */
@@ -296,23 +375,6 @@ wsgate.SpeedTest = new Class( {
 });
 /* /DEBUG */
 
-wsgate.log = {
-    drop: function() {
-    },
-    debug: function() {
-        console.debug.apply(this, arguments);
-    },
-    info: function() {
-        console.info.apply(this, arguments);
-    },
-    warn: function() {
-        console.warn.apply(this, arguments);
-    },
-    err: function() {
-        console.error.apply(this, arguments);
-    }
-}
-
 wsgate.copy16 = function(inA, inI, outA, outI) {
     outA[outI++] = inA[inI++];
     outA[outI] = inA[inI];
@@ -328,7 +390,14 @@ wsgate.pel16 = function (pel, outA, outI) {
 }
 
 wsgate.copyRGBA = function(inA, inI, outA, outI) {
-    outA.set(inA.subarray(inI, inI + 4), outI);
+    if ('subarray' in inA) {
+        outA.set(inA.subarray(inI, inI + 4), outI);
+    } else {
+        outA[outI++] = inA[inI++];
+        outA[outI++] = inA[inI++];
+        outA[outI++] = inA[inI++];
+        outA[outI] = inA[inI];
+    }
 }
 wsgate.xorbufRGBAPel16 = function(inA, inI, outA, outI, pel) {
     var pelR = (pel & 0xF800) >> 11;
@@ -379,14 +448,26 @@ wsgate.flipV = function(inA, width, height) {
     var half = height / 2;
     var lbot = sll * (height - 1);
     var ltop = 0;
-    var tmp;
-    var i;
-    for (i = 0; i < half ; ++i) {
-        tmp = inA.subarray(ltop, ltop + sll)
-        inA.set(inA.subarray(lbot, lbot + sll), ltop);
-        inA.set(tmp, lbot);
-        ltop += sll;
-        lbot -= sll;
+    var tmp = new Uint8Array(sll);
+    var i, j;
+    if ('subarray' in inA) {
+        for (i = 0; i < half ; ++i) {
+            tmp.set(inA.subarray(ltop, ltop + sll));
+            inA.set(inA.subarray(lbot, lbot + sll), ltop);
+            inA.set(tmp, lbot);
+            ltop += sll;
+            lbot -= sll;
+        }
+    } else {
+        for (i = 0; i < half ; ++i) {
+            for (j = 0; j < sll; ++j) {
+                tmp[j] = inA[ltop + j];
+                inA[ltop + j] = inA[lbot + j];
+                inA[lbot + j] = tmp[j];
+            }
+            ltop += sll;
+            lbot -= sll;
+        }
     }
 }
 
@@ -740,8 +821,9 @@ wsgate.dRLE16_RGBA = function(inA, inLength, width, outA) {
                     outI += 4;
                     runLength -= 1;
                 }
-                while (runLength-- > 0) {
+                while (runLength > 0) {
                     wsgate.pel2RGBA(0, outA, outI);
+                    runLength -= 1;
                     outI += 4;
                 }
             } else {
@@ -750,8 +832,9 @@ wsgate.dRLE16_RGBA = function(inA, inLength, width, outA) {
                     outI += 4;
                     runLength -= 1;
                 }
-                while (runLength-- > 0) {
+                while (runLength > 0) {
                     wsgate.copyRGBA(outA, outI - rowDelta, outA, outI);
+                    runLength -= 1;
                     outI += 4;
                 }
             }
@@ -771,13 +854,15 @@ wsgate.dRLE16_RGBA = function(inA, inLength, width, outA) {
                     inI += 2;
                 }
                 if (fFirstLine) {
-                    while (runLength-- > 0) {
+                    while (runLength > 0) {
                         wsgate.pel2RGBA(fgPel, outA, outI);
+                        runLength -= 1;
                         outI += 4;
                     }
                 } else {
-                    while (runLength-- > 0) {
+                    while (runLength > 0) {
                         wsgate.xorbufRGBAPel16(outA, outI - rowDelta, outA, outI, fgPel);
+                        runLength -= 1;
                         outI += 4;
                     }
                 }
@@ -790,11 +875,12 @@ wsgate.dRLE16_RGBA = function(inA, inLength, width, outA) {
                 inI += 2;
                 pixelB = inA[inI] | (inA[inI + 1] << 8);
                 inI += 2;
-                while (runLength-- > 0) {
+                while (runLength > 0) {
                     wsgate.pel2RGBA(pixelA, outA, outI);
                     outI += 4;
                     wsgate.pel2RGBA(pixelB, outA, outI);
                     outI += 4;
+                    runLength -= 1;
                 }
                 break;
             case 0x03:
@@ -803,9 +889,10 @@ wsgate.dRLE16_RGBA = function(inA, inLength, width, outA) {
                 inI += advance.val;
                 pixelA = inA[inI] | (inA[inI + 1] << 8);
                 inI += 2;
-                while (runLength-- > 0) {
+                while (runLength > 0) {
                     wsgate.pel2RGBA(pixelA, outA, outI);
                     outI += 4;
+                    runLength -= 1;
                 }
                 break;
             case 0x02:
@@ -831,7 +918,7 @@ wsgate.dRLE16_RGBA = function(inA, inLength, width, outA) {
                         runLength -= 8;
                     }
                 }
-                if (runLength-- > 0) {
+                if (runLength > 0) {
                     bitmask = inA[inI++];
                     if (fFirstLine) {
                         outI = wsgate.WriteFirstLineFgBgImage16toRGBA(outA, outI, bitmask, fgPel, runLength);
@@ -844,10 +931,11 @@ wsgate.dRLE16_RGBA = function(inA, inLength, width, outA) {
             case 0xF4:
                 runLength = wsgate.ExtractRunLength(code, inA, inI, advance);
                 inI += advance.val;
-                while (runLength-- > 0) {
+                while (runLength > 0) {
                     wsgate.pel2RGBA(inA[inI] | (inA[inI + 1] << 8), outA, outI);
                     inI += 2;
                     outI += 4;
+                    runLength -= 1;
                 }
                 break;
             case 0xF9:

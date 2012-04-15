@@ -42,6 +42,7 @@ namespace wsgate {
             RDP & operator=(const RDP &);
 
             void ThreadFunc();
+            void addError(const std::string &msg);
 
             void ContextNew(freerdp *inst, rdpContext *ctx);
             void ContextFree(freerdp *inst, rdpContext *ctx);
@@ -65,6 +66,7 @@ namespace wsgate {
             State m_State;
             Update *m_pUpdate;
             Primary *m_pPrimary;
+            uint32_t m_lastError;
 
             // Callbacks from C pthreads - Must be static in order t be assigned to C fnPtrs.
             static void *cbThreadFunc(void *ctx);

@@ -51,6 +51,16 @@ namespace wsgate {
 
     void Update::SetBounds(rdpContext* context, rdpBounds* bounds) {
         log::debug << __PRETTY_FUNCTION__ << endl;
+        rdpBounds lB;
+        uint32_t op = WSOP_SC_SETBOUNDS;
+        if (bounds) {
+            memcpy(&lB, bounds, sizeof(rdpBounds));
+        } else {
+            memset(&lB, 0, sizeof(rdpBounds));
+        }
+        string buf(reinterpret_cast<const char *>(&op), sizeof(op));
+        buf.append(reinterpret_cast<const char *>(&lB), sizeof(lB));
+        m_wshandler->send_binary(buf);
     }
 
     void Update::Synchronize(rdpContext* context) {

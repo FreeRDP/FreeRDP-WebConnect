@@ -30,7 +30,8 @@ namespace wsgate {
 
     void Primary::PatBlt(rdpContext* context, PATBLT_ORDER* po) {
         // log::debug << __PRETTY_FUNCTION__ << endl;
-        log::debug << "PAT " << po->brush.style << " " << hex << po->bRop << dec << endl;
+        uint32_t rop3 = gdi_rop3_code(po->bRop);
+        log::debug << "PAT " << po->brush.style << " " << hex << rop3 << dec << endl;
     }
 
     void Primary::ScrBlt(rdpContext* context, SCRBLT_ORDER* srcblt) {

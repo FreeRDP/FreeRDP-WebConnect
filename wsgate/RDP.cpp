@@ -2,6 +2,8 @@
 # include "config.h"
 #endif
 
+#include <sstream>
+
 #include <pthread.h>
 
 #include "RDP.hpp"
@@ -28,6 +30,7 @@ namespace wsgate {
           , m_State(STATE_INITIAL)
           , m_pUpdate(new Update(h))
           , m_pPrimary(new Primary(h))
+          , m_lastError(0)
     {
         if (!m_freerdp) {
             throw tracing::runtime_error("Could not create freerep instance");
@@ -179,10 +182,9 @@ namespace wsgate {
     }
 
     // private
-    void RDP::ContextFree(freerdp *rdp, rdpContext *)
+    void RDP::ContextFree(freerdp *, rdpContext *)
     {
         log::debug << "RDP::ContextFree" << endl;
-        // gdi_free(rdp);
     }
 
     // private
@@ -246,17 +248,48 @@ namespace wsgate {
     }
 
     // private
+    void RDP::addError(const std::string &msg)
+    {
+        if (!m_errMsg.empty()) {
+            m_errMsg.append("\n");
+        }
+        m_errMsg.append("E:").append(msg);
+    }
+
+    // private
     void RDP::ThreadFunc()
     {
         while (m_bThreadLoop) {
-            if (freerdp_shall_disconnect(m_freerdp)) {
-                uint32_t e = freerdp_error_info(m_freerdp);
-                log::debug << "Shall Disconnect: " << e << endl;
-                break;
+            uint32_t e = freerdp_error_info(m_freerdp);
+            if (0 != e) {
+                if (m_lastError != e) {
+                    m_lastError = e;
+                    switch (m_lastError) {
+                        case 1:
+                            // No really an error
+                            // (Happens when you invoke Disconnect in Start-Menu)
+                            addError("");
+                            break;
+                        case 5:
+                            addError("Another user connected to the server,\nforcing the disconnection of the current connection.");
+                            break;
+                        default:
+                            {
+                                ostringstream oss;
+                                oss << "Server reported error 0x" << hex << m_lastError;
+                                addError(oss.str());
+                            }
+                            break;
+                    }
+                }
             }
             if (!m_errMsg.empty()) {
+                log::debug << m_errMsg << endl;
                 m_wshandler->send_text(m_errMsg);
                 m_errMsg.clear();
+            }
+            if (freerdp_shall_disconnect(m_freerdp)) {
+                break;
             }
             switch (m_State) {
                 case STATE_CONNECTED:
@@ -268,7 +301,7 @@ namespace wsgate {
                         continue;
                     }
                     m_State = STATE_INITIAL;
-                    m_errMsg = "E:Could not connect to RDP backend.";
+                    addError("Could not connect to RDP backend.");
                     break;
                 case STATE_INITIAL:
                 case STATE_CLOSED:
