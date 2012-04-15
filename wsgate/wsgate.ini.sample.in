@@ -1,5 +1,5 @@
 [global]
-# Enable debug logging. Possible values: true, false
+# Enable debug logging. Possible values: true, false; Default: false
 debug = true
 
 # Set non-SSL listener port. If omitted, no listener will be started.
@@ -11,14 +11,29 @@ bindaddr = 127.0.0.1
 # Set hostname (for HTTP 1.1 host header comparison)
 hostname = localhost
 
-# Set syslog logging facility. See: syslog(3)
+# Set syslog logging facility.
+# Possible values: see syslog(3), without the LOG_ prefix
+# Default: DAEMON.
+# On Windows, this option is ignored and the looging is done via OutputDebugstring
 logfacility = LOCAL6
 
-# Set syslog mask. See: syslog(3). If omitted, ALL levels are enabled.
+# Set syslog mask.
+# Possible values: DEBUG, INFO, NOTICE, WARNING, ERR, CRIT, ALERT, EMERG
+# Multiple values: separate with the pipe sign "|"
+# Default: all enabled
 #logmask = WARN|ERR|INFO
 
+# Enable daemon mode.
+# Default: false, Currently ignored on Windows.
+#daemon = true
+
+# Path of daemon's PID file.
+# Default: none => Don't create a PID-file
+# Currently ignored on Windows
+#pidfile = /var/run/wsgate.pid
+
 [http]
-# Set doecument root of web service.
+# Set document root of web service. NO Default!
 documentroot = %pkgdatadir%
 
 [ssl]

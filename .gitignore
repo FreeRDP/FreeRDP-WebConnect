@@ -38,6 +38,7 @@ rpmbuild.log
 stamp-h1
 wsgate/wsgate
 wsgate/bindhelper
+wsgate/wsgate.ini.sample
 wsgate/doc/
 wsgate/webroot/index.html
 wsgate/webroot/css/style.css

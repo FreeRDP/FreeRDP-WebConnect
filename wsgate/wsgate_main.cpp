@@ -47,6 +47,12 @@
 #ifdef HAVE_SYS_TYPES_H
 # include <sys/types.h>
 #endif
+#ifdef HAVE_SYS_STAT_H
+# include <sys/stat.h>
+#endif
+#ifdef HAVE_FCNTL_H
+# include <fcntl.h>
+#endif
 #ifdef HAVE_SYS_SOCKET_H
 # include <sys/socket.h>
 #endif
@@ -123,9 +129,17 @@ namespace wsgate {
                 : EHS(parent, registerpath)
                 , m_sHostname("localhost")
                 , m_sDocumentRoot()
+                , m_sPidFile()
                 , m_bDebug(false)
                 {
                 }
+
+            virtual ~WsGate()
+            {
+                if (!m_sPidFile.empty()) {
+                    unlink(m_sPidFile.c_str());
+                }
+            }
 
             HttpResponse *HandleThreadException(ehs_threadid_t, HttpRequest *request, exception &ex)
             {
@@ -399,6 +413,10 @@ namespace wsgate {
                 m_sDocumentRoot = name;
             }
 
+            void SetPidFile(const string &name) {
+                m_sPidFile = name;
+            }
+
             void SetDebug(const bool debug) {
                 m_bDebug = debug;
             }
@@ -406,6 +424,7 @@ namespace wsgate {
         private:
             string m_sHostname;
             string m_sDocumentRoot;
+            string m_sPidFile;
             bool m_bDebug;
     };
 
@@ -591,6 +610,17 @@ namespace wsgate {
 
 }
 
+static wsgate::WsGate *g_srv = NULL;
+
+static void terminate(int)
+{
+    wsgate::log::info << "terminating" << endl;
+    if (g_srv) {
+        g_srv->StopServer();
+        g_srv = NULL;
+    }
+}
+
 // basic main that creates a threaded EHS object and then
 //   sleeps forever and lets the EHS thread do its job.
 int main (int argc, char **argv)
@@ -606,6 +636,8 @@ int main (int argc, char **argv)
 
     po::options_description cfg("");
     cfg.add_options()
+        ("global.daemon", po::value<string>(), "enable/disable daemon mode")
+        ("global.pidfile", po::value<string>(), "path of PID file in daemon mode")
         ("global.debug", po::value<string>(), "enable/disable debugging")
         ("global.hostname", po::value<string>(), "specify host name")
         ("global.port", po::value<uint16_t>(), "specify listening port")
@@ -758,22 +790,79 @@ int main (int argc, char **argv)
         oSP["passphrase"] = vm["ssl.certpass"].as<string>();
     }
 
+    bool daemon = false;
+    if (vm.count("global.daemon")) {
+        daemon = (0 == vm["global.daemon"].as<string>().compare("true"));
+        if (daemon) {
+#ifdef _WIN32
+            // TODO: Add win32 service handling
+#else
+            pid_t pid = fork();
+            switch (pid) {
+                case 0:
+                    // child
+                    {
+                        int nfd = open("/dev/null", O_RDWR);
+                        dup2(nfd, 0);
+                        dup2(nfd, 1);
+                        dup2(nfd, 2);
+                        close(nfd);
+                        chdir("/");
+                        setsid();
+                        if (vm.count("global.pidfile")) {
+                            string pidfn(vm["global.pidfile"].as<string>());
+                            if (!pidfn.empty()) {
+                                ofstream pidfile(pidfn);
+                                pidfile << getpid() << endl;
+                                pidfile.close();
+                                srv.SetPidFile(pidfn);
+                            }
+                        }
+                    }
+                    break;
+                case -1:
+                    cerr << "Could not fork" << endl;
+                    return -1;
+                default:
+                    return 0;
+            }
+#endif
+
+        }
+    }
+
+#ifndef _WIN32
+    signal(SIGINT, terminate);
+    signal(SIGTERM, terminate);
+#endif
+
     try {
         wsgate::log::info << "wsgate v" << VERSION << " starting" << endl;
         srv.StartServer(oSP);
 
         wsgate::log::info << "Listening on " << oSP["bindaddress"].GetCharString() << ":" << oSP["port"].GetInt() << endl;
 
-        kbdio kbd;
-        cout << "Press q to terminate ..." << endl;
-        while (!(srv.ShouldTerminate() || kbd.qpressed())) {
-            if (sleepInLoop) {
-                usleep(1000);
-            } else {
-                srv.HandleData(1000);
+        g_srv = &srv;
+        if (daemon) {
+            while (!(srv.ShouldTerminate())) {
+                if (sleepInLoop) {
+                    usleep(1000);
+                } else {
+                    srv.HandleData(1000);
+                }
+            }
+        } else {
+            kbdio kbd;
+            cout << "Press q to terminate ..." << endl;
+            while (!(srv.ShouldTerminate() || kbd.qpressed())) {
+                if (sleepInLoop) {
+                    usleep(1000);
+                } else {
+                    srv.HandleData(1000);
+                }
             }
         }
-
+        g_srv = NULL;
         srv.StopServer();
     } catch (exception &e) {
         cerr << "ERROR: " << e.what() << endl;
