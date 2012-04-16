@@ -481,8 +481,10 @@ namespace wsgate {
                     default:
                         if (waitpid(pid, &status, 0) != -1) {
                             ret = (0 == status);
-                            if (0 != status)
-                                log::err << BINDHELPER_PATH << ": " << strerror(WEXITSTATUS(status)) << endl;
+                            if (0 != status) {
+                                log::err << BINDHELPER_PATH << " reports: " << strerror(WEXITSTATUS(status)) << endl;
+                                errno = WEXITSTATUS(status);
+                            }
                         }
                         break;
                 }
@@ -885,6 +887,7 @@ int main (int argc, char **argv)
         srv.StopServer();
     } catch (exception &e) {
         cerr << "ERROR: " << e.what() << endl;
+        wsgate::log::err << e.what() << endl;
     }
 
     return 0;
