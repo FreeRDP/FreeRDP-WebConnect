@@ -8,6 +8,7 @@
 #include <cstdio>
 #include <cstring>
 #include <cstdlib>
+#include <cstdint>
 #include <iostream>
 #include <string>
 #include <vector>
@@ -24,7 +25,9 @@
 using namespace std;
 
 namespace wsgate {
+
 #ifdef _WIN32
+# define EVMSG_GENERIC   0x100
 # define LOG_EMERG       0       /* system is unusable */
 # define LOG_ALERT       1       /* action must be taken immediately */
 # define LOG_CRIT        2       /* critical conditions */
@@ -36,8 +39,106 @@ namespace wsgate {
 
 # define LOG_MASK(pri)   (1 << (pri))            /* mask for one priority */
 
-    static int current_log_mask = 0;
-#endif
+    class WinLog {
+        public:
+            static void Log(int level, string msg);
+            static void SetMask(int mask);
+            static void Create(const char *ident, int mask = 0xFF);
+            static void Destroy();
+
+        private:
+            WinLog(const char *ident, int mask);
+            ~WinLog();
+            
+            void DoLog(int level, string msg);
+
+            HANDLE m_hES;
+            int m_CurrentMask;
+
+            static WinLog *m_instance;
+    };
+
+    void WinLog::Log(int level, string msg) {
+        if (WinLog::m_instance) {
+            WinLog::m_instance->DoLog(level, msg);
+        }
+    }
+
+    void WinLog::SetMask(int mask) {
+        if (WinLog::m_instance) {
+            WinLog::m_instance->m_CurrentMask = mask;
+        }
+    }
+
+    void WinLog::Create(const char *ident, int mask /* = 0xFF */) {
+        if (!WinLog::m_instance) {
+            WinLog::m_instance = new WinLog(ident, mask);
+        }
+    }
+
+    void WinLog::Destroy() {
+        if (WinLog::m_instance) {
+            delete WinLog::m_instance;
+        }
+    }
+
+    WinLog::WinLog(const char *ident, int mask)
+        : m_hES(NULL)
+          , m_CurrentMask(mask)
+    {
+        char modpath[1024];
+        uint32_t modlen = ::GetModuleFileNameA(NULL, modpath, sizeof(modpath));
+        HKEY hKeyEvtLogApp = NULL;
+        if (0 == ::RegOpenKeyExA(HKEY_LOCAL_MACHINE,
+                    "SYSTEM\\CurrentControlSet\\Services\\EventLog\\Application",
+                    0, KEY_WRITE, &hKeyEvtLogApp))
+        {
+            HKEY hKey = NULL;
+            if (0 == ::RegCreateKeyExA(hKeyEvtLogApp, ident, 0, NULL, 0, KEY_WRITE, NULL, &hKey, NULL)) {
+                // Add the Event ID message-file name to the 'EventMessageFile' subkey.
+                ::RegSetValueExA(hKey, "EventMessageFile", 0, REG_EXPAND_SZ,
+                        reinterpret_cast<const BYTE *>(&modpath), modlen);
+                const uint32_t dwData = EVENTLOG_ERROR_TYPE|EVENTLOG_WARNING_TYPE|
+                    EVENTLOG_INFORMATION_TYPE;
+                ::RegSetValueExA(hKey, "TypesSupported", 0, REG_DWORD,
+                        reinterpret_cast<const BYTE*>(&dwData), sizeof(uint32_t));
+                ::RegCloseKey(hKey);
+            }
+            ::RegCloseKey(hKeyEvtLogApp);
+            m_hES = ::RegisterEventSourceA(NULL, ident);
+        }
+        m_instance = this;
+    }
+
+    WinLog::~WinLog() {
+        m_instance = NULL;
+        ::DeregisterEventSource(m_hES);
+    }
+
+    void WinLog::DoLog(int level, string msg) {
+        if (LOG_MASK(level) & m_CurrentMask) {
+            const char *p = msg.c_str();
+            switch (level) {
+                case LOG_DEBUG:
+                    OutputDebugStringA(p);
+                    break;
+                case LOG_INFO:
+                case LOG_NOTICE:
+                    ::ReportEventA(m_hES, EVENTLOG_SUCCESS,
+                            0, EVMSG_GENERIC, NULL, 1, 0, &p, NULL);
+                    break;
+                case LOG_WARNING:
+                    ::ReportEventA(m_hES, EVENTLOG_WARNING_TYPE,
+                            0, EVMSG_GENERIC, NULL, 1, 0, &p, NULL);
+                default:
+                    ::ReportEventA(m_hES, EVENTLOG_ERROR_TYPE,
+                            0, EVMSG_GENERIC, NULL, 1, 0, &p, NULL);
+                    break;
+            }
+        }
+    }
+
+#endif // _WIN32
 
     class nullbuf : public streambuf
     {
@@ -65,10 +166,11 @@ namespace wsgate {
         protected:
             virtual int overflow(int c = EOF) {
                 if (c == '\n') {
-#ifdef _WIN32
-                    if (LOG_MASK(level) & current_log_mask) {
-                        OutputDebugStringA(linebuf.c_str());
+                    if (linebuf.empty()) {
+                        return 0;
                     }
+#ifdef _WIN32
+                    WinLog::Log(level, linebuf);
 #else
                     syslog(level, "%s", linebuf.c_str());
 #endif
@@ -132,7 +234,7 @@ namespace wsgate {
         }
         // cout << "setlogmask(" << hex << bits << dec << ")" << endl;
 #ifdef _WIN32
-        current_log_mask = bits;
+        WinLog::SetMask(bits);
 #else
         setlogmask(bits);
 #endif
@@ -179,7 +281,7 @@ namespace wsgate {
 
     logger::logger(const string & _ident, const Facility facility /*= DAEMON*/, const string & _mask /*= "11111111"*/)
         : ident(strdup(_ident.c_str()))
-        , mask()
+          , mask()
     {
         string mtmp(_mask);
         if (mtmp.empty()) {
@@ -195,7 +297,7 @@ namespace wsgate {
 
     logger::logger(const logger &other)
         : ident(strdup(other.ident))
-        , mask(other.mask)
+          , mask(other.mask)
     {
     }
 
@@ -212,7 +314,9 @@ namespace wsgate {
 
     logger::~logger()
     {
-#ifndef _WIN32
+#ifdef _WIN32
+        WinLog::Destroy();
+#else
         closelog();
 #endif
         release();
@@ -257,7 +361,9 @@ namespace wsgate {
 
     void logger::init(Facility facility, bitset<8>mask)
     {
-#ifndef _WIN32
+#ifdef _WIN32
+        WinLog::Create(ident);
+#else
         int fac = LOG_DAEMON;
         switch (facility) {
             case AUTH:

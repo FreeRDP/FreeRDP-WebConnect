@@ -52,6 +52,7 @@ case $target_os in
     mingw*)
         LT_LANG([RC])
         AC_CHECK_TOOL(RC,windres,)
+        AC_CHECK_TOOL(MC,windmc,)
         ;;
 esac
 ],[
@@ -62,6 +63,7 @@ case $target_os in
         tagnames="RC"
         _LT_AC_TAGCONFIG
         AC_CHECK_TOOL(RC,windres,)
+        AC_CHECK_TOOL(MC,windmc,)
         ;;
 esac
 ])

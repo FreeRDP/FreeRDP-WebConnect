@@ -9,8 +9,11 @@
 namespace wsgate {
 
     /**
-     * A logging class, mapping syslog(3) functionality to C++.
-     * For every log level of syslog, a corresponding stream exists.
+     * A logging class, mapping syslog(3) functionality to C++ on Unix
+     * systems. On Windows systems, the logging is performed via the
+     * application event log (all log levels, except LOG_DEBUG) and via
+     * OutputDebugString (for log level LOG_DEBUG).
+     * For every log level, a corresponding ostream exists.
      */
     class logger {
         public:
@@ -40,8 +43,17 @@ namespace wsgate {
 
             /**
              * Initializes logging.
-             * @param ident The program identifier @see openlog
-             * @param facility The log facility to use @see openlog
+             * @param ident The program identifier. On Windows systems,
+             * this parameter defines the name of the EventSource in the application log.<br />
+             * <b>Additional note for Windows:</b><br />
+             * In order to create proper entries in the application event log, a registry
+             * key with the supplied name is created below
+             * HKLM\\SYSTEM\\CurrentControlSet\\Services\\EventLog\\Application\\
+             * this key is <b>not</b> automatically deleted, since it's content points to
+             * the executable (or dll) which is using this class. Therefore, in your
+             * uninstaller, please remove that key.
+             * @see openlog(3).
+             * @param facility The log facility to use. Ignored on Windows. @see openlog(3).
              * @param mask A string, specifying which log levels are enabled.
              *  This string can be specified in multiple formats:
              *  <ul>
@@ -65,17 +77,17 @@ namespace wsgate {
             logger & operator=(const logger &other);
 
             /**
-             * Releases internal log buffers.
+             * Releases the internal log buffers.
              */
             static void release();
 
             /**
-             * Enables logging on existing log channels.
+             * Enables logging on all existing log channels.
              */
             static void enable();
 
             /**
-             * Disables logging on existing log channels.
+             * Disables logging on all existing log channels.
              */
             static void disable();
 
@@ -94,12 +106,14 @@ namespace wsgate {
 
             /**
              * Modifies the log facility.
-             * @param facility The log facility to use @see openlog
+             * This method has no effect on Windows.
+             * @param facility The log facility to use @see openlog(3)
              */
             void setfacility(Facility facility);
 
             /**
              * Modifies the log facility.
+             * This method has no effect on Windows.
              * @param facility A string containg the facility name.
              */
             void setfacilityByName(const std::string & facility);
@@ -108,11 +122,16 @@ namespace wsgate {
              * Stream for logging with log level LOG_DEBUG.
              * Writing to this stream before invokation
              * of the constructor does nothing.
+             * On Windows, output is done via
+             * <a href="http://tiny.cc/cvrvcw">OutputDebugString</a> and can be examined by tools
+             * like <a href="http://tiny.cc/54rvcw">DebugView</a>.
              */
             static std::ostream debug;
 
             /**
              * Stream for logging with log level LOG_INFO.
+             * On Windows, the message is tagged with an
+             * Info-Icon in the application event log.
              * Writing to this stream before invokation
              * of the constructor does nothing.
              */
@@ -120,6 +139,8 @@ namespace wsgate {
 
             /**
              * Stream for logging with log level LOG_NOTICE.
+             * On Windows, the message is tagged with an
+             * Info-Icon in the application event log.
              * Writing to this stream before invokation
              * of the constructor does nothing.
              */
@@ -127,6 +148,8 @@ namespace wsgate {
 
             /**
              * Stream for logging with log level LOG_WARNING.
+             * On Windows, the message is tagged with a
+             * Warning-Icon in the application event log.
              * Writing to this stream before invokation
              * of the constructor does nothing.
              */
@@ -134,6 +157,8 @@ namespace wsgate {
 
             /**
              * Stream for logging with log level LOG_ERR.
+             * On Windows, the message is tagged with an
+             * Error-Icon in the application event log.
              * Writing to this stream before invokation
              * of the constructor does nothing.
              */
@@ -141,6 +166,8 @@ namespace wsgate {
 
             /**
              * Stream for logging with log level LOG_CRIT.
+             * On Windows, the message is tagged with an
+             * Error-Icon in the application event log.
              * Writing to this stream before invokation
              * of the constructor does nothing.
              */
@@ -148,14 +175,18 @@ namespace wsgate {
 
             /**
              * Stream for logging with log level LOG_ALERT.
+             * On Windows, the message is tagged with an
+             * Error-Icon in the application event log.
              * Writing to this stream before invokation
              * of the constructor does nothing.
              */
             static std::ostream alert;
 
             /**
-            /// Stream for logging with log level LOG_EMERG.
+             * Stream for logging with log level LOG_EMERG.
              * Writing to this stream before invokation
+             * On Windows, the message is tagged with an
+             * Error-Icon in the application event log.
              * of the constructor does nothing.
              */
             static std::ostream emerg;
@@ -170,7 +201,7 @@ namespace wsgate {
 
             /**
              * Performs the actual initialization.
-             * @param facility The log facility to use @see openlog
+             * @param facility The log facility to use @see openlog(3)
              * @param mask A std::bitset of length 8. The leftmost bit is accociated with the LOG_DEBUG
              *  level, the next bit with LOG_INFO and so on.
              */

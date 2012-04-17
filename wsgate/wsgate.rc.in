@@ -49,6 +49,8 @@ BEGIN
     END
 END
 
+#include "logging.rc"
+
 #endif    // !_MAC
 
 #endif    // Neutral resources
