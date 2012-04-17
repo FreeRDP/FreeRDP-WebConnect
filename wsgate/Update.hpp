@@ -10,12 +10,26 @@ typedef struct rdp_settings rdpSettings;
 
 namespace wsgate {
 
+    /**
+     * Implementation of the FreeRDP Update interface.
+     * This class implments callbacks for FreeRDP's Update API.
+     */ 
     class Update {
 
         public:
+            /**
+             * Constructs a new instance.
+             * @param h A pointer to the corresponding wshandler object.
+             */
             Update(wspp::wshandler *h);
+
+            /// Destructor.
             virtual ~Update();
 
+            /**
+             * Registers the callbacks ath FreeRDP's API.
+             * @param rdp A pointer to the FreeRDP instance.
+             */
             void Register(freerdp *rdp);
 
         private:

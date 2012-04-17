@@ -23,6 +23,10 @@ namespace wsgate {
     class Primary;
     struct CLRCONV;
 
+    /**
+     * OP-Codes, sent from the server to
+     * the (JavaScript) client.
+     */
     typedef enum {
         WSOP_SC_BEGINPAINT,
         WSOP_SC_ENDPAINT,
@@ -32,15 +36,37 @@ namespace wsgate {
         WSOP_SC_PATBLT
     } WsOPsc;
 
+    /**
+     * OP-Codes, sent from the (JavaScript)
+     * client to the server.
+     */
     typedef enum {
         WSOP_CS_MOUSE
     } WsOPcs;
 
+    /**
+     * Our extension of FreeRDP's context
+     */
     typedef struct {
+        /**
+         * FreeRDP's original portion.
+         */
         rdpContext _p;
+        /**
+         * Pointer to the main RDP handler.
+         */
         RDP *pRDP;
+        /**
+         * Pointer to the corresponding Update API module.
+         */
         Update *pUpdate;
+        /**
+         * Pointer to the corresponding Primary API module.
+         */
         Primary *pPrimary;
+        /**
+         * The current color space conversion parameter.
+         */
         HCLRCONV clrconv;
     } wsgContext;
 }

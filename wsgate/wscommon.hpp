@@ -32,14 +32,14 @@
 #define WEBSOCKET_CONSTANTS_HPP
 
 #ifndef __STDC_LIMIT_MACROS
-  #define __STDC_LIMIT_MACROS
+#define __STDC_LIMIT_MACROS
 #endif
 #include <boost/cstdint.hpp>
 
 // SIZE_MAX appears to be a compiler thing not an OS header thing.
-// make sure it is defined.
+// make sure it is defined. 
 #ifndef SIZE_MAX
-    #define SIZE_MAX ((size_t)(-1))
+#define SIZE_MAX ((size_t)(-1))
 #endif
 
 #include <exception>
@@ -48,30 +48,14 @@
 
 #include <boost/shared_ptr.hpp>
 
-// Defaults
+/**
+ * This namespace encapsulates the basic WebSockets protocol logic.
+ * Most of the code in this namespace (except the wshandler class)
+ * is derived from the <a href="http://tiny.cc/owxvcw">WebSockets++</a> project and
+ * licensed under a BSD-license.
+ */
 namespace wspp {
-    static const std::string USER_AGENT = "EHS";
-    
-    typedef std::vector<unsigned char> binary_string;
-    typedef boost::shared_ptr<binary_string> binary_string_ptr;
-    
-    typedef std::string utf8_string;
-    typedef boost::shared_ptr<utf8_string> utf8_string_ptr;
-    
-    const uint64_t DEFAULT_MAX_MESSAGE_SIZE = 0xFFFFFF; // ~16MB
-    
-    const size_t DEFAULT_READ_THRESHOLD = 1; // 512 would be a more sane value for this
-    const bool DEFAULT_SILENT_CLOSE = false; // true
-    
-    const size_t MAX_THREAD_POOL_SIZE = 64;
-    
-    const uint16_t DEFAULT_PORT = 80;
-    const uint16_t DEFAULT_SECURE_PORT = 443;
-    
-    inline uint16_t default_port(bool secure) {
-        return (secure ? DEFAULT_SECURE_PORT : DEFAULT_PORT);
-    }   
-    
+
     namespace session {
         namespace state {
             enum value {
@@ -82,49 +66,49 @@ namespace wspp {
             };
         }
     }
-    
+
     namespace close {
-    namespace status {
-        enum value {
-            INVALID_END = 999,
-            NORMAL = 1000,
-            GOING_AWAY = 1001,
-            PROTOCOL_ERROR = 1002,
-            UNSUPPORTED_DATA = 1003,
-            RSV_ADHOC_1 = 1004,
-            NO_STATUS = 1005,
-            ABNORMAL_CLOSE = 1006,
-            INVALID_PAYLOAD = 1007,
-            POLICY_VIOLATION = 1008,
-            MESSAGE_TOO_BIG = 1009,
-            EXTENSION_REQUIRE = 1010,
-            INTERNAL_ENDPOINT_ERROR = 1011,
-            RSV_ADHOC_2 = 1012,
-            RSV_ADHOC_3 = 1013,
-            RSV_ADHOC_4 = 1014,
-            TLS_HANDSHAKE = 1015,
-            RSV_START = 1016,
-            RSV_END = 2999,
-            INVALID_START = 5000
-        };
-        
-        inline bool reserved(value s) {
-            return ((s >= RSV_START && s <= RSV_END) || s == RSV_ADHOC_1 
-                    || s == RSV_ADHOC_2 || s == RSV_ADHOC_3 || s == RSV_ADHOC_4);
-        }
-        
-        // Codes invalid on the wire
-        inline bool invalid(value s) {
-            return ((s <= INVALID_END || s >= INVALID_START) || 
-                    s == NO_STATUS || 
-                    s == ABNORMAL_CLOSE || 
-                    s == TLS_HANDSHAKE);
-        }
-        
-        // TODO functions for application ranges?
-    } // namespace status
+        namespace status {
+            enum value {
+                INVALID_END = 999,
+                NORMAL = 1000,
+                GOING_AWAY = 1001,
+                PROTOCOL_ERROR = 1002,
+                UNSUPPORTED_DATA = 1003,
+                RSV_ADHOC_1 = 1004,
+                NO_STATUS = 1005,
+                ABNORMAL_CLOSE = 1006,
+                INVALID_PAYLOAD = 1007,
+                POLICY_VIOLATION = 1008,
+                MESSAGE_TOO_BIG = 1009,
+                EXTENSION_REQUIRE = 1010,
+                INTERNAL_ENDPOINT_ERROR = 1011,
+                RSV_ADHOC_2 = 1012,
+                RSV_ADHOC_3 = 1013,
+                RSV_ADHOC_4 = 1014,
+                TLS_HANDSHAKE = 1015,
+                RSV_START = 1016,
+                RSV_END = 2999,
+                INVALID_START = 5000
+            };
+
+            inline bool reserved(value s) {
+                return ((s >= RSV_START && s <= RSV_END) || s == RSV_ADHOC_1 
+                        || s == RSV_ADHOC_2 || s == RSV_ADHOC_3 || s == RSV_ADHOC_4);
+            }
+
+            // Codes invalid on the wire
+            inline bool invalid(value s) {
+                return ((s <= INVALID_END || s >= INVALID_START) || 
+                        s == NO_STATUS || 
+                        s == ABNORMAL_CLOSE || 
+                        s == TLS_HANDSHAKE);
+            }
+
+            // TODO functions for application ranges?
+        } // namespace status
     } // namespace close
-    
+
     namespace frame {
         // Opcodes are 4 bits
         // See spec section 5.2
@@ -147,21 +131,21 @@ namespace wspp {
                 CONTROL_RSVE = 0xE,
                 CONTROL_RSVF = 0xF
             };
-            
+
             inline bool reserved(value v) {
                 return (v >= RSV3 && v <= RSV7) || 
-                (v >= CONTROL_RSVB && v <= CONTROL_RSVF);
+                    (v >= CONTROL_RSVB && v <= CONTROL_RSVF);
             }
-            
+
             inline bool invalid(value v) {
                 return (v > 0xF || v < 0);
             }
-            
+
             inline bool is_control(value v) {
                 return v >= 0x8;
             }
         }
-        
+
         namespace limits {
             static const uint8_t PAYLOAD_SIZE_BASIC = 125;
             static const uint16_t PAYLOAD_SIZE_EXTENDED = 0xFFFF; // 2^16, 65535

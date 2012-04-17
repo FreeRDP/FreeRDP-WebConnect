@@ -3,12 +3,26 @@
 
 namespace wsgate {
 
+    /**
+     * Implementation of the FreeRDP Primary interface.
+     * This class implments callbacks for FreeRDP's Primary API.
+     */ 
     class Primary {
 
         public:
+            /**
+             * Constructs a new instance.
+             * @param h A pointer to the corresponding wshandler object.
+             */
             Primary(wspp::wshandler *h);
+
+            /// Destructor
             virtual ~Primary();
 
+            /**
+             * Registers the callbacks ath FreeRDP's API.
+             * @param rdp A pointer to the FreeRDP instance.
+             */
             void Register(freerdp *rdp);
 
         private:
