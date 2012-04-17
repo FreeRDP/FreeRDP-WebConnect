@@ -873,7 +873,7 @@ int main (int argc, char **argv)
                 }
             }
         } else {
-            kbdio kbd;
+            wsgate::kbdio kbd;
             cout << "Press q to terminate ..." << endl;
             while (!(srv.ShouldTerminate() || g_signaled || kbd.qpressed())) {
                 if (sleepInLoop) {
