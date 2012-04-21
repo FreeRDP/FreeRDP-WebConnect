@@ -18,20 +18,64 @@ namespace wsgate {
 
     void Primary::Register(freerdp *rdp) {
         log::debug << __PRETTY_FUNCTION__ << endl;
-        rdp->update->primary->OpaqueRect = cbOpaqueRect;
         rdp->update->primary->DstBlt = cbDstBlt;
         rdp->update->primary->PatBlt = cbPatBlt;
         rdp->update->primary->ScrBlt = cbScrBlt;
+        rdp->update->primary->OpaqueRect = cbOpaqueRect;
+        rdp->update->primary->DrawNineGrid = cbDrawNineGrid;
+        rdp->update->primary->MultiDstBlt = cbMultiDstBlt;
+        rdp->update->primary->MultiPatBlt = cbMultiPatBlt;
+        rdp->update->primary->MultiScrBlt = cbMultiScrBlt;
+        rdp->update->primary->MultiOpaqueRect = cbMultiOpaqueRect;
+        rdp->update->primary->MultiDrawNineGrid = cbMultiDrawNineGrid;
+        rdp->update->primary->LineTo = cbLineTo;
+        rdp->update->primary->Polyline = cbPolyline;
+        rdp->update->primary->MemBlt = cbMemBlt;
+        rdp->update->primary->Mem3Blt = cbMem3Blt;
+        rdp->update->primary->SaveBitmap = cbSaveBitmap;
+        rdp->update->primary->GlyphIndex = cbGlyphIndex;
+        rdp->update->primary->FastIndex = cbFastIndex;
+        rdp->update->primary->FastGlyph = cbFastGlyph;
+        rdp->update->primary->PolygonSC = cbPolygonSC;
+        rdp->update->primary->PolygonCB = cbPolygonCB;
+        rdp->update->primary->EllipseSC = cbEllipseSC;
+        rdp->update->primary->EllipseCB = cbEllipseCB;
     }
 
     void Primary::DstBlt(rdpContext*, DSTBLT_ORDER*) {
         log::debug << __PRETTY_FUNCTION__ << endl;
     }
 
-    void Primary::PatBlt(rdpContext*, PATBLT_ORDER* po) {
+    void Primary::PatBlt(rdpContext *ctx, PATBLT_ORDER* po) {
         // log::debug << __PRETTY_FUNCTION__ << endl;
         uint32_t rop3 = gdi_rop3_code(po->bRop);
-        log::debug << "PAT " << po->brush.style << " " << hex << rop3 << dec << endl;
+        HCLRCONV hclrconv = reinterpret_cast<wsgContext *>(ctx)->clrconv;
+        if (GDI_BS_SOLID == po->brush.style) {
+            log::debug << "PAT S " << hex << rop3 << dec << endl;
+            struct {
+                uint32_t op;
+                int32_t x;
+                int32_t y;
+                int32_t w;
+                int32_t h;
+                uint32_t fg;
+                uint32_t rop;
+            } tmp = {
+                WSOP_SC_PATBLT,
+                po->nLeftRect,
+                po->nTopRect,
+                po->nWidth,
+                po->nHeight,
+                freerdp_color_convert_var(po->foreColor, 16, 32, hclrconv),
+                rop3
+            };
+            string buf(reinterpret_cast<const char *>(&tmp), sizeof(tmp));
+            m_wshandler->send_binary(buf);
+        } else if (GDI_BS_PATTERN ==  po->brush.style) {
+            log::debug << "PAT P " << hex << rop3 << dec << endl;
+        } else {
+            log::debug << "PAT style " << hex << po->brush.style << dec << endl;
+        }
     }
 
     void Primary::ScrBlt(rdpContext*, SCRBLT_ORDER*) {
@@ -41,11 +85,13 @@ namespace wsgate {
     void Primary::OpaqueRect(rdpContext* context, OPAQUE_RECT_ORDER* oro) {
         // log::debug << __PRETTY_FUNCTION__ << endl;
         HCLRCONV hclrconv = reinterpret_cast<wsgContext *>(context)->clrconv;
+        uint32_t svcolor = oro->color;
         oro->color = freerdp_color_convert_var(oro->color, 16, 32, hclrconv);
         uint32_t op = WSOP_SC_OPAQUERECT;
         string buf(reinterpret_cast<const char *>(&op), sizeof(op));
         buf.append(reinterpret_cast<const char *>(oro), sizeof(OPAQUE_RECT_ORDER));
         m_wshandler->send_binary(buf);
+        oro->color = svcolor;
     }
 
     void Primary::DrawNineGrid(rdpContext*, DRAW_NINE_GRID_ORDER*) {

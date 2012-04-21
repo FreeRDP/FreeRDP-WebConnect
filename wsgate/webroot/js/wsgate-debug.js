@@ -54,10 +54,47 @@ wsgate.RDP = new Class( {
         this.mq = new Array();
         this.pID = null;
         this.pMTX = 0;
+        this.clx = 0;
+        this.cly = 0;
+        this.clw = 0;
+        this.clh = 0;
     },
     Disconnect: function() {
         this._reset();
     },
+    /**
+     * Create (or retrieve the current instance of) a "backing store" canvas
+     * of the same size like th primary canvas. This canvas is NOT linked into
+     * the DOM and therefore invisble.
+     */
+    _bctx: function() {
+        if (!this.bctx) {
+            this.bstore = new Element('canvas', {
+                'width':this.canvas.width,
+                'height':this.canvas.height,
+            });
+            this.bctx = this.bstore.getContext('2d');
+        }
+        return this.bctx;
+    },
+    /**
+     * Check, if a given point is inside the clipping region.
+     */
+    _ckclp: function(x, y) {
+        if (this.clw || this.clh) {
+            return (
+                    (x >= this.clx) &&
+                    (x <= (this.clx + this.clw)) &&
+                    (y >= this.cly) &&
+                    (y <= (this.cly + this.clh))
+                   );
+        }
+        // No clipping region
+        return true;
+    },
+    /**
+     * Main message loop.
+     */
     _pmsg: function() { // process a binary RDP message from our queue
         var op, hdr, data, bmdata, rgba, compressed;
         if (this.pMTX++ > 0) {
@@ -93,17 +130,37 @@ wsgate.RDP = new Class( {
                     compressed =  (hdr[5] != 0);
                     // wsgate.log.debug('Bitmap:', (compressed ? ' C ' : ' U '), ' x: ', hdr[0], ' y: ', hdr[1], ' w: ', hdr[2], ' h: ', hdr[3], ' bpp: ', hdr[4]);
                     if ((hdr[4] == 16) || (hdr[4] == 15)) {
-                        var outB = this.cctx.createImageData(hdr[2], hdr[3]);
-                        if (compressed) {
-                            // var tmp = new Uint8Array(hdr[2] * hdr[3] * 2);
-                            // wsgate.dRLE16(bmdata, hdr[6], hdr[2], tmp);
-                            // wsgate.dRGB162RGBA(tmp, hdr[6], outB.data);
-                            wsgate.dRLE16_RGBA(bmdata, hdr[6], hdr[2], outB.data);
-                            wsgate.flipV(outB.data, hdr[2], hdr[3]);
+                        if (this._ckclp(hdr[0], hdr[1]) &&
+                                this._ckclp(hdr[0] + hdr[2], hdr[1] + hdr[3]))
+                        {
+                            // Completely inside clip region
+                            var outB = this.cctx.createImageData(hdr[2], hdr[3]);
+                            if (compressed) {
+                                wsgate.dRLE16_RGBA(bmdata, hdr[6], hdr[2], outB.data);
+                                wsgate.flipV(outB.data, hdr[2], hdr[3]);
+                            } else {
+                                wsgate.dRGB162RGBA(bmdata, hdr[6], outB.data);
+                            }
+                            this.cctx.putImageData(outB, hdr[0], hdr[1]);
                         } else {
-                            wsgate.dRGB162RGBA(bmdata, hdr[6], outB.data);
+                            // putImageData ignores the clipping region, so we must
+                            // clip ourselves: We first paint into a second canvas,
+                            // the use drawImage (which honors clipping).
+
+                            var outB = this._bctx().createImageData(hdr[2], hdr[3]);
+                            if (compressed) {
+                                // var tmp = new Uint8Array(hdr[2] * hdr[3] * 2);
+                                // wsgate.dRLE16(bmdata, hdr[6], hdr[2], tmp);
+                                // wsgate.dRGB162RGBA(tmp, hdr[6], outB.data);
+                                wsgate.dRLE16_RGBA(bmdata, hdr[6], hdr[2], outB.data);
+                                wsgate.flipV(outB.data, hdr[2], hdr[3]);
+                            } else {
+                                wsgate.dRGB162RGBA(bmdata, hdr[6], outB.data);
+                            }
+                            this.bctx.putImageData(outB, 0, 0);
+                            this.cctx.drawImage(this.bstore, 0, 0, hdr[2], hdr[3],
+                                    hdr[0], hdr[1], hdr[2], hdr[3]);
                         }
-                        this.cctx.putImageData(outB, hdr[0], hdr[1]);
                     } else {
                         wsgate.log.warn('BPP <> 15/16 not yet implemented');
                     }
@@ -121,23 +178,109 @@ wsgate.RDP = new Class( {
                     // SetBounds
                     // left, top, right, bottom
                     hdr = new Int32Array(data, 4, 4);
-                    // All zero means: reset to full canvas zize
+                    // All zero means: reset to full canvas size
+                    this.clx = hdr[0];
+                    this.cly = hdr[1];
+                    this.clw = hdr[2] - hdr[0];
+                    this.clh = hdr[3] - hdr[1];
                     if (hdr[0] == hdr[1] == hdr[2] == hdr[3] == 0) {
                         hdr[2] = this.canvas.width;
                         hdr[3] = this.canvas.height;
                     }
+                    // Replace clipping region, NO intersection.
+                    this.cctx.beginPath();
+                    this.cctx.rect(0, 0, this.canvas.width, this.canvas.height);
+                    this.cctx.clip();
+                    // New clipping region
                     this.cctx.beginPath();
                     this.cctx.rect(hdr[0], hdr[1], hdr[2] - hdr[0], hdr[3] - hdr[1]);
                     this.cctx.clip();
                     break; 
                 case 5:
                     // PatBlt
+                    if (28 == data.byteLength) {
+                        // Solid brush style
+                        // x, y, width, height, fgcolor, rop3
+                        hdr = new Int32Array(data, 4, 4);
+                        rgba = new Uint8Array(data, 20, 4);
+                        this._sROP(new Uint32Array(data, 24, 1)[0]);
+                    }
                     break; 
                 default:
                     wsgate.log.warn('Unknown BINRESP: ', data.byteLength);
             }
         }
         this.pMTX -= 1;
+    },
+    _sROP: function(rop) {
+        switch (rop) {
+            case 0x00CC0020:
+                // GDI_SRCCOPY: D = S
+                break;
+            case 0x00EE0086:
+                // GDI_SRCPAINT: D = S | D
+                break;
+            case 0x008800C6:
+                // GDI_SRCAND: D = S & D
+                break;
+            case 0x00660046:
+                // GDI_SRCINVERT: D = S ^ D
+                break;
+            case 0x00440328:
+                // GDI_SRCERASE: D = S & ~D
+                break;
+            case 0x00330008:
+                // GDI_NOTSRCCOPY: D = ~S
+                break;
+            case 0x001100A6:
+                // GDI_NOTSRCERASE: D = ~S & ~D
+                break;
+            case 0x00C000CA:
+                // GDI_MERGECOPY: D = S & P
+                break;
+            case 0x00BB0226:
+                // GDI_MERGEPAINT: D = ~S | D
+                break;
+            case 0x00F00021:
+                // GDI_PATCOPY: D = P
+                break;
+            case 0x00FB0A09:
+                // GDI_PATPAINT: D = D | (P | ~S)
+                break;
+            case 0x005A0049:
+                // GDI_PATINVERT: D = P ^ D
+                break;
+            case 0x00550009:
+                // GDI_DSTINVERT: D = ~D
+                break;
+            case 0x00000042:
+                // GDI_BLACKNESS: D = 0
+                break;
+            case 0x00FF0062:
+                // GDI_WHITENESS: D = 1
+                break;
+            case 0x00E20746:
+                // GDI_DSPDxax: D = (S & P) | (~S & D)
+                break;
+            case 0x00B8074A:
+                // GDI_PSDPxax: D = (S & D) | (~S & P)
+                break;
+            case 0x000C0324:
+                // GDI_SPna: D = S & ~P
+                break;
+            case 0x00220326:
+                // GDI_DSna D = D & ~S
+                break;
+            case 0x00220326:
+                // GDI_DSna: D = D & ~S
+                break;
+            case 0x00A000C9:
+                // GDI_DPa: D = D & P
+                break;
+            case 0x00A50065:
+                // GDI_PDxn: D = D ^ ~P
+                break;
+        }
     },
     _reset: function() {
         this.pID && clearTimeout(this.pID);
@@ -148,7 +291,15 @@ wsgate.RDP = new Class( {
             this.fireEvent('disconnected');
             this.sock.close();
         }
+        this.clx = 0;
+        this.cly = 0;
+        this.clw = 0;
+        this.clh = 0;
         this.canvas.removeEvents();
+        this.bctx = null;
+        if (this.bstore) {
+            this.bstore.destroy();
+        }
         while (this.ccnt > 0) {
             this.cctx.restore();
             this.ccnt -= 1;
@@ -222,6 +373,13 @@ wsgate.RDP = new Class( {
             this.sock.send(buf);
         }
     },
+    onKdown: function(evt) {
+        console.dir(evt);
+    },
+    onKup: function(evt) {
+    },
+    onKpress: function(evt) {
+    },
     onWSmsg: function(evt) {
         switch (typeof(evt.data)) {
             case 'string':
@@ -255,10 +413,13 @@ wsgate.RDP = new Class( {
     onWSopen: function(evt) {
         this.pID = this._pmsg.periodical(10, this);
         this.canvas.addEvent('mousemove', this.onMouseMove.bind(this));
-        this.canvas.addEvent('mousedown', this.onMouseDown.bind(this), true);
-        this.canvas.addEvent('mouseup', this.onMouseUp.bind(this), true);
-        this.canvas.addEvent('mousewheel', this.onMouseWheel.bind(this), true);
-        this.canvas.addEvent('contextmenu', function(e) {e.stop();}, true);
+        this.canvas.addEvent('mousedown', this.onMouseDown.bind(this));
+        this.canvas.addEvent('mouseup', this.onMouseUp.bind(this));
+        this.canvas.addEvent('mousewheel', this.onMouseWheel.bind(this));
+        this.canvas.addEvent('contextmenu', function(e) {e.stop();});
+        document.addEvent('keydown', this.onKdown.bind(this));
+        document.addEvent('keyup', this.onKup.bind(this));
+        document.addEvent('keypress', this.onKpress.bind(this));
         this.fireEvent('connected');
     },
     onWSclose: function(evt) {

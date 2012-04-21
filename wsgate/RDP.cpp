@@ -225,20 +225,36 @@ namespace wsgate {
         m_rdpSettings->bitmap_cache = 0;
         m_rdpSettings->offscreen_bitmap_cache = 0;
 
+        m_rdpSettings->order_support[NEG_DSTBLT_INDEX] = 0;
+        m_rdpSettings->order_support[NEG_PATBLT_INDEX] = 0;
+        m_rdpSettings->order_support[NEG_SCRBLT_INDEX] = 0;
+        m_rdpSettings->order_support[NEG_MEMBLT_INDEX] = 0;
+        m_rdpSettings->order_support[NEG_MEM3BLT_INDEX] = 0;
+        m_rdpSettings->order_support[NEG_ATEXTOUT_INDEX] = 0;
+        m_rdpSettings->order_support[NEG_AEXTTEXTOUT_INDEX] = 0;
         m_rdpSettings->order_support[NEG_DRAWNINEGRID_INDEX] = 0;
+        m_rdpSettings->order_support[NEG_LINETO_INDEX] = 0;
         m_rdpSettings->order_support[NEG_MULTI_DRAWNINEGRID_INDEX] = 0;
+        m_rdpSettings->order_support[NEG_OPAQUE_RECT_INDEX] = 1;
+        m_rdpSettings->order_support[NEG_SAVEBITMAP_INDEX] = 0;
+        m_rdpSettings->order_support[NEG_WTEXTOUT_INDEX] = 0;
+        m_rdpSettings->order_support[NEG_MEMBLT_V2_INDEX] = 0;
+        m_rdpSettings->order_support[NEG_MEM3BLT_V2_INDEX] = 0;
         m_rdpSettings->order_support[NEG_MULTIDSTBLT_INDEX] = 0;
         m_rdpSettings->order_support[NEG_MULTIPATBLT_INDEX] = 0;
         m_rdpSettings->order_support[NEG_MULTISCRBLT_INDEX] = 0;
-
-        m_rdpSettings->order_support[NEG_SAVEBITMAP_INDEX] = 0;
-        m_rdpSettings->order_support[NEG_MEM3BLT_V2_INDEX] = 0;
-        m_rdpSettings->order_support[NEG_MEMBLT_V2_INDEX] = 0;
-
-        // memset(m_rdpSettings->order_support, 0, sizeof(m_rdpSettings->order_support));
-        // m_rdpSettings->order_support[NEG_DSTBLT_INDEX] = 0;
-        // m_rdpSettings->order_support[NEG_PATBLT_INDEX] = 0;
-        // m_rdpSettings->order_support[NEG_SCRBLT_INDEX] = 0;
+        m_rdpSettings->order_support[NEG_MULTIOPAQUERECT_INDEX] = 0;
+        m_rdpSettings->order_support[NEG_FAST_INDEX_INDEX] = 0;
+        m_rdpSettings->order_support[NEG_POLYGON_SC_INDEX] = 0;
+        m_rdpSettings->order_support[NEG_POLYGON_CB_INDEX] = 0;
+        m_rdpSettings->order_support[NEG_POLYLINE_INDEX] = 0;
+        m_rdpSettings->order_support[NEG_FAST_GLYPH_INDEX] = 0;
+        m_rdpSettings->order_support[NEG_ELLIPSE_SC_INDEX] = 0;
+        m_rdpSettings->order_support[NEG_ELLIPSE_CB_INDEX] = 0;
+        m_rdpSettings->order_support[NEG_GLYPH_INDEX_INDEX] = 0;
+        m_rdpSettings->order_support[NEG_GLYPH_WEXTTEXTOUT_INDEX] = 0;
+        m_rdpSettings->order_support[NEG_GLYPH_WLONGTEXTOUT_INDEX] = 0;
+        m_rdpSettings->order_support[NEG_GLYPH_WLONGEXTTEXTOUT_INDEX] = 0;
 
         reinterpret_cast<wsgContext *>(m_freerdp->context)->clrconv =
             freerdp_clrconv_new(CLRCONV_ALPHA|CLRCONV_INVERT);
