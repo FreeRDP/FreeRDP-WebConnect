@@ -24,7 +24,7 @@ wsgate_CPPFLAGS = \
 	-DDEFAULTCFG=\"$(sysconfdir)/wsgate.ini\"
 wsgate_LDADD = $(WSGATE_RES) $(WSGATE_LDADD)
 wsgate_DEPENDENCIES = $(WSGATE_RES)
-EXTRA_wsgate_SOURCES = wsgate.rc logging.rc MSG00001.bin
+EXTRA_wsgate_SOURCES = wsgate.rc
 
 noinst_HEADERS = \
 	base64.hpp \
