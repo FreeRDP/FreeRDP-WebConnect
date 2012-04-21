@@ -7,7 +7,7 @@ Group: Network Servers
 URL: https://github.com/thinstuff/FreeRDP-WebConnect
 Source0: %{name}-%{version}.tar.gz
 BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-root-%(id -u -n)
-Buildrequires: openssl-devel, gcc-c++, pcre-devel, boost-devel, ehs-devel
+Buildrequires: openssl-devel, gcc-c++, pcre-devel, boost-devel, ehs-devel, freerdp-devel
 Buildrequires: doxygen, graphviz, automake, libtool
 
 %description
