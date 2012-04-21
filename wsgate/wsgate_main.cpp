@@ -386,7 +386,17 @@ namespace wsgate {
                 f.close();
                 string rbuf(buf, fsize);
                 delete buf;
-                MimeType mt = simpleMime(to_lower_copy(p.filename().generic_string()));
+#ifdef BOOST_FILESYSTEM_VERSION
+# if (BOOST_FILESYSTEM_VERSION >= 3)
+                string basename(p.filename().generic_string());
+# else
+                string basename(p.filename());
+# endif
+#else
+                // Not defined at all: old API
+                string basename(p.filename());
+#endif
+                MimeType mt = simpleMime(to_lower_copy(basename));
                 if (HTML == mt) {
                     ostringstream oss;
                     oss << (request->Secure() ? "wss://" : "ws://")
