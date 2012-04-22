@@ -50,7 +50,7 @@ cat > %{buildroot}%{_sysconfdir}/logrotate.d/wsgate <<EOF
     endscript
 }
 EOF
-%if %{is_el}
+%if %{is_el}%{is_sles}
 mkdir -p %{buildroot}%{_initrddir}
 %{__install} -m 0755 conf/initrc.redhat %{buildroot}%{_initrddir}/wsgate
 %endif
@@ -107,6 +107,7 @@ fi
 %{_sbindir}/*
 %{_datadir}/*
 %{_sysconfdir}/logrotate.d/wsgate
+%{_sysconfdir}/wsgate.ini.sample
 %if %{is_el}%{is_fc}
 %{_sysconfdir}/rsyslog.d/wsgate.conf
 %endif
