@@ -1,0 +1,103 @@
+#!/bin/bash
+#
+# wsgate        Starts wsgate.
+#
+# chkconfig: 345 70 10
+# description: wsgate provides a WebSocket gateway for FreeRDP-WebConnect.
+#
+# processname: wsgate
+# config: /etc/wsgate.ini
+# pidfile: /var/run/wsgate.pid
+
+### BEGIN INIT INFO
+# Provides: wsgate
+# Required-Start: $local_fs $network $syslog
+# Required-Stop: $local_fs $syslog
+# Should-Start: $syslog
+# Should-Stop: $network $syslog
+# Default-Start:  3 4 5
+# Default-Stop: 0 1 2 6
+# Short-Description: wsgate provides a WebSocket gateway for FreeRDP-WebConnect
+# Description: The WebSockets gateway for FreeRDP-WebConnect allws you
+#              to provide ibrowser-based RDP sessions.
+### END INIT INFO
+
+# Source function library.
+. /etc/init.d/functions
+
+WSGATE_CONFIG="/etc/wsgate.ini"
+WSGATE_OPTIONS=
+
+# pull in sysconfig settings
+test -f /etc/sysconfig/wsgate && . /etc/sysconfig/wsgate
+
+RETVAL=0
+PIDFILE=/var/run/wsgate.pid
+
+prog=wsgate
+exec=/usr/sbin/wsgate
+lockfile=/var/lock/subsys/$prog
+
+
+# Bail out, if our config does not exist
+test -f $WSGATE_CONFIG || exit 0
+
+start() {
+	[ -x $exec ] || exit 5
+
+	umask 077
+
+        /usr/libexec/wsgate/keygen.sh
+        echo -n $"Starting $prog: "
+        daemon --pidfile="$PIDFILE" $exec -c $WSGATE_CONFIG $WSGATE_OPTIONS
+        RETVAL=$?
+        echo
+        [ $RETVAL -eq 0 ] && touch $lockfile
+        return $RETVAL
+}
+stop() {
+        echo -n $"Shutting down $prog: "
+        killproc -p "$PIDFILE" $exec
+        RETVAL=$?
+        echo
+        [ $RETVAL -eq 0 ] && rm -f $lockfile
+        return $RETVAL
+}
+reload()  {
+        stop
+        start
+}
+rhstatus() {
+        status -p "$PIDFILE" -l $prog $exec
+}
+restart() {
+        stop
+        start
+}
+
+case "$1" in
+  start)
+        start
+        ;;
+  stop)
+        stop
+        ;;
+  restart)
+        restart
+        ;;
+  reload|force-reload)
+	reload
+	;;
+  status)
+        rhstatus
+        ;;
+  condrestart|try-restart)
+        rhstatus >/dev/null 2>&1 || exit 0
+        restart
+        ;;
+  *)
+        echo $"Usage: $0 {start|stop|restart|condrestart|try-restart|reload|force-reload|status}"
+        exit 2
+esac
+
+exit $?

@@ -842,7 +842,7 @@ int main (int argc, char **argv)
                         chdir("/");
                         setsid();
                         if (vm.count("global.pidfile")) {
-                            string pidfn(vm["global.pidfile"].as<string>());
+                            const string pidfn(vm["global.pidfile"].as<string>());
                             if (!pidfn.empty()) {
                                 ofstream pidfile(pidfn);
                                 pidfile << getpid() << endl;

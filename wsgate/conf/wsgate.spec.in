@@ -1,14 +1,27 @@
+%define rel @GITREV@%{?dist}
+%define systemddir /lib/systemd/system
+
+##
+## OS detection
+##
+%define is_rh %(test -n "`echo %{?dist}|grep rh`" && echo 1 || echo 0)
+%define is_el %(test -n "`echo %{?dist}|grep el`" && echo 1 || echo 0)
+%define is_fc 0%{?fedora}%{?fedora_version}
+%define is_suse 0%{?suse_version}
+%define is_sles 0%{?sles_version}
+%define is_mdv 0%{?mdkversion}
+
 Summary: FreeRDP-WebConnct gateway
 Name:    wsgate
 Version: @VERSION@
-Release: @GITREV@
+Release: %{rel}
 License: LGPL
 Group: Network Servers
 URL: https://github.com/thinstuff/FreeRDP-WebConnect
 Source0: %{name}-%{version}.tar.gz
 BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-root-%(id -u -n)
-Buildrequires: openssl-devel, gcc-c++, pcre-devel, boost-devel, ehs-devel, freerdp-devel
-Buildrequires: doxygen, graphviz, automake, libtool
+Buildrequires: openssl-devel, pcre-devel, boost-devel, ehs-devel, freerdp-devel
+Buildrequires: doxygen, graphviz, automake, libtool, make, gcc-c++ 
 
 %description
 A WebSockets gateway for FreeRDP-WebConnect
@@ -21,17 +34,82 @@ A WebSockets gateway for FreeRDP-WebConnect
 %{__make} %{?_smp_mflags} V=1
 
 %install
-%{__rm} -rf %{buildroot}
 %{__make} DESTDIR=%{buildroot} install
+%{__install} -m 0755 conf/keygen.sh %{buildroot}%{_libexecdir}/wsgate
+mkdir -p %{buildroot}%{_sysconfdir}/rsyslog.d
+echo "local6.*  /var/log/wsgate" > %{buildroot}%{_sysconfdir}/rsyslog.d/wsgate.conf
+mkdir -p %{buildroot}%{_sysconfdir}/logrotate.d
+cat > %{buildroot}%{_sysconfdir}/logrotate.d/wsgate <<EOF
+/var/log/wsgate
+{
+    sharedscripts
+    postrotate
+        /bin/kill -HUP `cat /var/run/syslogd.pid 2> /dev/null` 2> /dev/null || true
+    endscript
+}
+EOF
+%if %{is_el}
+mkdir -p %{buildroot}%{_initrddir}
+%{__install} -m 0755 conf/initrc.redhat %{buildroot}%{_initrddir}/wsgate
+%endif
+%if %{is_fc}
+mkdir -p %{buildroot}%{systemddir}
+%{__install} -m 0755 conf/wsgate.service %{buildroot}%{systemddir}
+%{__install} -m 0755 conf/wsgate-keygen.service %{buildroot}%{systemddir}
+%endif
 
 %clean
 %{__rm} -rf %{buildroot}
+
+%pre
+getent group wsgate >/dev/null || groupadd -r wsgate || :
+getent passwd wsgate >/dev/null || \
+  useradd -c "FreeRDP WebConnect Gateway" -g wsgate -s /sbin/nologin \
+  -s /sbin/nologin -r -d /var/empty/wsgate wsgate 2> /dev/null || :
+
+%if %{is_fc}
+%post
+if [ $1 -eq 1 ] ; then
+    /bin/systemctl enable wsgate-keygen.service >/dev/null 2>&1 || :
+    /bin/systemctl enable wsgate.service >/dev/null 2>&1 || :
+fi
+
+%preun
+if [ $1 -eq 0 ] ; then
+    # Package removal, not upgrade
+    /bin/systemctl --no-reload disable wsgate.service > /dev/null 2>&1 || :
+    /bin/systemctl --no-reload disable wsgate-keygen.service > /dev/null 2>&1 || :
+    /bin/systemctl stop wsgate.service > /dev/null 2>&1 || :
+    /bin/systemctl stop wsgate-keygen.service > /dev/null 2>&1 || :
+fi
+
+%postun
+/bin/systemctl daemon-reload >/dev/null 2>&1 || :
+if [ $1 -ge 1 ] ; then
+    # Package upgrade, not uninstall
+    /bin/systemctl try-restart wsgate.service >/dev/null 2>&1 || :
+    /bin/systemctl try-restart wsgate-keygen.service >/dev/null 2>&1 || :
+fi
+%endif
+
+%if %{is_el}
+%post
+/sbin/chkconfig --add wsgate
+
+%preun
+/sbin/chkconfig --del wsgate
+%endif
 
 %files
 %defattr(-,root,root,-)
 %{_sbindir}/*
 %{_datadir}/*
 %{_sysconfdir}/*
+%if %{is_fc}
+%{systemddir}/*
+%endif
+%defattr(0755,root,root,-)
+%{_libexecdir}/%{name}/keygen.sh
 %defattr(4755,root,root,-)
 %{_libexecdir}/%{name}/bindhelper
 

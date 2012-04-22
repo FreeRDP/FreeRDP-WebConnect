@@ -1,0 +1,13 @@
+[Unit]
+Description=wsgate server keys generation.
+After=syslog.target
+Before=wsgate.service
+
+[Service]
+Type=oneshot
+EnvironmentFile=/etc/sysconfig/wsgate
+ExecStart=/usr/libexec/wsgate/keygen.sh
+RemainAfterExit=yes
+
+[Install]
+WantedBy=multi-user.target

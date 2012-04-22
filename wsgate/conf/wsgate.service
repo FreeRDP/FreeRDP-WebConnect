@@ -1,0 +1,13 @@
+[Unit]
+Description=FreeRDO WebAccess Gateway
+After=syslog.target network.target
+
+[Service]
+Type=forking
+User=wsgate
+Group=wsgate
+EnvironmentFile=/etc/sysconfig/wsgate
+ExecStart=/usr/sbin/wsgate -c $WSGATE_CONFIG
+
+[Install]
+WantedBy=multi-user.target
