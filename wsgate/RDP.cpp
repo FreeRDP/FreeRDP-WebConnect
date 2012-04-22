@@ -11,6 +11,9 @@
 #include "Primary.hpp"
 
 #include "btexception.hpp"
+extern "C" {
+#include <freerdp/locale/keyboard.h>
+}
 
 namespace wsgate {
 
@@ -123,6 +126,142 @@ namespace wsgate {
                         const wsmsg *m = reinterpret_cast<const wsmsg *>(data.data());
                         // log::debug << "MM: x=" << m->x << " y=" << m->y << endl;
                         m_freerdp->input->MouseEvent(m_freerdp->input, m->flags, m->x, m->y);
+                    }
+                    break;
+                case WSOP_CS_KUPDOWN:
+                    // used only for modifiers
+                    {
+                        typedef struct {
+                            uint32_t op;
+                            uint32_t down;
+                            uint32_t code;
+                        } wsmsg;
+                        const wsmsg *m = reinterpret_cast<const wsmsg *>(data.data());
+                        log::debug << "K" << ((m->down) ? "down" : "up") << ": c=" << m->code << endl;
+                        uint32_t tcode = 0;
+                        switch (m->code) {
+                            case 16:
+                                tcode = RDP_SCANCODE_LSHIFT;
+                                break;
+                            case 17:
+                                tcode = RDP_SCANCODE_LCONTROL;
+                                break;
+                            case 18:
+                                tcode = RDP_SCANCODE_LMENU; // Alt
+                                break;
+                            case 20:
+                                // capslock
+                                // tcode = RDP_SCANCODE_;
+                                break;
+                            case 93:
+                                tcode = RDP_SCANCODE_LWIN; // Win-Key
+                                break;
+                            case 144:
+                                // numlock
+                                // tcode = RDP_SCANCODE_;
+                                break;
+                            case 145:
+                                // scrolllock
+                                // tcode = RDP_SCANCODE_;
+                                break;
+                        }
+                        if (0 < tcode) {
+                            uint32_t tflag = rdp_scancode_extended(tcode) ? KBD_FLAGS_EXTENDED : 0;
+                            tcode = rdp_scancode_code(tcode);
+                            SendInputKeyboardEvent((m->down ? KBD_FLAGS_DOWN : KBD_FLAGS_RELEASE)|tflag, tcode);
+                        }
+                    }
+                    break;
+                case WSOP_CS_KPRESS:
+                    {
+                        typedef struct {
+                            uint32_t op;
+                            uint32_t shiftstate;
+                            uint32_t code;
+                        } wsmsg;
+                        const wsmsg *m = reinterpret_cast<const wsmsg *>(data.data());
+                        uint32_t tcode = m->code;
+                        log::debug << "Kpress c=" << m->code << ", ss=" << hex << m->shiftstate << dec << endl;
+                        if (0x2F < m->code) {
+                            if (m->shiftstate & 6) {
+                                // Control and or Alt: Must use scan-codes since unicode-event can't handle these
+                                if (((64 < tcode) && (91 > tcode)) || ((96 < tcode) && (123 > tcode))) {
+                                    tcode -= (m->shiftstate & 1) ? 0 : 32;
+                                    tcode = freerdp_keyboard_get_rdp_scancode_from_virtual_key_code(tcode);
+                                    log::debug << "Kpress oc=" << tcode << endl;
+                                    if (0 < tcode) {
+                                        SendInputKeyboardEvent(KBD_FLAGS_DOWN, tcode);
+                                        SendInputKeyboardEvent(KBD_FLAGS_RELEASE, tcode);
+                                    }
+                                }
+                            } else {
+                                if (0 < tcode) {
+                                    SendInputUnicodeKeyboardEvent(KBD_FLAGS_DOWN, tcode);
+                                    SendInputUnicodeKeyboardEvent(KBD_FLAGS_RELEASE, tcode);
+                                }
+                            }
+                        } else {
+                            tcode = 0;
+                            switch (m->code) {
+                                case 8:
+                                    tcode = RDP_SCANCODE_BACKSPACE;
+                                    break;
+                                case 9:
+                                    tcode = RDP_SCANCODE_TAB;
+                                    break;
+                                case 13:
+                                    tcode = RDP_SCANCODE_RETURN;
+                                    break;
+                                case 19:
+                                    tcode = RDP_SCANCODE_PAUSE;
+                                    break;
+                                case 27:
+                                    tcode = RDP_SCANCODE_ESCAPE;
+                                    break;
+                                case 32:
+                                    tcode = RDP_SCANCODE_SPACE;
+                                    break;
+                                case 33:
+                                    tcode = RDP_SCANCODE_PRIOR; // Page up
+                                    break;
+                                case 34:
+                                    tcode = RDP_SCANCODE_NEXT; // Page down
+                                    break;
+                                case 35:
+                                    tcode = RDP_SCANCODE_END;
+                                    break;
+                                case 36:
+                                    tcode = RDP_SCANCODE_HOME;
+                                    break;
+                                case 37:
+                                    tcode = RDP_SCANCODE_LEFT;
+                                    break;
+                                case 38:
+                                    tcode = RDP_SCANCODE_UP;
+                                    break;
+                                case 39:
+                                    tcode = RDP_SCANCODE_RIGHT;
+                                    break;
+                                case 40:
+                                    tcode = RDP_SCANCODE_DOWN;
+                                    break;
+                                case 44:
+                                    tcode = RDP_SCANCODE_PRINTSCREEN;
+                                    break;
+                                case 45:
+                                    tcode = RDP_SCANCODE_INSERT;
+                                    break;
+                                case 46:
+                                    tcode = RDP_SCANCODE_DELETE;
+                                    break;
+                            }
+                            if (0 < tcode) {
+                                uint32_t tflag = rdp_scancode_extended(tcode) ? KBD_FLAGS_EXTENDED : 0;
+                                tcode = rdp_scancode_code(tcode);
+                                SendInputKeyboardEvent(KBD_FLAGS_DOWN|tflag, tcode);
+                                SendInputKeyboardEvent(KBD_FLAGS_RELEASE|tflag, tcode);
+                            }
+                        }
                     }
                     break;
             }

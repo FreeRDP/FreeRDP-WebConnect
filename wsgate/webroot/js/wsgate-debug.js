@@ -58,6 +58,7 @@ wsgate.RDP = new Class( {
         this.cly = 0;
         this.clw = 0;
         this.clh = 0;
+        this.modkeys = [16, 17, 18, 20, 144, 145];
     },
     Disconnect: function() {
         this._reset();
@@ -374,11 +375,50 @@ wsgate.RDP = new Class( {
         }
     },
     onKdown: function(evt) {
-        console.dir(evt);
+        var a, buf;
+        evt.preventDefault();
+        if (this.modkeys.contains(evt.code)) {
+            // wsgate.log.debug('kD code: ', evt.code, ' ', evt);
+            if (this.sock.readyState == this.sock.OPEN) {
+                buf = new ArrayBuffer(12);
+                a = new Uint32Array(buf);
+                a[0] = 1; // WSOP_CS_KUPDOWN
+                a[1] = 1; // down
+                a[2] = evt.code;
+                this.sock.send(buf);
+            }
+        }
     },
     onKup: function(evt) {
+        var a, buf;
+        evt.preventDefault();
+        if (this.modkeys.contains(evt.code)) {
+            // wsgate.log.debug('kU code: ', evt.code);
+            if (this.sock.readyState == this.sock.OPEN) {
+                buf = new ArrayBuffer(12);
+                a = new Uint32Array(buf);
+                a[0] = 1; // WSOP_CS_KUPDOWN
+                a[1] = 0; // up
+                a[2] = evt.code;
+                this.sock.send(buf);
+            }
+        }
     },
     onKpress: function(evt) {
+        var a, buf;
+        evt.preventDefault();
+        if (this.modkeys.contains(evt.code)) {
+            return;
+        }
+        if (this.sock.readyState == this.sock.OPEN) {
+            // wsgate.log.debug('kP code: ', evt.code);
+            buf = new ArrayBuffer(12);
+            a = new Uint32Array(buf);
+            a[0] = 2; // WSOP_CS_KPRESS
+            a[1] = (evt.shift ? 1 : 0)|(evt.control ? 2 : 0)|(evt.alt ? 4 : 0)|(evt.meta ? 8 : 0);
+            a[2] = evt.code;
+            this.sock.send(buf);
+        }
     },
     onWSmsg: function(evt) {
         switch (typeof(evt.data)) {

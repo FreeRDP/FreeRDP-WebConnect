@@ -41,7 +41,9 @@ namespace wsgate {
      * client to the server.
      */
     typedef enum {
-        WSOP_CS_MOUSE
+        WSOP_CS_MOUSE,
+        WSOP_CS_KUPDOWN,
+        WSOP_CS_KPRESS
     } WsOPcs;
 
     /**
