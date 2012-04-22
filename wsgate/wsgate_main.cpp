@@ -409,6 +409,8 @@ namespace wsgate {
                     replace_all(rbuf, "%COOKIE_LASTPASS%", tmp);
                     tmp = request->Cookies("lasthost");
                     replace_all(rbuf, "%COOKIE_LASTHOST%", tmp);
+                    tmp.assign(VERSION).append(".").append(GITREV);
+                    replace_all(rbuf, "%VERSION%", tmp);
                 }
                 switch (mt) {
                     case TEXT:

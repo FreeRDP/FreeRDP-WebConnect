@@ -319,6 +319,20 @@ table td.key {
 	border:					2px solid #eee;
 }
 
+.about {
+	border:					1px solid #000;
+    margin: 10px;
+    text-align: center;
+    font-size: 14pt;
+}
+
+.error {
+    color: #FFF;
+    background-color: #F00;
+    font-size: 14pt;
+	font-weight:			bold;
+}
+
 #screen {
     border: 0;
     margin: 0;

@@ -87,9 +87,10 @@ window.addEvent('domready', function() {
     </script>
 </head>
 <body>
-    <canvas id="screen" width="1024px" height="768px">
-    <strong>Sorry, It looks as though your browser does not support the canvas tag...</strong> If you can, I suggest that you try Chrome or Safari.
+    <canvas id="screen" width="640px" height="480px">
+    <p class="error">Sorry, It looks as though your browser does not support the canvas tag.</p>
     </canvas>
+    <noscript><p class="error">Please enable JavaScript.</p></noscript>
     <table width="400px" id="maindialog" class="invisible">
         <tr>
             <td>
@@ -135,6 +136,11 @@ window.addEvent('domready', function() {
                     <h4 title="Currently empty">Advanced</h4>
                     <div>
                         This page is intentionally blank ;)
+                    </div>
+                    <h4 title="Show version info">About</h4>
+                    <div class="about">
+                        <h2>FreeRDP WebConnect<h2>
+                        Version %VERSION%
                     </div>
                 </div>
             </td>
