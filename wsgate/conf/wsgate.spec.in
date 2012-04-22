@@ -36,8 +36,10 @@ A WebSockets gateway for FreeRDP-WebConnect
 %install
 %{__make} DESTDIR=%{buildroot} install
 %{__install} -m 0755 conf/keygen.sh %{buildroot}%{_libexecdir}/wsgate
+%if %{is_el}%{is_fc}
 mkdir -p %{buildroot}%{_sysconfdir}/rsyslog.d
 echo "local6.*  /var/log/wsgate" > %{buildroot}%{_sysconfdir}/rsyslog.d/wsgate.conf
+%endif
 mkdir -p %{buildroot}%{_sysconfdir}/logrotate.d
 cat > %{buildroot}%{_sysconfdir}/logrotate.d/wsgate <<EOF
 /var/log/wsgate
@@ -104,9 +106,14 @@ fi
 %defattr(-,root,root,-)
 %{_sbindir}/*
 %{_datadir}/*
-%{_sysconfdir}/*
+%{_sysconfdir}/logrotate.d/wsgate
+%if %{is_el}%{is_fc}
+%{_sysconfdir}/rsyslog.d/wsgate.conf
+%endif
 %if %{is_fc}
 %{systemddir}/*
+%else
+%{_initrddir}/wsgate
 %endif
 %defattr(0755,root,root,-)
 %{_libexecdir}/%{name}/keygen.sh
