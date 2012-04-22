@@ -4,13 +4,12 @@
 ##
 ## OS detection
 ##
-%if 0%{opensuse_bs}
+%if 0%{?opensuse_bs}
 %define is_el 0%{?centos_version}%{?rhel_version}
 %else
 %define is_el %(test -n "`echo %{?dist}|grep el`" && echo 1 || echo 0)
 %endif
 %define is_rh %(test -n "`echo %{?dist}|grep rh`" && echo 1 || echo 0)
-%define is_el %(test -n "`echo %{?dist}|grep el`" && echo 1 || echo 0)
 %define is_fc 0%{?fedora}%{?fedora_version}
 %define is_suse 0%{?suse_version}
 %define is_sles 0%{?sles_version}
@@ -24,9 +23,23 @@ License: LGPL
 Group: Network Servers
 URL: https://github.com/thinstuff/FreeRDP-WebConnect
 Source0: %{name}-%{version}.tar.gz
+%if 0%{?opensuse_bs}
+Source99: %{name}.rpmlintrc
+%endif
 BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-root-%(id -u -n)
 Buildrequires: openssl-devel, pcre-devel, boost-devel, ehs-devel, freerdp-devel
-Buildrequires: doxygen, graphviz, automake, libtool, make, gcc-c++ 
+Buildrequires: doxygen, graphviz, automake, libtool, make, gcc-c++, java, perl
+
+%if %{is_fc}
+Buildrequires: elfutils-devel
+%endif
+%if %{is_suse}%{is_sles}
+%if %{suse_version} > 1999
+Buildrequires: libdw-devel
+%endif
+%endif
+
+Requires: logrotate
 
 %description
 A WebSockets gateway for FreeRDP-WebConnect
@@ -58,6 +71,9 @@ EOF
 %if %{is_el}%{is_sles}
 mkdir -p %{buildroot}%{_initrddir}
 %{__install} -m 0755 conf/initrc.redhat %{buildroot}%{_initrddir}/wsgate
+%if %{is_sles}
+ln -s %{_initrddir}/wsgate  %{buildroot}%{_sbindir}/rcwsgate
+%endif
 %endif
 %if %{is_fc}
 mkdir -p %{buildroot}%{systemddir}
@@ -111,10 +127,10 @@ fi
 %defattr(-,root,root,-)
 %{_sbindir}/*
 %{_datadir}/*
-%{_sysconfdir}/logrotate.d/wsgate
-%{_sysconfdir}/wsgate.ini.sample
+%config(noreplace) %{_sysconfdir}/logrotate.d/wsgate
+%config(noreplace) %{_sysconfdir}/wsgate.ini.sample
 %if %{is_el}%{is_fc}
-%{_sysconfdir}/rsyslog.d/wsgate.conf
+%config(noreplace) %{_sysconfdir}/rsyslog.d/wsgate.conf
 %endif
 %if %{is_fc}
 %{systemddir}/*
