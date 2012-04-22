@@ -844,7 +844,7 @@ int main (int argc, char **argv)
                         if (vm.count("global.pidfile")) {
                             const string pidfn(vm["global.pidfile"].as<string>());
                             if (!pidfn.empty()) {
-                                ofstream pidfile(pidfn);
+                                ofstream pidfile(pidfn.c_str());
                                 pidfile << getpid() << endl;
                                 pidfile.close();
                                 srv.SetPidFile(pidfn);

@@ -260,7 +260,7 @@ dnl Check for boost::lock_guard
 
 AC_MSG_CHECKING([for availability of boost::lock_guard])
 AC_LANG_PUSH([C++])
-AC_COMPILE_IFELSE([
+AC_LINK_IFELSE([
 AC_LANG_PROGRAM([[#include <boost/thread.hpp>
 boost::recursive_mutex m;]],
 [[boost::lock_guard<boost::recursive_mutex> lock(m);]]
