@@ -283,6 +283,9 @@ wsgate.RDP = new Class( {
                 break;
         }
     },
+    /**
+     * Reset our state to disconnected
+     */
     _reset: function() {
         this.pID && clearTimeout(this.pID);
         this.pID = null;
@@ -308,6 +311,9 @@ wsgate.RDP = new Class( {
         this.cctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
         document.title = document.title.replace(/:.*/, ': offline');
     },
+    /**
+     * Event handler for mouse move events
+     */
     onMouseMove: function(evt) {
         var buf, a, x, y;
         evt.preventDefault();
@@ -324,6 +330,9 @@ wsgate.RDP = new Class( {
             this.sock.send(buf);
         }
     },
+    /**
+     * Event handler for mouse down events
+     */
     onMouseDown: function(evt) {
         var buf, a, x, y, which;
         evt.preventDefault();
@@ -341,6 +350,9 @@ wsgate.RDP = new Class( {
             this.sock.send(buf);
         }
     },
+    /**
+     * Event handler for mouse up events
+     */
     onMouseUp: function(evt) {
         var buf, a, x, y, which;
         evt.preventDefault();
@@ -358,6 +370,9 @@ wsgate.RDP = new Class( {
             this.sock.send(buf);
         }
     },
+    /**
+     * Event handler for mouse wheel events
+     */
     onMouseWheel: function(evt) {
         var buf, a, x, y;
         evt.preventDefault();
@@ -374,10 +389,13 @@ wsgate.RDP = new Class( {
             this.sock.send(buf);
         }
     },
+    /**
+     * Event handler for key down events
+     */
     onKdown: function(evt) {
         var a, buf;
-        evt.preventDefault();
         if (this.modkeys.contains(evt.code)) {
+            evt.preventDefault();
             // wsgate.log.debug('kD code: ', evt.code, ' ', evt);
             if (this.sock.readyState == this.sock.OPEN) {
                 buf = new ArrayBuffer(12);
@@ -389,10 +407,13 @@ wsgate.RDP = new Class( {
             }
         }
     },
+    /**
+     * Event handler for key up events
+     */
     onKup: function(evt) {
         var a, buf;
-        evt.preventDefault();
         if (this.modkeys.contains(evt.code)) {
+            evt.preventDefault();
             // wsgate.log.debug('kU code: ', evt.code);
             if (this.sock.readyState == this.sock.OPEN) {
                 buf = new ArrayBuffer(12);
@@ -404,6 +425,9 @@ wsgate.RDP = new Class( {
             }
         }
     },
+    /**
+     * Event handler for key pressed events
+     */
     onKpress: function(evt) {
         var a, buf;
         evt.preventDefault();
@@ -420,8 +444,12 @@ wsgate.RDP = new Class( {
             this.sock.send(buf);
         }
     },
+    /**
+     * Event handler for WebSocket RX events
+     */
     onWSmsg: function(evt) {
         switch (typeof(evt.data)) {
+            // We use text messages for alerts and debugging ...
             case 'string':
                 // wsgate.log.debug(evt.data);
                 switch (evt.data.substr(0,2)) {
@@ -444,28 +472,43 @@ wsgate.RDP = new Class( {
                             break;
                 }
                 break;
+            // ... and binary messages for the actual RDP stuff.
             case 'object':
                 this.mq.push(evt.data);
                 break;
         }
 
     },
+    /**
+     * Event handler for WebSocket connect events
+     */
     onWSopen: function(evt) {
+        // Start our message loop
         this.pID = this._pmsg.periodical(10, this);
+        // Add listeners for the various input events
         this.canvas.addEvent('mousemove', this.onMouseMove.bind(this));
         this.canvas.addEvent('mousedown', this.onMouseDown.bind(this));
         this.canvas.addEvent('mouseup', this.onMouseUp.bind(this));
         this.canvas.addEvent('mousewheel', this.onMouseWheel.bind(this));
+        // Disable the browser's context menu
         this.canvas.addEvent('contextmenu', function(e) {e.stop();});
+        // The keyboard events need to be attached to the
+        // document, because otherwise we seem to loose them.
         document.addEvent('keydown', this.onKdown.bind(this));
         document.addEvent('keyup', this.onKup.bind(this));
         document.addEvent('keypress', this.onKpress.bind(this));
         this.fireEvent('connected');
     },
+    /**
+     * Event handler for WebSocket disconnect events
+     */
     onWSclose: function(evt) {
         this._reset();
         this.fireEvent('disconnected');
     },
+    /**
+     * Event handler for WebSocket error events
+     */
     onWSerr: function (evt) {
         switch (this.sock.readyState) {
             case this.sock.CONNECTING:
@@ -474,17 +517,31 @@ wsgate.RDP = new Class( {
         }
         this._reset();
     },
+    /**
+     * Convert a color value containet in an uint8 array into an rgba expression
+     * that can be used to parameterize the canvas.
+     */
     _c2s: function(c) {
         return 'rgba' + '(' + c[0] + ',' + c[1] + ',' + c[2] + ',' + ((0.0 + c[3]) / 255) + ')';
     },
+    /**
+     * Save the canvas state and remember this in our object.
+     */
     _ctxS: function() {
         this.cctx.save();
         this.ccnt += 1;
     },
+    /**
+     * Restore the canvas state and remember this in our object.
+     */
     _ctxR: function() {
         this.cctx.restore();
         this.ccnt -= 1;
     },
+    /**
+     * Convert the button information of a mouse event into
+     * RDP-like flags.
+     */
     _mB: function(evt) {
         var bidx;
         if ('event' in evt && 'button' in evt.event) {
