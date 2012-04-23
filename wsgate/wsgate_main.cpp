@@ -866,9 +866,10 @@ int main (int argc, char **argv)
     }
 
 #ifndef _WIN32
+    signal(SIGPIPE, SIG_IGN);
+#endif
     signal(SIGINT, terminate);
     signal(SIGTERM, terminate);
-#endif
 
     try {
         wsgate::log::info << "wsgate v" << VERSION << " starting" << endl;
