@@ -67,12 +67,12 @@ CLEANFILES = wsgate.ini.sample logging.rc MSG00001.bin
 
 am_v_rc = $(am_v_rc_$(V))
 am_v_rc_ = $(am_v_rc_$(AM_DEFAULT_VERBOSITY))
-am_v_rc_0 = @echo "  RC  " $@;
+am_v_rc_0 = @echo "  RC    " $@;
 
-.rc.lo:
+wsgate.lo: wsgate.rc logging.rc MSG00001.bin
 	$(am_v_rc)$(LIBTOOL) $(AM_V_lt) --tag=RC --mode=compile $(RC) -I$(top_builddir) -o $@ $<
 
-.rc.o:
+wsgate.o: wsgate.rc logging.rc MSG00001.bin
 	$(am_v_rc)$(RC) -I$(top_builddir) -o $@ $<
 
 # Bootstrap target.
