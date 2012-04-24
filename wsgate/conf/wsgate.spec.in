@@ -21,7 +21,7 @@ Version: @VERSION@
 Release: %{rel}
 License: LGPL
 Group: Network Servers
-URL: https://github.com/thinstuff/FreeRDP-WebConnect
+URL: https://github.com/FreeRDP/FreeRDP-WebConnect
 Source0: %{name}-%{version}.tar.gz
 %if 0%{?opensuse_bs}
 Source99: %{name}.rpmlintrc
