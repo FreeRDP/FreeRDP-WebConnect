@@ -158,7 +158,7 @@ esac
 
 dnl Checks for header files.
 AC_HEADER_STDC
-AC_CHECK_HEADERS([arpa/inet.h demangle.h dwarf.h fcntl.h netinet/in.h stdlib.h string.h syslog.h sys/ioctl.h sys/socket.h sys/stat.h sys/time.h sys/types.h sys/wait.h termios.h time.h unistd.h execinfo.h conio.h winsock2.h windows.h])
+AC_CHECK_HEADERS([arpa/inet.h demangle.h dwarf.h fcntl.h netinet/in.h signal.h stdlib.h string.h syslog.h sys/ioctl.h sys/socket.h sys/stat.h sys/time.h sys/types.h sys/wait.h termios.h time.h unistd.h execinfo.h conio.h winsock2.h windows.h])
 
 dnl DWARF vs. BFD
 DW_CPPFLAGS=
@@ -364,6 +364,8 @@ case $target_os in
         fi
         ;;
     mingw*)
+        AC_DEFINE_UNQUOTED([_WIN32_WINNT],0x0501,[Minimum Windows version (XP)])
+        AC_DEFINE_UNQUOTED([_UNICODE],1,[Select wide string variants])
         BINDHELPER=
         PLATFORMDIST=setup
         INSTALL_SAMPLES='$(noinst_PROGRAMS)'

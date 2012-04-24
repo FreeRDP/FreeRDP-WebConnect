@@ -44,6 +44,9 @@
 #include <boost/date_time/posix_time/posix_time.hpp>
 #include <boost/tuple/tuple.hpp>
 
+#ifdef HAVE_SIGNAL_H
+# include <signal.h>
+#endif
 #ifdef HAVE_SYS_TYPES_H
 # include <sys/types.h>
 #endif
