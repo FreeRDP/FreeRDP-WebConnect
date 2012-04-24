@@ -138,6 +138,8 @@ namespace wsgate {
         }
     }
 
+    WinLog *WinLog::m_instance;
+
 #endif // _WIN32
 
     class nullbuf : public streambuf
