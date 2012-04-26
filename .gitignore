@@ -38,6 +38,7 @@ rpmbuild.log
 stamp-h1
 wsgate/wsgate
 wsgate/bindhelper
+wsgate/*.bin
 wsgate/wsgate.ini.sample
 wsgate/doc/
 wsgate/webroot/index.html
@@ -46,3 +47,7 @@ wsgate/webroot/js/modernizr.js
 wsgate/webroot/js/mootools.js
 wsgate/webroot/js/simpletabs.js
 wsgate/webroot/js/wsgate.js
+wsgate/setup/.dlldeps
+wsgate/setup/.setupdir
+wsgate/setup/.stripsetup
+wsgate/setup/setupdir
