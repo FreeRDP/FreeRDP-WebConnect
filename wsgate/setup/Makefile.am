@@ -5,6 +5,8 @@
 		pkglibexecdir=/bin pkgdatadir=/webroot sysconfdir=/etc \
 		install
 	cp -av $(top_builddir)/doc/html setupdir/doc
+	cp openssl.cnf setupdir/etc
+	find "$(DLLPATH)" -name openssl.exe|xargs --no-run-if-empty cp -t setupdir/bin
 	touch $@
 
 .dlldeps: .setupdir findrequires.pl
@@ -12,7 +14,7 @@
 	touch $@
 
 .stripsetup: .setupdir
-	$(STRIP) --strip-unneeded setupdir/bin/*.exe `ls setupdir/bin/*.dll`
+#	$(STRIP) --strip-unneeded setupdir/bin/*.exe `ls setupdir/bin/*.dll`
 	touch $@
 
 nativesetup: .setupdir .dlldeps .stripsetup
@@ -23,6 +25,6 @@ crosssetup: .setupdir .dlldeps .stripsetup isccwrap.sh
 
 setup: $(SETUP)
 
-EXTRA_DIST = wsgate.iss version.iss
+EXTRA_DIST = wsgate.iss version.iss openssl.cnf
 MAINTAINERCLEANFILES = Makefile.in
 CLEANFILES = -r .setupdir .dlldeps .stripsetup setupdir

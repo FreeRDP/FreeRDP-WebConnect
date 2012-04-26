@@ -22,9 +22,9 @@ wsgate_SOURCES = \
 wsgate_CPPFLAGS = \
 	-DBINDHELPER_PATH=\"$(pkglibexecdir)/bindhelper$(EXEEXT)\" \
 	-DDEFAULTCFG=\"$(sysconfdir)/wsgate.ini\"
-wsgate_LDADD = $(WSGATE_RES) $(WSGATE_LDADD)
-wsgate_DEPENDENCIES = $(WSGATE_RES)
-EXTRA_wsgate_SOURCES = wsgate.rc
+wsgate_LDADD = $(SERVICE_OBJECTS) $(WSGATE_RES) $(WSGATE_LDADD)
+wsgate_DEPENDENCIES = $(SERVICE_OBJECTS) $(WSGATE_RES)
+EXTRA_wsgate_SOURCES = wsgate.rc NTService.cpp
 
 noinst_HEADERS = \
 	base64.hpp \
@@ -42,7 +42,8 @@ noinst_HEADERS = \
 	wsutf8.hpp \
 	RDP.hpp \
 	Update.hpp \
-	Primary.hpp
+	Primary.hpp \
+	NTService.hpp
 
 sysconf_DATA = wsgate.ini.sample
 

@@ -78,7 +78,9 @@ namespace wsgate {
 
     void WinLog::Destroy() {
         if (WinLog::m_instance) {
-            delete WinLog::m_instance;
+            WinLog *tmp = WinLog::m_instance;
+            WinLog::m_instance = NULL;
+            delete tmp;
         }
     }
 
@@ -107,11 +109,9 @@ namespace wsgate {
             ::RegCloseKey(hKeyEvtLogApp);
             m_hES = ::RegisterEventSourceA(NULL, ident);
         }
-        m_instance = this;
     }
 
     WinLog::~WinLog() {
-        m_instance = NULL;
         ::DeregisterEventSource(m_hES);
     }
 
@@ -130,6 +130,7 @@ namespace wsgate {
                 case LOG_WARNING:
                     ::ReportEventA(m_hES, EVENTLOG_WARNING_TYPE,
                             0, EVMSG_GENERIC, NULL, 1, 0, &p, NULL);
+                    break;
                 default:
                     ::ReportEventA(m_hES, EVENTLOG_ERROR_TYPE,
                             0, EVMSG_GENERIC, NULL, 1, 0, &p, NULL);
@@ -138,7 +139,7 @@ namespace wsgate {
         }
     }
 
-    WinLog *WinLog::m_instance;
+    WinLog *WinLog::m_instance = NULL;
 
 #endif // _WIN32
 

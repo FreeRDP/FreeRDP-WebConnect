@@ -27,16 +27,19 @@ case $build_os in
         ;;
 esac
 
+SERVICE_OBJECTS=
 WSGATE_RES=
 PLATFORM_SUBDIRS=
 case $target_os in
     mingw*)
         PLATFORM_SUBDIRS=setup
-        WSGATE_RES='wsgate.lo'
+        WSGATE_RES='wsgate.$(OBJEXT)'
+        SERVICE_OBJECTS='NTService.$(OBJEXT)'
         ;;
 esac
 AC_SUBST(PLATFORM_SUBDIRS)
 AC_SUBST(WSGATE_RES)
+AC_SUBST(SERVICE_OBJECTS)
 
 dnl Checks for programs.
 AC_PROG_CXX

@@ -8,8 +8,8 @@ port = 80
 # Set bind address of non-SSL listener.
 bindaddr = 127.0.0.1
 
-# Set hostname (for HTTP 1.1 host header comparison)
-hostname = localhost
+# Set hostname (optional, for HTTP 1.1 host header comparison if running behind NAT)
+# hostname = localhost
 
 # Set syslog logging facility.
 # Possible values: see syslog(3), without the LOG_ prefix

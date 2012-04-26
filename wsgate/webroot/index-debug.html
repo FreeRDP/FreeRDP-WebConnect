@@ -31,8 +31,8 @@
                         document.id('rdphost').value.trim();
                         button = document.id("rdpconnect");
                         button.removeEvents();
-                        button.value = 'Disconnect';
-                        button.addEvent('click', rdp.Disconnect.bind(rdp));
+                        /* button.value = 'Disconnect';
+                        button.addEvent('click', rdp.Disconnect.bind(rdp)); */
 
                         });
                 rdp.addEvent('disconnected', function() {

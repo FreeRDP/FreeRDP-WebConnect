@@ -78,6 +78,13 @@
 #include "wsgate.hpp"
 #include "myrawsocket.hpp"
 
+#ifdef _WIN32
+# define WIN32_LEAN_AND_MEAN
+# include <windows.h>
+# include <shlobj.h>
+# include "NTService.hpp"
+#endif
+
 using namespace std;
 using boost::algorithm::to_lower_copy;
 using boost::algorithm::ends_with;
@@ -130,7 +137,7 @@ namespace wsgate {
 
             WsGate(EHS *parent = NULL, std::string registerpath = "")
                 : EHS(parent, registerpath)
-                , m_sHostname("localhost")
+                , m_sHostname()
                 , m_sDocumentRoot()
                 , m_sPidFile()
                 , m_bDebug(false)
@@ -179,6 +186,7 @@ namespace wsgate {
                 if (uri.npos != pos) {
                     uri.erase(pos);
                 }
+                string thisHost(m_sHostname.empty() ? request->LocalAddress() : m_sHostname);
 
                 if (0 == uri.compare("/wsgate")) {
                     int dtwidth = 1024;
@@ -234,7 +242,7 @@ namespace wsgate {
                             << ": " << uri << " => 400 (Upgrade header does not contain websocket tag)" << endl;
                         return HTTPRESPONSECODE_400_BADREQUEST;
                     }
-                    if (0 != wshost.compare(m_sHostname)) {
+                    if (0 != wshost.compare(thisHost)) {
                         log::warn << "Request from " << request->RemoteAddress()
                             << ": " << uri << " => 400 (Host header does not match)" << endl;
                         return HTTPRESPONSECODE_400_BADREQUEST;
@@ -280,14 +288,14 @@ namespace wsgate {
 
                     CookieParameters setcookie;
                     setcookie["path"] = "/";
-                    setcookie["host"] = m_sHostname;
+                    setcookie["host"] = thisHost;
                     setcookie["max-age"] = "864000";
                     if (request->Secure()) {
                         setcookie["secure"] = "";
                     }
                     CookieParameters delcookie;
                     delcookie["path"] = "/";
-                    delcookie["host"] = m_sHostname;
+                    delcookie["host"] = thisHost;
                     delcookie["max-age"] = "0";
                     if (request->Secure()) {
                         delcookie["secure"] = "";
@@ -403,7 +411,8 @@ namespace wsgate {
                 if (HTML == mt) {
                     ostringstream oss;
                     oss << (request->Secure() ? "wss://" : "ws://")
-                        << m_sHostname << ":" << request->LocalPort() << "/wsgate";
+                        << thisHost << ":"
+                        << request->LocalPort() << "/wsgate";
                     replace_all(rbuf, "%WSURI%", oss.str());
                     replace_all(rbuf, "%JSDEBUG%", (m_bDebug ? "-debug" : ""));
                     string tmp(request->Cookies("lastuser"));
@@ -470,16 +479,14 @@ namespace wsgate {
 #ifndef _WIN32
     // Bind helper is not needed on win32, because win32 does not
     // have a concept of privileged ports.
-    class MyBindHelper : public PrivilegedBindHelper
-    {
-        public:
-            MyBindHelper() : mutex(pthread_mutex_t())
-        {
-            pthread_mutex_init(&mutex, NULL);
-        }
+    class MyBindHelper : public PrivilegedBindHelper {
 
-            virtual bool BindPrivilegedPort(int socket, const char *addr, const unsigned short port)
-            {
+        public:
+            MyBindHelper() : mutex(pthread_mutex_t()) {
+                pthread_mutex_init(&mutex, NULL);
+            }
+
+            bool BindPrivilegedPort(int socket, const char *addr, const unsigned short port) {
                 bool ret = false;
                 pid_t pid;
                 int status;
@@ -652,15 +659,18 @@ namespace wsgate {
 }
 
 static bool g_signaled = false;
+static bool g_service_background = true;
 
 static void terminate(int)
 {
     g_signaled = true;
 }
 
-// basic main that creates a threaded EHS object and then
-//   sleeps forever and lets the EHS thread do its job.
+#ifdef _WIN32
+int _service_main (int argc, char **argv)
+#else
 int main (int argc, char **argv)
+#endif
 {
     wsgate::logger log("wsgate");
 
@@ -668,6 +678,9 @@ int main (int argc, char **argv)
     desc.add_options()
         ("help,h", "Show this message and exit.")
         ("version,V", "Show version information and exit.")
+#ifndef _WIN32
+        ("foreground,f", "Run in foreground.")
+#endif
         ("config,c", po::value<string>()->default_value(DEFAULTCFG), "Specify config file")
         ;
 
@@ -696,6 +709,9 @@ int main (int argc, char **argv)
         po::store(po::parse_command_line(argc, argv, desc), vm);
         po::notify(vm);
     } catch (const po::error &e) {
+#ifdef _WIN32
+        wsgate::log::err << e.what() << endl << "Hint: Use --help option." << endl;
+#endif
         cerr << e.what() << endl << "Hint: Use --help option." << endl;
         return -1;
     }
@@ -705,13 +721,16 @@ int main (int argc, char **argv)
         return 0;
     }
     if (vm.count("version")) {
-        cout << "wsgate v" << VERSION << endl << getEHSconfig() << endl;
+        cout << "wsgate v" << VERSION << "." << GITREV << endl << getEHSconfig() << endl;
         return 0;
     }
     if (vm.count("config")) {
         string cfgname(vm["config"].as<string>());
         ifstream f(cfgname.c_str());
         if (f.fail()) {
+#ifdef _WIN32
+            wsgate::log::err << "Could not read config file '" << cfgname << "'." << endl;
+#endif
             cerr << "Could not read config file '" << cfgname << "'." << endl;
             return -1;
         }
@@ -723,6 +742,9 @@ int main (int argc, char **argv)
             return -1;
         }
     } else {
+#ifdef _WIN32
+        wsgate::log::err << "Mandatory option --config <filename> is missing." << endl;
+#endif
         cerr << "Mandatory option --config <filename> is missing." << endl;
         return -1;
     }
@@ -741,20 +763,24 @@ int main (int argc, char **argv)
         log.setfacilityByName(to_upper_copy(vm["global.logfacility"].as<string>()));
     }
     if (0 == (vm.count("global.port") + vm.count("ssl.port"))) {
+#ifdef _WIN32
+        wsgate::log::err << "No listening ports defined." << endl;
+#endif
         cerr << "No listening ports defined." << endl;
         return -1;
     }
-    if (0 == (vm.count("global.hostname"))) {
-        cerr << "No hostname defined." << endl;
-        return -1;
-    }
     if (0 == (vm.count("http.documentroot"))) {
+#ifdef _WIN32
+        wsgate::log::err << "No documentroot defined." << endl;
+#endif
         cerr << "No documentroot defined." << endl;
         return -1;
     }
 
 
-    string hostname(vm["global.hostname"].as<string>());
+    if (vm.count("global.hostname")) {
+        srv.SetHostname(vm["global.hostname"].as<string>());
+    }
     int port = -1;
     bool https = false;
     // bool need2 = false;
@@ -767,7 +793,6 @@ int main (int argc, char **argv)
         port = vm["ssl.port"].as<uint16_t>();
         https = true;
     }
-    srv.SetHostname(hostname);
     srv.SetDocumentRoot(vm["http.documentroot"].as<string>());
 
 #ifndef _WIN32
@@ -827,13 +852,13 @@ int main (int argc, char **argv)
         oSP["passphrase"] = vm["ssl.certpass"].as<string>();
     }
 
+#ifdef _WIN32
+    bool daemon = (vm.count("foreground")) ? false : g_service_background;
+#else
     bool daemon = false;
-    if (vm.count("global.daemon")) {
+    if (vm.count("global.daemon") && (0 == vm.count("foreground"))) {
         daemon = (0 == vm["global.daemon"].as<string>().compare("true"));
         if (daemon) {
-#ifdef _WIN32
-            // TODO: Add win32 service handling
-#else
             pid_t pid = fork();
             switch (pid) {
                 case 0:
@@ -863,10 +888,9 @@ int main (int argc, char **argv)
                 default:
                     return 0;
             }
-#endif
-
         }
     }
+#endif
 
 #ifndef _WIN32
     signal(SIGPIPE, SIG_IGN);
@@ -875,7 +899,7 @@ int main (int argc, char **argv)
     signal(SIGTERM, terminate);
 
     try {
-        wsgate::log::info << "wsgate v" << VERSION << " starting" << endl;
+        wsgate::log::info << "wsgate v" << VERSION << "." << GITREV << " starting" << endl;
         srv.StartServer(oSP);
 
         wsgate::log::info << "Listening on " << oSP["bindaddress"].GetCharString() << ":" << oSP["port"].GetInt() << endl;
@@ -908,3 +932,152 @@ int main (int argc, char **argv)
 
     return 0;
 }
+
+#ifdef _WIN32
+// Windows Service implementation
+
+namespace wsgate {
+
+    class WsGateService : public NTService {
+
+        public:
+
+            WsGateService() : NTService("FreeRDP-WebConnect", "FreeRDP WebConnect")
+        {
+            m_dwServiceStartupType = SERVICE_AUTO_START;
+            m_sDescription.assign("RDP Web access gateway");
+            AddDependency("Eventlog");
+        }
+
+        protected:
+
+            bool OnServiceStop()
+            {
+                g_signaled = true;
+                return true;
+            }
+
+            bool OnServiceShutdown()
+            {
+                g_signaled = true;
+                return true;
+            }
+
+            void RunService()
+            {
+                g_signaled = false;
+                // On Windows, always set out working dir to ../ relatively seen from
+                // the binary's path.
+                path p(m_sModulePath);
+                string wdir(p.branch_path().branch_path().string());
+                chdir(wdir.c_str());
+                g_signaled = false;
+                char *argv[] = {
+                    strdup("wsgate"),
+                    strdup("-c"),
+                    strdup("etc/wsgate.ini"),
+                    NULL
+                };
+                int r = _service_main(3, argv);
+                if (0 != r) {
+                    m_ServiceStatus.dwWin32ExitCode = ERROR_SERVICE_SPECIFIC_ERROR;
+                    m_ServiceStatus.dwServiceSpecificExitCode = r;
+                }
+                free(argv[0]);
+                free(argv[1]);
+                free(argv[2]);
+            }
+
+        public:
+
+            bool ParseSpecialArgs(int argc, char **argv)
+            {
+                if (argc < 2) {
+                    return false;
+                }
+                bool installed = false;
+                try {
+                    installed = IsServiceInstalled();
+                } catch (const tracing::runtime_error &e) {
+                    cerr << e.what() << endl;
+                    return true;
+                }
+                if (0 == strcmp(argv[1], "--query")) {
+                    // Report version of installed service
+                    cout << "The service is " << (installed ? "currently" : "not")
+                        << " installed." << endl;
+                    return true;
+                }
+                if (0 == strcmp(argv[1], "--start")) {
+                    // Start the service
+                    try {
+                        Start();
+                    } catch (const tracing::runtime_error &e) {
+                        cerr << "Failed to start " << m_sServiceName << endl;
+                        cerr << e.what() << endl;
+                    }
+                    return true;
+                }
+                if (0 == strcmp(argv[1], "--stop")) {
+                    // Start the service
+                    try {
+                        Stop();
+                    } catch (const tracing::runtime_error &e) {
+                        cerr << "Failed to stop " << m_sServiceName << endl;
+                        cerr << e.what() << endl;
+                    }
+                    return true;
+                }
+                if (0 == strcmp(argv[1], "--install")) {
+                    // Install the service
+                    if (installed) {
+                        cout << m_sServiceName << " is already installed." << endl;
+                    } else {
+                        try {
+                            InstallService();
+                            cout << m_sServiceName << " installed." << endl;
+                        } catch (const tracing::runtime_error &e) {
+                            cerr << "Failed to install " << m_sServiceName << endl;
+                            cerr << e.what() << endl;
+                        }
+                    }
+                    return true;
+                }
+                if (0 == strcmp(argv[1], "--remove")) {
+                    // Remove the service
+                    if (!installed) {
+                        cout << m_sServiceName << " is not installed." << endl;
+                    } else {
+                        try {
+                            UninstallService();
+                            cout << m_sServiceName << " removed." << endl;
+                        } catch (const tracing::runtime_error &e) {
+                            cerr << "Failed to remove " << m_sServiceName << endl;
+                            cerr << e.what() << endl;
+                        }
+                    }
+                    return true;
+                }
+                return false;
+            }
+
+    };
+}
+
+int main (int argc, char **argv)
+{
+    wsgate::WsGateService s;
+    if (!s.ParseSpecialArgs(argc, argv)) {
+        try {
+            if (!s.Execute()) {
+                return _service_main(argc, argv);
+            }
+        } catch (const tracing::runtime_error &e) {
+            cerr << "Failed to execute service" << endl;
+            cerr << e.what() << endl;
+        }
+    }
+    return s.ServiceExitCode();
+}
+
+#endif

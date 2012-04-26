@@ -58,7 +58,7 @@ wsgate.RDP = new Class( {
         this.cly = 0;
         this.clw = 0;
         this.clh = 0;
-        this.modkeys = [16, 17, 18, 20, 144, 145];
+        this.modkeys = [8, 16, 17, 18, 20, 144, 145];
     },
     Disconnect: function() {
         this._reset();
