@@ -90,7 +90,7 @@ dist-hook: conf/doxygen.cfg doxygen-doc
 
 rpm: dist conf/$(PACKAGE).spec
 	rm -f *.rpm
-	rpmbuild -ta $(distdir).tar.gz 2>&1 | tee rpmbuild.log
+	rpmbuild $(RPMBUILD_OPTS) -ta $(distdir).tar.gz 2>&1 | tee rpmbuild.log
 	test -n "`grep ^Wrote: rpmbuild.log`" || exit 1
 	for rpm in `grep ^Wrote: rpmbuild.log|awk '{print $$2}'` ; do ln -snf $$rpm . ; done
 	rm -f rpmbuild.log
