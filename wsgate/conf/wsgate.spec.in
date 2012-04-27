@@ -48,7 +48,7 @@ A WebSockets gateway for FreeRDP-WebConnect
 %setup -q
 
 %build
-%configure
+%configure --enable-warn
 %{__make} %{?_smp_mflags} V=1
 
 %install
