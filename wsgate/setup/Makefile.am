@@ -14,14 +14,14 @@
 	touch $@
 
 .stripsetup: .setupdir
-#	$(STRIP) --strip-unneeded setupdir/bin/*.exe `ls setupdir/bin/*.dll`
+	$(STRIP) --strip-unneeded setupdir/bin/*.exe `ls setupdir/bin/*.dll`
 	touch $@
 
 nativesetup: .setupdir .dlldeps .stripsetup
 	"$(ISCC)" "$(srcdir)/wsgate.iss"
 
-crosssetup: .setupdir .dlldeps .stripsetup isccwrap.sh
-	sh isccwrap.sh "$(srcdir)/wsgate.iss"
+crosssetup: .setupdir .dlldeps .stripsetup
+	$(ISCC) "$(srcdir)/wsgate.iss"
 
 setup: $(SETUP)
 
