@@ -361,8 +361,9 @@ namespace wsgate {
                         << ": " << uri << " => 404 Not found" << endl;
                     return HTTPRESPONSECODE_404_NOTFOUND;
                 }
-                time_t mtime = last_write_time(p);
 
+                // Handle If-modified-sice request header
+                time_t mtime = last_write_time(p);
                 string ifms(request->Headers("if-modified-since"));
                 if (!ifms.empty()) {
                     pt::ptime file_time(pt::from_time_t(mtime));
@@ -389,14 +390,9 @@ namespace wsgate {
                         << ": " << uri << " => 404 (file '" << p << "' unreadable)" << endl;
                     return HTTPRESPONSECODE_404_NOTFOUND;
                 }
-                f.seekg (0, ios::end);
-                size_t fsize = f.tellg();
-                f.seekg (0, ios::beg);
-                char *buf = new char [fsize];
-                f.read (buf,fsize);
+                string body((istreambuf_iterator<char>(f)), istreambuf_iterator<char>());
                 f.close();
-                string rbuf(buf, fsize);
-                delete buf;
+
 #ifdef BOOST_FILESYSTEM_VERSION
 # if (BOOST_FILESYSTEM_VERSION >= 3)
                 string basename(p.filename().generic_string());
@@ -407,22 +403,23 @@ namespace wsgate {
                 // Not defined at all: old API
                 string basename(p.filename());
 #endif
+
                 MimeType mt = simpleMime(to_lower_copy(basename));
                 if (HTML == mt) {
                     ostringstream oss;
                     oss << (request->Secure() ? "wss://" : "ws://")
                         << thisHost << ":"
                         << request->LocalPort() << "/wsgate";
-                    replace_all(rbuf, "%WSURI%", oss.str());
-                    replace_all(rbuf, "%JSDEBUG%", (m_bDebug ? "-debug" : ""));
+                    replace_all(body, "%WSURI%", oss.str());
+                    replace_all(body, "%JSDEBUG%", (m_bDebug ? "-debug" : ""));
                     string tmp(request->Cookies("lastuser"));
-                    replace_all(rbuf, "%COOKIE_LASTUSER%", tmp);
+                    replace_all(body, "%COOKIE_LASTUSER%", tmp);
                     tmp = base64_decode(request->Cookies("lastpass"));
-                    replace_all(rbuf, "%COOKIE_LASTPASS%", tmp);
+                    replace_all(body, "%COOKIE_LASTPASS%", tmp);
                     tmp = request->Cookies("lasthost");
-                    replace_all(rbuf, "%COOKIE_LASTHOST%", tmp);
+                    replace_all(body, "%COOKIE_LASTHOST%", tmp);
                     tmp.assign(VERSION).append(".").append(GITREV);
-                    replace_all(rbuf, "%VERSION%", tmp);
+                    replace_all(body, "%VERSION%", tmp);
                 }
                 switch (mt) {
                     case TEXT:
@@ -447,7 +444,7 @@ namespace wsgate {
                         response->SetHeader("Content-Type", "application/octet-stream");
                         break;
                 }
-                response->SetBody(rbuf.data(), rbuf.length());
+                response->SetBody(body.data(), body.length());
                 log::info << "Request from " << request->RemoteAddress()
                     << ": " << uri << " => 200 OK" << endl;
                 return HTTPRESPONSECODE_200_OK;
