@@ -64,7 +64,7 @@ MAINTAINERCLEANFILES = -r aclocal.m4 config.h.in* configure Makefile.in \
 
 MOSTLYCLEANFILES = $(DX_CLEANFILES)
 
-CLEANFILES = wsgate.ini.sample logging.rc MSG00001.bin
+CLEANFILES = wsgate.ini.sample logging.rc MSG00001.bin doxygen.log
 
 am_v_rc = $(am_v_rc_$(V))
 am_v_rc_ = $(am_v_rc_$(AM_DEFAULT_VERBOSITY))
@@ -85,7 +85,10 @@ MSG00001.bin logging.rc: logging.mc
 	$(AM_V_GEN)$(MC) -e xx $<
 	@rm -f logging.xx
 
-dist-hook: conf/doxygen.cfg doxygen-doc
+alldoc: conf/doxygen.cfg
+	$(MAKE) doxygen-doc 2> doxygen.log
+
+dist-hook: alldoc
 	cp -a doc $(distdir)/doc
 
 rpm: dist conf/$(PACKAGE).spec
@@ -95,7 +98,7 @@ rpm: dist conf/$(PACKAGE).spec
 	for rpm in `grep ^Wrote: rpmbuild.log|awk '{print $$2}'` ; do ln -snf $$rpm . ; done
 	rm -f rpmbuild.log
 
-setup: all doxygen-doc
+setup: all alldoc
 	$(MAKE) -C setup setup
 
 dist-platform: $(PLATFORMDIST)
@@ -105,6 +108,8 @@ wsgate.ini.sample: wsgate.ini.sample.in
 		-e "s^%sysconfdir%^$(sysconfdir)^g" \
 		-e "s^%PACKAGE%^$(PACKAGE)^g" \
 		< $< > $@
+
+.PHONY: alldoc rpm setup dist-platform
 
 # Next ifdef is really tricky:
 #  We want to be able to run make -f Makefile.am without having make
