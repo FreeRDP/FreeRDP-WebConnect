@@ -109,8 +109,6 @@ wsgate.ini.sample: wsgate.ini.sample.in
 		-e "s^%PACKAGE%^$(PACKAGE)^g" \
 		< $< > $@
 
-.PHONY: alldoc rpm setup dist-platform
-
 # Next ifdef is really tricky:
 #  We want to be able to run make -f Makefile.am without having make
 #  complaining with "missing separator" at the automake include line.
