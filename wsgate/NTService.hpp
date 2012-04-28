@@ -1,7 +1,7 @@
 #ifndef _NTSERVICE_H_
 #define _NTSERVICE_H_
 
-#ifdef _WIN32
+#if definded(_WIN32) || defined(DOXYGEN_RUN)
 
 #include <string>
 

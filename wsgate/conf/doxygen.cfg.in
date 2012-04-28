@@ -1484,7 +1484,7 @@ INCLUDE_FILE_PATTERNS  =
 # undefined via #undef or recursively expanded use the := operator
 # instead of the = operator.
 
-PREDEFINED             = USE_BFD USE_DWARF HAVE_BOOST_LOCK_GUARD
+PREDEFINED             = USE_BFD USE_DWARF HAVE_BOOST_LOCK_GUARD DOXYGEN_RUN
 
 # If the MACRO_EXPANSION and EXPAND_ONLY_PREDEF tags are set to YES then
 # this tag can be used to specify a list of macro names that should be expanded.
