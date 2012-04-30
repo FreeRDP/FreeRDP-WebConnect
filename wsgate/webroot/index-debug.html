@@ -60,7 +60,7 @@ function ResizeCanvas(sz) {
     document.id('screen').height = h;
 }
 function OnDesktopSize() {
-    ResizeCanvas(v = document.id('dtsize').value);
+    ResizeCanvas(document.id('dtsize').value);
 }
 function showDialog(show) {
     if (show) {
@@ -81,7 +81,7 @@ window.addEvent('domready', function() {
         document.id('rdpconnect').addEvent('click', RDPrun);
         document.id('dtsize').addEvent('change', OnDesktopSize);
         var tabs = new SimpleTabs('rdpdialog',{selector:'h4'});
-        ResizeCanvas('auto');
+        OnDesktopSize();
         showDialog(true);
         });
     </script>
