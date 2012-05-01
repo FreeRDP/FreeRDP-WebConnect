@@ -146,7 +146,7 @@ wsgate.RDP = new Class( {
                         } else {
                             // putImageData ignores the clipping region, so we must
                             // clip ourselves: We first paint into a second canvas,
-                            // the use drawImage (which honors clipping).
+                            // then use drawImage (which honors clipping).
 
                             var outB = this._bctx().createImageData(hdr[2], hdr[3]);
                             if (compressed) {
@@ -300,6 +300,7 @@ wsgate.RDP = new Class( {
         this.clw = 0;
         this.clh = 0;
         this.canvas.removeEvents();
+        document.removeEvents();
         this.bctx = null;
         if (this.bstore) {
             this.bstore.destroy();
@@ -667,8 +668,8 @@ wsgate.xorbufRGBAPel16 = function(inA, inI, outA, outI, pel) {
     pelG = (pelG << 2 & ~0x3) | (pelG >> 4);
     pelB = (pelB << 3 & ~0x7) | (pelB >> 2);
 
-    outA[outI++] = inA[inI] ^ pelR;
-    outA[outI++] = inA[inI] ^ pelG;
+    outA[outI++] = inA[inI++] ^ pelR;
+    outA[outI++] = inA[inI++] ^ pelG;
     outA[outI++] = inA[inI] ^ pelB;
     outA[outI] = 255;                                 // alpha
 }

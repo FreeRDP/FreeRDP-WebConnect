@@ -31,6 +31,7 @@
                         document.id('rdphost').value.trim();
                         button = document.id("rdpconnect");
                         button.removeEvents();
+                        window.removeEvent('resize', OnDesktopSize);
                         /* button.value = 'Disconnect';
                         button.addEvent('click', rdp.Disconnect.bind(rdp)); */
 
@@ -41,7 +42,8 @@
                         button.removeEvents();
                         button.value = 'Connect';
                         button.addEvent('click', RDPrun);
-
+                        OnDesktopSize();
+                        window.addEvent('resize', OnDesktopSize);
                         });
                 showDialog(false);
                 rdp.Run();
@@ -51,6 +53,9 @@ function ResizeCanvas(sz) {
     if (sz == 'auto') {
         w = window.getCoordinates().width;
         h = window.getCoordinates().height;
+        if (w % 2) {
+            w -= 1;
+        }
     } else {
         var sza = sz.split('x');
         var w = sza[0];
@@ -83,6 +88,7 @@ window.addEvent('domready', function() {
         var tabs = new SimpleTabs('rdpdialog',{selector:'h4'});
         OnDesktopSize();
         showDialog(true);
+        window.addEvent('resize', OnDesktopSize);
         });
     </script>
 </head>
