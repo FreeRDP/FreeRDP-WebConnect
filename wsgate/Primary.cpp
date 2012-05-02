@@ -111,14 +111,26 @@ namespace wsgate {
     }
 
     void Primary::MultiOpaqueRect(rdpContext* context, MULTI_OPAQUE_RECT_ORDER* moro) {
-        log::debug << __PRETTY_FUNCTION__ << endl;
+        // log::debug << __PRETTY_FUNCTION__ << endl;
         HCLRCONV hclrconv = reinterpret_cast<wsgContext *>(context)->clrconv;
         uint32_t color = freerdp_color_convert_var(moro->color, 16, 32, hclrconv);
+#if 0
+        log::debug << "MultiOpaqueRect color=" << hex << moro->color << " (" << color << ")" << dec
+            << " nr=" << moro->numRectangles << endl;
+        for (size_t i = 0; i < moro->numRectangles; ++i) {
+            DELTA_RECT *r = &moro->rectangles[i+1];
+            log::debug << "  " << i << ": x=" << r->left << " y=" << r->top
+                << " w=" << r->width << " h=" << r->height << endl;
+        }
+#endif
+        uint32_t nr = moro->numRectangles;
         uint32_t op = WSOP_SC_MULTI_OPAQUERECT;
         string buf(reinterpret_cast<const char *>(&op), sizeof(op));
         buf.append(reinterpret_cast<const char *>(&color), sizeof(color));
-        buf.append(reinterpret_cast<const char *>(&moro->numRectangles), sizeof(moro->numRectangles));
-        buf.append(reinterpret_cast<const char *>(&moro->rectangles), sizeof(DELTA_RECT) * moro->numRectangles);
+        buf.append(reinterpret_cast<const char *>(&nr), sizeof(nr));
+        // Rectangles start at index 1 and rect at index 0 is always 0,0,0,0
+        buf.append(reinterpret_cast<const char *>(&moro->rectangles[1]),
+                sizeof(DELTA_RECT) * nr);
         m_wshandler->send_binary(buf);
     }
 

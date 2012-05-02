@@ -50,6 +50,8 @@ wsgate.RDP = new Class( {
         this.parent(url);
         this.canvas = canvas;
         this.cctx = canvas.getContext('2d');
+        this.cctx.strokeStyle = 'rgba(255,255,255,0)';
+        this.cctx.FillStyle = 'rgba(255,255,255,0)';
         this.ccnt = 0;
         this.mq = new Array();
         this.pID = null;
@@ -97,7 +99,7 @@ wsgate.RDP = new Class( {
      * Main message loop.
      */
     _pmsg: function() { // process a binary RDP message from our queue
-        var op, hdr, count, data, rects, bmdata, rgba, compressed, i, offs;
+        var op, hdr, count, data, rects, bmdata, rgba, compressed, i, offs, x, y, w, h, color, len;
         if (this.pMTX++ > 0) {
             this.pMTX -= 1;
             return;
@@ -129,35 +131,38 @@ wsgate.RDP = new Class( {
                     hdr = new Uint32Array(data, 4, 7);
                     bmdata = new Uint8Array(data, 32);
                     compressed =  (hdr[5] != 0);
-                    // wsgate.log.debug('Bitmap:', (compressed ? ' C ' : ' U '), ' x: ', hdr[0], ' y: ', hdr[1], ' w: ', hdr[2], ' h: ', hdr[3], ' bpp: ', hdr[4]);
+                    x = hdr[0];
+                    y = hdr[1];
+                    w = hdr[2];
+                    h = hdr[3];
+                    len = hdr[6];
                     if ((hdr[4] == 16) || (hdr[4] == 15)) {
-                        if (this._ckclp(hdr[0], hdr[1]) &&
-                                this._ckclp(hdr[0] + hdr[2], hdr[1] + hdr[3]))
+                        if (this._ckclp(x, y) && this._ckclp(x + w, y + h))
                         {
-                            // Completely inside clip region
-                            var outB = this.cctx.createImageData(hdr[2], hdr[3]);
+                                // wsgate.log.debug('BMi:',(compressed ? ' C ' : ' U '),' x=',x,'y=',y,' w=',w,' h=',h,' l=',len);
+                            var outB = this.cctx.createImageData(w, h);
                             if (compressed) {
-                                wsgate.dRLE16_RGBA(bmdata, hdr[6], hdr[2], outB.data);
-                                wsgate.flipV(outB.data, hdr[2], hdr[3]);
+                                wsgate.dRLE16_RGBA(bmdata, len, w, outB.data);
+                                wsgate.flipV(outB.data, w, h);
                             } else {
-                                wsgate.dRGB162RGBA(bmdata, hdr[6], outB.data);
+                                wsgate.dRGB162RGBA(bmdata, len, outB.data);
                             }
-                            this.cctx.putImageData(outB, hdr[0], hdr[1]);
+                            this.cctx.putImageData(outB, x, y);
                         } else {
+                            // wsgate.log.debug('BMc:',(compressed ? ' C ' : ' U '),' x=',x,'y=',y,' w=',w,' h=',h,' bpp=',hdr[4]);
                             // putImageData ignores the clipping region, so we must
                             // clip ourselves: We first paint into a second canvas,
                             // then use drawImage (which honors clipping).
 
-                            var outB = this._bctx().createImageData(hdr[2], hdr[3]);
+                            var outB = this._bctx().createImageData(w, h);
                             if (compressed) {
-                                wsgate.dRLE16_RGBA(bmdata, hdr[6], hdr[2], outB.data);
-                                wsgate.flipV(outB.data, hdr[2], hdr[3]);
+                                wsgate.dRLE16_RGBA(bmdata, len, w, outB.data);
+                                wsgate.flipV(outB.data, w, h);
                             } else {
-                                wsgate.dRGB162RGBA(bmdata, hdr[6], outB.data);
+                                wsgate.dRGB162RGBA(bmdata, len, outB.data);
                             }
                             this.bctx.putImageData(outB, 0, 0);
-                            this.cctx.drawImage(this.bstore, 0, 0, hdr[2], hdr[3],
-                                    hdr[0], hdr[1], hdr[2], hdr[3]);
+                            this.cctx.drawImage(this.bstore, 0, 0, w, h, x, y, w, h);
                         }
                     } else {
                         wsgate.log.warn('BPP <> 15/16 not yet implemented');
@@ -200,8 +205,15 @@ wsgate.RDP = new Class( {
                         // Solid brush style
                         // x, y, width, height, fgcolor, rop3
                         hdr = new Int32Array(data, 4, 4);
+                        x = hdr[0];
+                        y = hdr[1];
+                        w = hdr[2];
+                        h = hdr[3];
                         rgba = new Uint8Array(data, 20, 4);
-                        this._sROP(new Uint32Array(data, 24, 1)[0]);
+                        if (this._sROP(new Uint32Array(data, 24, 1)[0])) {
+                            this.cctx.fillStyle = this._c2s(rgba);
+                            this.cctx.fillRect(x, y, w, h);
+                        }
                     }
                     break; 
                 case 6:
@@ -211,11 +223,13 @@ wsgate.RDP = new Class( {
                     rgba = new Uint8Array(data, 4, 4);
                     count = new Uint32Array(data, 8, 1);
                     rects = new Uint32Array(data, 12, count[0] * 4);
-                    // wsgate.log.debug('MultiFill: ', count[0], " ", this._c2s(rgba));
+                    wsgate.log.debug('MultiFill: ', count[0], " ", this._c2s(rgba));
                     this.cctx.fillStyle = this._c2s(rgba);
                     offs = 0;
+                    var c = this._c2s(rgba);
                     for (i = 0; i < count[0]; ++i) {
                         this.cctx.fillRect(rects[offs], rects[offs+1], rects[offs+2], rects[offs+3]);
+                        // this._fR(rects[offs], rects[offs+1], rects[offs+2], rects[offs+3], c);
                         offs += 4;
                     }
                     break; 
@@ -225,10 +239,47 @@ wsgate.RDP = new Class( {
         }
         this.pMTX -= 1;
     },
+    _fR: function(x, y, w, h, color) {
+        return;
+        if ((w < 2) || (h < 2)) {
+            this.cctx.strokeStyle = color;
+            this.cctx.beginPath();
+            this.cctx.moveTo(x, y);
+            if (w > h) {
+                this.cctx.lineWidth = h;
+                this.cctx.lineTo(x + w, y);
+            } else {
+                this.cctx.lineWidth = w;
+                this.cctx.lineTo(x, y + h);
+            }
+            this.cctx.stroke();
+        } else {
+            this.cctx.fillStyle = color;
+            this.cctx.fillRect(x, y, w, h);
+        }
+    },
     _sROP: function(rop) {
         switch (rop) {
+            case 0x005A0049:
+                // GDI_PATINVERT: D = P ^ D
+                this.cctx.globalCompositeOperation = 'xor';
+                return true;
+                break;
+            case 0x00F00021:
+                // GDI_PATCOPY: D = P
+                this.cctx.globalCompositeOperation = 'copy';
+                return true;
+                break;
+            default:
+                wsgate.log.warn('Unsupported raster op: ', rop.toString(16));
+                break;
+        }
+        return false;
+            /*
             case 0x00CC0020:
                 // GDI_SRCCOPY: D = S
+                wsgate.log.warn('Unsupported raster op: ', rop.toString(16));
+                return false;
                 break;
             case 0x00EE0086:
                 // GDI_SRCPAINT: D = S | D
@@ -254,14 +305,8 @@ wsgate.RDP = new Class( {
             case 0x00BB0226:
                 // GDI_MERGEPAINT: D = ~S | D
                 break;
-            case 0x00F00021:
-                // GDI_PATCOPY: D = P
-                break;
             case 0x00FB0A09:
                 // GDI_PATPAINT: D = D | (P | ~S)
-                break;
-            case 0x005A0049:
-                // GDI_PATINVERT: D = P ^ D
                 break;
             case 0x00550009:
                 // GDI_DSTINVERT: D = ~D
@@ -293,7 +338,7 @@ wsgate.RDP = new Class( {
             case 0x00A50065:
                 // GDI_PDxn: D = D ^ ~P
                 break;
-        }
+            */
     },
     /**
      * Reset our state to disconnected

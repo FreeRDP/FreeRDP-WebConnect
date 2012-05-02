@@ -369,7 +369,7 @@ namespace wsgate {
         m_rdpSettings->offscreen_bitmap_cache = 0;
 
         m_rdpSettings->order_support[NEG_DSTBLT_INDEX] = 0;
-        m_rdpSettings->order_support[NEG_PATBLT_INDEX] = 0;
+        m_rdpSettings->order_support[NEG_PATBLT_INDEX] = 1;
         m_rdpSettings->order_support[NEG_SCRBLT_INDEX] = 0;
         m_rdpSettings->order_support[NEG_MEMBLT_INDEX] = 0;
         m_rdpSettings->order_support[NEG_MEM3BLT_INDEX] = 0;
