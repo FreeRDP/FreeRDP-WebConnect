@@ -57,10 +57,12 @@ Name: "ru"; MessagesFile: "compiler:Languages\Russian.isl"
 uninst_wsgate=Uninstall {#=APPNAME}
 doc=API Documentation
 binshell=Start commandline in bin directory
+fwadd=Adding firewall rules
 
 de.uninst_wsgate=Deinstalliere {#=APPNAME}
 de.doc=API Dokumentation
 de.binshell=Starte Kommandozeile im bin directory
+de.fwadd=Erstelle Firewall-Regeln
 
 cfgssl1=SSL Setup
 cfgssl2=Server SSL certificate
@@ -101,6 +103,18 @@ Source: setupdir\doc\*; DestDir: {app}\doc; Flags: recursesubdirs; Components: a
 Name: "{group}\{cm:doc}"; Filename: "{app}\doc\index.html"; Components: apidoc;
 Name: "{group}\{cm:binshell}"; Filename: "{cmd}"; WorkingDir: "{app}\bin"
 Name: "{group}\{cm:uninst_wsgate}"; Filename: "{uninstallexe}";
+
+[Run]
+Filename: "{sys}\netsh.exe"; Parameters: "firewall add allowedprogram ""{app}\bin\wsgate.exe"" ""{#=APPNAME}"" ENABLE"; StatusMsg: {cm:fwadd}; Flags: runhidden skipifdoesntexist; OnlyBelowVersion: 0,6.0.6000; MinVersion: 0,5.1
+Filename: "{sys}\netsh.exe"; Parameters: "advfirewall firewall add rule name=wsgate_in dir=in action=allow protocol=TCP localport=80,443 program=""{app}\bin\wsgate.exe"" description=""{#=APPNAME}"""; StatusMsg: {cm:fwadd}; Flags: runhidden skipifdoesntexist; MinVersion: 0,6.0.6000
+Filename: "{sys}\netsh.exe"; Parameters: "advfirewall firewall add rule name=wsgate_out dir=out action=allow protocol=TCP program=""{app}\bin\wsgate.exe"" description=""{#=APPNAME}"""; StatusMsg: {cm:fwadd}; Flags: runhidden skipifdoesntexist; MinVersion: 0,6.0.6000
+
+[UninstallRun]
+Filename: "{sys}\netsh.exe"; Parameters: "firewall delete allowedprogram ""{app}\bin\wsgate.exe"" ALL"; Flags: runhidden skipifdoesntexist; RunOnceId: fwdelwsgate; OnlyBelowVersion: 1.0,6.0.6000; MinVersion: 0,5.1
+Filename: "{sys}\netsh.exe"; Parameters: "advfirewall firewall delete rule name=wsgate_in"; Flags: runhidden skipifdoesntexist; RunOnceId: fwdelIwsgate; MinVersion: 0,6.0.6000
+Filename: "{sys}\netsh.exe"; Parameters: "advfirewall firewall delete rule name=wsgate_out"; Flags: runhidden skipifdoesntexist; RunOnceId: fwdelOwsgate; MinVersion: 0,6.0.6000
+
+
 
 [Code]
 const
