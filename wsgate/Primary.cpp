@@ -83,7 +83,7 @@ namespace wsgate {
     }
 
     void Primary::OpaqueRect(rdpContext* context, OPAQUE_RECT_ORDER* oro) {
-        // log::debug << __PRETTY_FUNCTION__ << endl;
+        log::debug << __PRETTY_FUNCTION__ << endl;
         HCLRCONV hclrconv = reinterpret_cast<wsgContext *>(context)->clrconv;
         uint32_t svcolor = oro->color;
         oro->color = freerdp_color_convert_var(oro->color, 16, 32, hclrconv);
@@ -110,8 +110,16 @@ namespace wsgate {
         log::debug << __PRETTY_FUNCTION__ << endl;
     }
 
-    void Primary::MultiOpaqueRect(rdpContext*, MULTI_OPAQUE_RECT_ORDER*) {
+    void Primary::MultiOpaqueRect(rdpContext* context, MULTI_OPAQUE_RECT_ORDER* moro) {
         log::debug << __PRETTY_FUNCTION__ << endl;
+        HCLRCONV hclrconv = reinterpret_cast<wsgContext *>(context)->clrconv;
+        uint32_t color = freerdp_color_convert_var(moro->color, 16, 32, hclrconv);
+        uint32_t op = WSOP_SC_MULTI_OPAQUERECT;
+        string buf(reinterpret_cast<const char *>(&op), sizeof(op));
+        buf.append(reinterpret_cast<const char *>(&color), sizeof(color));
+        buf.append(reinterpret_cast<const char *>(&moro->numRectangles), sizeof(moro->numRectangles));
+        buf.append(reinterpret_cast<const char *>(&moro->rectangles), sizeof(DELTA_RECT) * moro->numRectangles);
+        m_wshandler->send_binary(buf);
     }
 
     void Primary::MultiDrawNineGrid(rdpContext*, MULTI_DRAW_NINE_GRID_ORDER*) {

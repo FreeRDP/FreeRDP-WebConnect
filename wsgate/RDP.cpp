@@ -376,7 +376,7 @@ namespace wsgate {
         m_rdpSettings->order_support[NEG_ATEXTOUT_INDEX] = 0;
         m_rdpSettings->order_support[NEG_AEXTTEXTOUT_INDEX] = 0;
         m_rdpSettings->order_support[NEG_DRAWNINEGRID_INDEX] = 0;
-        m_rdpSettings->order_support[NEG_LINETO_INDEX] = 0;
+        m_rdpSettings->order_support[NEG_LINETO_INDEX] = 1;
         m_rdpSettings->order_support[NEG_MULTI_DRAWNINEGRID_INDEX] = 0;
         m_rdpSettings->order_support[NEG_OPAQUE_RECT_INDEX] = 1;
         m_rdpSettings->order_support[NEG_SAVEBITMAP_INDEX] = 0;
@@ -386,7 +386,7 @@ namespace wsgate {
         m_rdpSettings->order_support[NEG_MULTIDSTBLT_INDEX] = 0;
         m_rdpSettings->order_support[NEG_MULTIPATBLT_INDEX] = 0;
         m_rdpSettings->order_support[NEG_MULTISCRBLT_INDEX] = 0;
-        m_rdpSettings->order_support[NEG_MULTIOPAQUERECT_INDEX] = 0;
+        m_rdpSettings->order_support[NEG_MULTIOPAQUERECT_INDEX] = 1;
         m_rdpSettings->order_support[NEG_FAST_INDEX_INDEX] = 0;
         m_rdpSettings->order_support[NEG_POLYGON_SC_INDEX] = 0;
         m_rdpSettings->order_support[NEG_POLYGON_CB_INDEX] = 0;

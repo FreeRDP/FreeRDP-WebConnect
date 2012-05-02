@@ -97,7 +97,7 @@ wsgate.RDP = new Class( {
      * Main message loop.
      */
     _pmsg: function() { // process a binary RDP message from our queue
-        var op, hdr, data, bmdata, rgba, compressed;
+        var op, hdr, count, data, rects, bmdata, rgba, compressed, i, offs;
         if (this.pMTX++ > 0) {
             this.pMTX -= 1;
             return;
@@ -116,7 +116,7 @@ wsgate.RDP = new Class( {
                     this._ctxR();
                     break;
                 case 2:
-                    /// Single bitmap
+                    // Single bitmap
                     //
                     //  0 uint32 Destination X
                     //  1 uint32 Destination Y
@@ -202,6 +202,21 @@ wsgate.RDP = new Class( {
                         hdr = new Int32Array(data, 4, 4);
                         rgba = new Uint8Array(data, 20, 4);
                         this._sROP(new Uint32Array(data, 24, 1)[0]);
+                    }
+                    break; 
+                case 6:
+                    // Multi Opaque rect
+                    // color, nrects
+                    // rect1.x,rect1.y,rect1.w,rect1.h ... rectn.x,rectn.y,rectn.w,rectn.h
+                    rgba = new Uint8Array(data, 4, 4);
+                    count = new Uint32Array(data, 8, 1);
+                    rects = new Uint32Array(data, 12, count[0] * 4);
+                    // wsgate.log.debug('MultiFill: ', count[0], " ", this._c2s(rgba));
+                    this.cctx.fillStyle = this._c2s(rgba);
+                    offs = 0;
+                    for (i = 0; i < count[0]; ++i) {
+                        this.cctx.fillRect(rects[offs], rects[offs+1], rects[offs+2], rects[offs+3]);
+                        offs += 4;
                     }
                     break; 
                 default:
@@ -516,7 +531,7 @@ wsgate.RDP = new Class( {
         this._reset();
     },
     /**
-     * Convert a color value containet in an uint8 array into an rgba expression
+     * Convert a color value contained in an uint8 array into an rgba expression
      * that can be used to parameterize the canvas.
      */
     _c2s: function(c) {
