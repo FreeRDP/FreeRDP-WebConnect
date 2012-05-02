@@ -186,7 +186,7 @@ namespace wsgate {
                 if (uri.npos != pos) {
                     uri.erase(pos);
                 }
-                string thisHost(m_sHostname.empty() ? request->LocalAddress() : m_sHostname);
+                string thisHost(m_sHostname.empty() ? request->Headers("Host") : m_sHostname);
 
                 if (0 == uri.compare("/wsgate")) {
                     int dtwidth = 1024;
@@ -349,6 +349,12 @@ namespace wsgate {
                     return HTTPRESPONSECODE_101_SWITCHING_PROTOCOLS;
                 }
 
+                // Regular (non WebSockets request
+                if (0 != thisHost.compare(request->Headers("Host"))) {
+                    log::warn << "Request from " << request->RemoteAddress()
+                        << ": " << uri << " => 404 Not found" << endl;
+                    return HTTPRESPONSECODE_404_NOTFOUND;
+                }
                 path p(m_sDocumentRoot);
                 p /= uri;
                 if (ends_with(uri, "/")) {

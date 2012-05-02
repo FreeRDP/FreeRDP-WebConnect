@@ -97,7 +97,7 @@ wsgate.RDP = new Class( {
      * Main message loop.
      */
     _pmsg: function() { // process a binary RDP message from our queue
-        var op, hdr, data, bmdata, rgba, compressed;
+        var op, hdr, count, data, rects, bmdata, rgba, compressed, i, offs;
         if (this.pMTX++ > 0) {
             this.pMTX -= 1;
             return;
@@ -116,7 +116,7 @@ wsgate.RDP = new Class( {
                     this._ctxR();
                     break;
                 case 2:
-                    /// Single bitmap
+                    // Single bitmap
                     //
                     //  0 uint32 Destination X
                     //  1 uint32 Destination Y
@@ -146,13 +146,10 @@ wsgate.RDP = new Class( {
                         } else {
                             // putImageData ignores the clipping region, so we must
                             // clip ourselves: We first paint into a second canvas,
-                            // the use drawImage (which honors clipping).
+                            // then use drawImage (which honors clipping).
 
                             var outB = this._bctx().createImageData(hdr[2], hdr[3]);
                             if (compressed) {
-                                // var tmp = new Uint8Array(hdr[2] * hdr[3] * 2);
-                                // wsgate.dRLE16(bmdata, hdr[6], hdr[2], tmp);
-                                // wsgate.dRGB162RGBA(tmp, hdr[6], outB.data);
                                 wsgate.dRLE16_RGBA(bmdata, hdr[6], hdr[2], outB.data);
                                 wsgate.flipV(outB.data, hdr[2], hdr[3]);
                             } else {
@@ -205,6 +202,21 @@ wsgate.RDP = new Class( {
                         hdr = new Int32Array(data, 4, 4);
                         rgba = new Uint8Array(data, 20, 4);
                         this._sROP(new Uint32Array(data, 24, 1)[0]);
+                    }
+                    break; 
+                case 6:
+                    // Multi Opaque rect
+                    // color, nrects
+                    // rect1.x,rect1.y,rect1.w,rect1.h ... rectn.x,rectn.y,rectn.w,rectn.h
+                    rgba = new Uint8Array(data, 4, 4);
+                    count = new Uint32Array(data, 8, 1);
+                    rects = new Uint32Array(data, 12, count[0] * 4);
+                    // wsgate.log.debug('MultiFill: ', count[0], " ", this._c2s(rgba));
+                    this.cctx.fillStyle = this._c2s(rgba);
+                    offs = 0;
+                    for (i = 0; i < count[0]; ++i) {
+                        this.cctx.fillRect(rects[offs], rects[offs+1], rects[offs+2], rects[offs+3]);
+                        offs += 4;
                     }
                     break; 
                 default:
@@ -300,6 +312,7 @@ wsgate.RDP = new Class( {
         this.clw = 0;
         this.clh = 0;
         this.canvas.removeEvents();
+        document.removeEvents();
         this.bctx = null;
         if (this.bstore) {
             this.bstore.destroy();
@@ -518,7 +531,7 @@ wsgate.RDP = new Class( {
         this._reset();
     },
     /**
-     * Convert a color value containet in an uint8 array into an rgba expression
+     * Convert a color value contained in an uint8 array into an rgba expression
      * that can be used to parameterize the canvas.
      */
     _c2s: function(c) {
@@ -634,20 +647,6 @@ wsgate.SpeedTest = new Class( {
 });
 /* /DEBUG */
 
-wsgate.copy16 = function(inA, inI, outA, outI) {
-    outA[outI++] = inA[inI++];
-    outA[outI] = inA[inI];
-}
-wsgate.xorbuf16 = function(inA, inI, outA, outI, pel) {
-    var newPEL = (inA[inI] | (inA[inI + 1] << 8)) ^ pel;
-    outA[outI++] = newPEL & 0xFF;
-    outA[outI] = (newPEL >> 8) & 0xFF;
-}
-wsgate.pel16 = function (pel, outA, outI) {
-    outA[outI++] = pel & 0xFF;
-    outA[outI] = (pel >> 8) & 0xFF;
-}
-
 wsgate.copyRGBA = function(inA, inI, outA, outI) {
     if ('subarray' in inA) {
         outA.set(inA.subarray(inI, inI + 4), outI);
@@ -667,8 +666,8 @@ wsgate.xorbufRGBAPel16 = function(inA, inI, outA, outI, pel) {
     pelG = (pelG << 2 & ~0x3) | (pelG >> 4);
     pelB = (pelB << 3 & ~0x7) | (pelB >> 2);
 
-    outA[outI++] = inA[inI] ^ pelR;
-    outA[outI++] = inA[inI] ^ pelG;
+    outA[outI++] = inA[inI++] ^ pelR;
+    outA[outI++] = inA[inI++] ^ pelG;
     outA[outI++] = inA[inI] ^ pelB;
     outA[outI] = 255;                                 // alpha
 }
@@ -852,204 +851,6 @@ wsgate.WriteFirstLineFgBgImage16toRGBA = function(outA, outI, bitmask, fgPel, cB
         cmpMask <<= 1;
     }
     return outI;
-}
-
-wsgate.WriteFgBgImage16to16 = function(outA, outI, rowDelta, bitmask, fgPel, cBits) {
-    var cmpMask = 0x01;
-
-    while (cBits-- > 0) {
-        if (bitmask & cmpMask) {
-            wsgate.xorbuf16(outA, outI - rowDelta, outA, outI, fgPel);
-        } else {
-            wsgate.copy16(outA, outI - rowDelta, outA, outI);
-        }
-        outI += 2;
-        cmpMask <<= 1;
-    }
-    return outI;
-}
-
-wsgate.WriteFirstLineFgBgImage16to16 = function(outA, outI, bitmask, fgPel, cBits) {
-    var cmpMask = 0x01;
-
-    while (cBits-- > 0) {
-        if (bitmask & cmpMask) {
-            wsgate.pel16(fgPel, outA, outI);
-        } else {
-            wsgate.pel16(0, outA, outI);
-        }
-        outI += 2;
-        cmpMask <<= 1;
-    }
-    return outI;
-}
-
-wsgate.dRLE16 = function(inA, inLength, width, outA) {
-    var runLength;
-    var code, pixelA, pixelB, bitmask;
-    var inI = 0;
-    var outI = 0;
-    var fInsertFgPel = false;
-    var fFirstLine = true;
-    var fgPel = 0xFFFFFF;
-    var rowDelta = width * 2;
-    var advance = {val: 0};
-
-    while (inI < inLength) {
-        if (fFirstLine) {
-            if (outI >= rowDelta) {
-                fFirstLine = false;
-                fInsertFgPel = false;
-            }
-        }
-        code = wsgate.ExtractCodeId(inA[inI]);
-        if (code == 0x00 || code == 0xF0) {
-            runLength = wsgate.ExtractRunLength(code, inA, inI, advance);
-            inI += advance.val;
-            if (fFirstLine) {
-                if (fInsertFgPel) {
-                    wsgate.pel16(fgPel, outA, outI);
-                    outI += 2;
-                    runLength -= 1;
-                }
-                while (runLength-- > 0) {
-                    wsgate.pel16(0, outA, outI);
-                    outI += 2;
-                }
-            } else {
-                if (fInsertFgPel) {
-                    wsgate.xorbuf16(outA, outI - rowDelta, outA, outI, fgPel);
-                    outI += 2;
-                    runLength -= 1;
-                }
-                while (runLength-- > 0) {
-                    wsgate.copy16(outA, outI - rowDelta, outA, outI);
-                    outI += 2;
-                }
-            }
-            fInsertFgPel = true;
-            continue;
-        }
-        fInsertFgPel = false;
-        switch (code) {
-            case 0x01:
-            case 0xF1:
-            case 0x0C:
-            case 0xF6:
-                runLength = wsgate.ExtractRunLength(code, inA, inI, advance);
-                inI += advance.val;
-                if (code == 0x0C || code == 0xF6) {
-                    fgPel = inA[inI] | (inA[inI + 1] << 8);
-                    inI += 2;
-                }
-                if (fFirstLine) {
-                    while (runLength-- > 0) {
-                        wsgate.pel16(fgPel, outA, outI);
-                        outI += 2;
-                    }
-                } else {
-                    while (runLength-- > 0) {
-                        wsgate.xorbuf16(outA, outI - rowDelta, outA, outI, fgPel);
-                        outI += 2;
-                    }
-                }
-                break;
-            case 0x0E:
-            case 0xF8:
-                runLength = wsgate.ExtractRunLength(code, inA, inI, advance);
-                inI += advance.val;
-                pixelA = inA[inI] | (inA[inI + 1] << 8);
-                inI += 2;
-                pixelB = inA[inI] | (inA[inI + 1] << 8);
-                inI += 2;
-                while (runLength-- > 0) {
-                    wsgate.pel16(pixelA, outA, outI);
-                    outI += 2;
-                    wsgate.pel16(pixelB, outA, outI);
-                    outI += 2;
-                }
-                break;
-            case 0x03:
-            case 0xF3:
-                runLength = wsgate.ExtractRunLength(code, inA, inI, advance);
-                inI += advance.val;
-                pixelA = inA[inI] | (inA[inI + 1] << 8);
-                inI += 2;
-                while (runLength-- > 0) {
-                    wsgate.pel16(pixelA, outA, outI);
-                    outI += 2;
-                }
-                break;
-            case 0x02:
-            case 0xF2:
-            case 0x0D:
-            case 0xF7:
-                runLength = wsgate.ExtractRunLength(code, inA, inI, advance);
-                inI += advance.val;
-                if (code == 0x0D || code == 0xF7) {
-                    fgPel = inA[inI] | (inA[inI + 1] << 8);
-                    inI += 2;
-                }
-                if (fFirstLine) {
-                    while (runLength >= 8) {
-                        bitmask = inA[inI++];
-                        outI = wsgate.WriteFirstLineFgBgImage16to16(outA, outI, bitmask, fgPel, 8);
-                        runLength -= 8;
-                    }
-                } else {
-                    while (runLength >= 8) {
-                        bitmask = inA[inI++];
-                        outI = wsgate.WriteFgBgImage16to16(outA, outI, rowDelta, bitmask, fgPel, 8);
-                        runLength -= 8;
-                    }
-                }
-                if (runLength-- > 0) {
-                    bitmask = inA[inI++];
-                    if (fFirstLine) {
-                        outI = wsgate.WriteFirstLineFgBgImage16to16(outA, outI, bitmask, fgPel, runLength);
-                    } else {
-                        outI = wsgate.WriteFgBgImage16to16(outA, outI, rowDelta, bitmask, fgPel, runLength);
-                    }
-                }
-                break;
-            case 0x04:
-            case 0xF4:
-                runLength = wsgate.ExtractRunLength(code, inA, inI, advance);
-                inI += advance.val;
-                while (runLength-- > 0) {
-                    wsgate.copy16(inA, inI, outA, outI);
-                    inI += 2;
-                    outI += 2;
-                }
-                break;
-            case 0xF9:
-                inI += 1;
-                if (fFirstLine) {
-                    outI = wsgate.WriteFirstLineFgBgImage16to16(outA, outI, 0x03, fgPel, 8);
-                } else {
-                    outI = wsgate.WriteFgBgImage16to16(outA, outI, rowDelta, 0x03, fgPel, 8);
-                }
-                break;
-            case 0xFA:
-                inI += 1;
-                if (fFirstLine) {
-                    outI = wsgate.WriteFirstLineFgBgImage16to16(outA, outI, 0x05, fgPel, 8);
-                } else {
-                    outI = wsgate.WriteFgBgImage16to16(outA, outI, rowDelta, 0x05, fgPel, 8);
-                }
-                break;
-            case 0xFD:
-                inI += 1;
-                wsgate.pel16(0xFFFF, outA, outI);
-                outI += 2;
-                break;
-            case 0xFE:
-                inI += 1;
-                wsgate.pel16(0, outA, outI);
-                outI += 2;
-                break;
-        }
-    }
 }
 
 wsgate.dRLE16_RGBA = function(inA, inLength, width, outA) {
