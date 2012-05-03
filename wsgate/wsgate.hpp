@@ -5,6 +5,7 @@
 
 namespace wsgate {
 
+    /// Our global logging instance
     typedef wsgate::logger log;
 
 }

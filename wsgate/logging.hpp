@@ -18,6 +18,7 @@ namespace wsgate {
     class logger {
         public:
 
+            /// The predefined facilities
             typedef enum {
                 AUTH,
                 AUTHPRIV,
