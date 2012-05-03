@@ -62,7 +62,11 @@ namespace wsgate {
              * @return true on success.
              */
             bool CheckFileDescriptor();
-
+            /**
+             * Handler for incoming WebSockets messages.
+             * Called from the WebSockets codec, whenever the client sent a message.
+             * @param data The binary payload of the incoming message.
+             */
             void OnWsMessage(const std::string & data);
 
             /**
