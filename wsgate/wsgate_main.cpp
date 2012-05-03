@@ -662,7 +662,9 @@ namespace wsgate {
 }
 
 static bool g_signaled = false;
+#ifdef _WIN32
 static bool g_service_background = true;
+#endif
 
 static void terminate(int)
 {
@@ -670,7 +672,7 @@ static void terminate(int)
 }
 
 #ifdef _WIN32
-int _service_main (int argc, char **argv)
+static int _service_main (int argc, char **argv)
 #else
 int main (int argc, char **argv)
 #endif
@@ -872,7 +874,7 @@ int main (int argc, char **argv)
                         dup2(nfd, 1);
                         dup2(nfd, 2);
                         close(nfd);
-                        chdir("/");
+                        (void)chdir("/");
                         setsid();
                         if (vm.count("global.pidfile")) {
                             const string pidfn(vm["global.pidfile"].as<string>());
