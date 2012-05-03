@@ -33,17 +33,28 @@ namespace wsgate {
             MyRawSocketHandler(WsGate *parent);
 
             /**
+             * Handle raw data.
+             * Called by EHS, if an EHSConnection is in raw mode. 
              * @see RawSocketHandler::OnData
+             * @param conn The EHSConnection on which the data was received.
+             * @param data The received data.
+             * @return true, if the connection should be kept open.
              */
             virtual bool OnData(EHSConnection *conn, std::string data);
 
             /**
+             * Handle connect event.
+             * Called by EHS, if an EHSConnection has switched into raw mode.
              * @see RawSocketHandler::OnConnect
+             * @param conn The EHSConnection on which the event happened.
              */
             virtual void OnConnect(EHSConnection *conn);
 
             /**
+             * Handle disconnect event.
+             * Called by EHS, if an EHSConnection is about to be closed.
              * @see RawSocketHandler::OnDisconnect
+             * @param conn The EHSConnection on which the event happened.
              */
             virtual void OnDisconnect(EHSConnection *conn);
 
@@ -58,6 +69,7 @@ namespace wsgate {
              * @param pass The password to be used for the RDP session.
              * @param width The desktop width to be used for the RDP session.
              * @param height The desktop height to be used for the RDP session.
+             * @return true on success.
              */
             bool Prepare(EHSConnection *conn, const std::string mode,
                     const std::string host, uint16_t port,
