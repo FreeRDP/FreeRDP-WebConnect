@@ -89,7 +89,7 @@ namespace wsgate {
              * To be overridden by your derived class. The default
              * implementation just returns true.
              * @param argc The number of arguments.
-             * @param argv, a NULL terminated array of string pointers.
+             * @param argv A NULL terminated array of string pointers.
              * @return true on success.
              */
             virtual bool OnServiceInit(uint32_t argc, char **argv);
