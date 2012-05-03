@@ -17,8 +17,13 @@ namespace tracing {
     class dummy_tracer
     {
         public:
+            /// Constructor
             dummy_tracer(int) { }
 
+            /**
+             * Dummy trace generator.
+             * @return A string constant "Tracing disabled".
+             */
             std::string trace(int) const
             {
                 return "Tracing disabled";
@@ -53,7 +58,7 @@ namespace tracing {
              * information the function names and source line numbers
              * are used, otherwise, the stack trace contains only
              * hexadecimal addresses.
-             * @param Number of frames to skip.
+             * @param skip Number of frames to skip.
              * @return A multi line string, containing the backtrace.
              */
             const std::string & trace(int skip) const;
@@ -99,7 +104,7 @@ namespace tracing {
              * information the function names and source line numbers
              * are used, otherwise, the stack trace contains only
              * hexadecimal addresses.
-             * @param Number of frames to skip.
+             * @param skip Number of frames to skip.
              * @return A multi line string, containing the backtrace.
              */
             const std::string & trace(int skip) const;
@@ -107,6 +112,7 @@ namespace tracing {
             /** Copy constructor */
             dwarf_tracer(const dwarf_tracer &);
 
+            /// Assignement operator
             dwarf_tracer & operator = (const dwarf_tracer &);
 
         private:
@@ -158,9 +164,18 @@ namespace tracing {
     class runtime_error : public exception
     {
         public:
+            /**
+             * Constructor
+             * @param __arg The message to be held by this instance.
+             */
             explicit runtime_error(const std::string& __arg)
                 : exception(), msg(__arg) { }
+            /// Destructor
             virtual ~runtime_error() throw() { }
+            /**
+             * Retrieves the message, provided at construction time.
+             * @return The textual message, provided at construction time.
+             */
             virtual const char* what() const throw()
             { return msg.c_str(); }
 
@@ -178,11 +193,16 @@ namespace tracing {
         std::string _M_msg;
 
         public:
-        /** Takes a character string describing the error. */
+        /** Constructor.
+         * @param __arg The message to be held by this instance.
+         */
         explicit logic_error(const std::string&  __arg) : _M_msg(__arg) { }
+        /// Destructor
         virtual ~logic_error() throw() { }
-        /** Returns a C-style character string describing the general cause of
-         *  the current error (the same string passed to the ctor).  */
+        /**
+         * Retrieves the message, provided at construction time.
+         * @return The textual message, provided at construction time.
+         */
         virtual const char* what() const throw() { return _M_msg.c_str(); }
     };
 
@@ -192,6 +212,9 @@ namespace tracing {
     class domain_error : public logic_error 
     {
         public:
+            /** Constructor.
+             * @param __arg The message to be held by this instance.
+             */
             explicit domain_error(const std::string&  __arg);
     };
 
@@ -199,6 +222,9 @@ namespace tracing {
     class invalid_argument : public logic_error 
     {
         public:
+            /** Constructor.
+             * @param __arg The message to be held by this instance.
+             */
             explicit invalid_argument(const std::string&  __arg) : logic_error(__arg) { }
     };
 
@@ -207,6 +233,9 @@ namespace tracing {
     class length_error : public logic_error 
     {
         public:
+            /** Constructor.
+             * @param __arg The message to be held by this instance.
+             */
             explicit length_error(const std::string&  __arg);
     };
 
@@ -215,6 +244,9 @@ namespace tracing {
     class out_of_range : public logic_error 
     {
         public:
+            /** Constructor.
+             * @param __arg The message to be held by this instance.
+             */
             explicit out_of_range(const std::string&  __arg);
     };
 
@@ -223,6 +255,9 @@ namespace tracing {
     class range_error : public runtime_error 
     {
         public:
+            /** Constructor.
+             * @param __arg The message to be held by this instance.
+             */
             explicit range_error(const std::string&  __arg);
     };
 
@@ -230,6 +265,9 @@ namespace tracing {
     class overflow_error : public runtime_error 
     {
         public:
+            /** Constructor.
+             * @param __arg The message to be held by this instance.
+             */
             explicit overflow_error(const std::string&  __arg);
     };
 
@@ -237,6 +275,9 @@ namespace tracing {
     class underflow_error : public runtime_error 
     {
         public:
+            /** Constructor.
+             * @param __arg The message to be held by this instance.
+             */
             explicit underflow_error(const std::string&  __arg);
     };
 
