@@ -144,6 +144,9 @@ namespace wsgate {
                         log::debug << "K" << ((m->down) ? "down" : "up") << ": c=" << m->code << endl;
                         uint32_t tcode = 0;
                         switch (m->code) {
+                            case 8:
+                                tcode = RDP_SCANCODE_BACKSPACE;
+                                break;
                             case 16:
                                 tcode = RDP_SCANCODE_LSHIFT;
                                 break;
@@ -185,8 +188,9 @@ namespace wsgate {
                         } wsmsg;
                         const wsmsg *m = reinterpret_cast<const wsmsg *>(data.data());
                         uint32_t tcode = m->code;
-                        log::debug << "Kpress c=" << m->code << ", ss=" << hex << m->shiftstate << dec << endl;
-                        if (0x2F < m->code) {
+                        log::debug << "Kpress c=0x" << hex << m->code << ", ss=0x" << m->shiftstate << dec << endl;
+                        if (0x20 < m->code) {
+                            log::debug << "Kp1" << endl;
                             if (m->shiftstate & 6) {
                                 // Control and or Alt: Must use scan-codes since unicode-event can't handle these
                                 if (((64 < tcode) && (91 > tcode)) || ((96 < tcode) && (123 > tcode))) {
@@ -205,57 +209,55 @@ namespace wsgate {
                                 }
                             }
                         } else {
+                            log::debug << "Kp2" << endl;
                             tcode = 0;
                             switch (m->code) {
-                                case 8:
-                                    tcode = RDP_SCANCODE_BACKSPACE;
-                                    break;
-                                case 9:
+                                case 0x09:
                                     tcode = RDP_SCANCODE_TAB;
                                     break;
-                                case 13:
+                                case 0x0D:
                                     tcode = RDP_SCANCODE_RETURN;
                                     break;
-                                case 19:
+                                case 0x13:
                                     tcode = RDP_SCANCODE_PAUSE;
                                     break;
-                                case 27:
+                                case 0x1B:
                                     tcode = RDP_SCANCODE_ESCAPE;
                                     break;
-                                case 32:
+                                case 0x20:
                                     tcode = RDP_SCANCODE_SPACE;
                                     break;
-                                case 33:
+                                case 0x21:
                                     tcode = RDP_SCANCODE_PRIOR; // Page up
                                     break;
-                                case 34:
+                                case 0x22:
                                     tcode = RDP_SCANCODE_NEXT; // Page down
                                     break;
-                                case 35:
+                                case 0x23:
                                     tcode = RDP_SCANCODE_END;
                                     break;
-                                case 36:
+                                case 0x24:
                                     tcode = RDP_SCANCODE_HOME;
                                     break;
-                                case 37:
+                                case 0x25:
                                     tcode = RDP_SCANCODE_LEFT;
                                     break;
-                                case 38:
+                                case 0x26:
                                     tcode = RDP_SCANCODE_UP;
                                     break;
-                                case 39:
+                                case 0x27:
                                     tcode = RDP_SCANCODE_RIGHT;
                                     break;
-                                case 40:
+                                case 0x28:
                                     tcode = RDP_SCANCODE_DOWN;
                                     break;
-                                case 44:
+                                case 0x2C:
                                     tcode = RDP_SCANCODE_PRINTSCREEN;
                                     break;
-                                case 45:
+                                case 0x2D:
                                     tcode = RDP_SCANCODE_INSERT;
                                     break;
-                                case 46:
+                                case 0x2E:
                                     tcode = RDP_SCANCODE_DELETE;
                                     break;
                             }
@@ -370,13 +372,13 @@ namespace wsgate {
 
         m_rdpSettings->order_support[NEG_DSTBLT_INDEX] = 0;
         m_rdpSettings->order_support[NEG_PATBLT_INDEX] = 1;
-        m_rdpSettings->order_support[NEG_SCRBLT_INDEX] = 0;
+        m_rdpSettings->order_support[NEG_SCRBLT_INDEX] = 1;
         m_rdpSettings->order_support[NEG_MEMBLT_INDEX] = 0;
         m_rdpSettings->order_support[NEG_MEM3BLT_INDEX] = 0;
         m_rdpSettings->order_support[NEG_ATEXTOUT_INDEX] = 0;
         m_rdpSettings->order_support[NEG_AEXTTEXTOUT_INDEX] = 0;
         m_rdpSettings->order_support[NEG_DRAWNINEGRID_INDEX] = 0;
-        m_rdpSettings->order_support[NEG_LINETO_INDEX] = 1;
+        m_rdpSettings->order_support[NEG_LINETO_INDEX] = 0;
         m_rdpSettings->order_support[NEG_MULTI_DRAWNINEGRID_INDEX] = 0;
         m_rdpSettings->order_support[NEG_OPAQUE_RECT_INDEX] = 1;
         m_rdpSettings->order_support[NEG_SAVEBITMAP_INDEX] = 0;

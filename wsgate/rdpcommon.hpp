@@ -34,7 +34,8 @@ namespace wsgate {
         WSOP_SC_OPAQUERECT,
         WSOP_SC_SETBOUNDS,
         WSOP_SC_PATBLT,
-        WSOP_SC_MULTI_OPAQUERECT
+        WSOP_SC_MULTI_OPAQUERECT,
+        WSOP_SC_SCRBLT
     } WsOPsc;
 
     /**

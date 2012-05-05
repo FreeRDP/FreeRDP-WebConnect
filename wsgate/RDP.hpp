@@ -69,6 +69,7 @@ namespace wsgate {
              */
             void OnWsMessage(const std::string & data);
 
+        private:
             /**
              * Wraps the corresponding FreeRDP API call.
              * @param flags The flags as defined by the FreeRDP API.
@@ -99,7 +100,6 @@ namespace wsgate {
              */
             void SendInputExtendedMouseEvent(uint16_t flags, uint16_t x, uint16_t y);
 
-        private:
             // Non-copyable
             RDP(const RDP &);
             RDP & operator=(const RDP &);

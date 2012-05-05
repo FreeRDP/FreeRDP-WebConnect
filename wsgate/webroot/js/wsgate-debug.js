@@ -52,10 +52,13 @@ wsgate.RDP = new Class( {
         this.cctx = canvas.getContext('2d');
         this.cctx.strokeStyle = 'rgba(255,255,255,0)';
         this.cctx.FillStyle = 'rgba(255,255,255,0)';
+        this.bstore = new Element('canvas', {
+            'width':this.canvas.width,
+            'height':this.canvas.height,
+        });
+        this.bctx = this.bstore.getContext('2d');
         this.ccnt = 0;
-        this.mq = new Array();
         this.pID = null;
-        this.pMTX = 0;
         this.clx = 0;
         this.cly = 0;
         this.clw = 0;
@@ -64,21 +67,6 @@ wsgate.RDP = new Class( {
     },
     Disconnect: function() {
         this._reset();
-    },
-    /**
-     * Create (or retrieve the current instance of) a "backing store" canvas
-     * of the same size like th primary canvas. This canvas is NOT linked into
-     * the DOM and therefore invisble.
-     */
-    _bctx: function() {
-        if (!this.bctx) {
-            this.bstore = new Element('canvas', {
-                'width':this.canvas.width,
-                'height':this.canvas.height,
-            });
-            this.bctx = this.bstore.getContext('2d');
-        }
-        return this.bctx;
     },
     /**
      * Check, if a given point is inside the clipping region.
@@ -98,146 +86,167 @@ wsgate.RDP = new Class( {
     /**
      * Main message loop.
      */
-    _pmsg: function() { // process a binary RDP message from our queue
-        var op, hdr, count, data, rects, bmdata, rgba, compressed, i, offs, x, y, w, h, color, len;
-        if (this.pMTX++ > 0) {
-            this.pMTX -= 1;
-            return;
-        }
-        while (data = this.mq.shift()) {
-            op = new Uint32Array(data, 0, 1);
-            switch (op[0]) {
-                case 0:
-                    // BeginPaint
-                    // wsgate.log.debug('BeginPaint');
-                    this._ctxS();
-                    break;
-                case 1:
-                    // EndPaint
-                    // wsgate.log.debug('EndPaint');
-                    this._ctxR();
-                    break;
-                case 2:
-                    // Single bitmap
-                    //
-                    //  0 uint32 Destination X
-                    //  1 uint32 Destination Y
-                    //  2 uint32 Width
-                    //  3 uint32 Height
-                    //  4 uint32 Bits per Pixel
-                    //  5 uint32 Flag: Compressed
-                    //  6 uint32 DataSize
-                    //
-                    hdr = new Uint32Array(data, 4, 7);
-                    bmdata = new Uint8Array(data, 32);
-                    compressed =  (hdr[5] != 0);
+    _pmsg: function(data) { // process a binary RDP message from our queue
+        var op, hdr, count, rects, bmdata, rgba, compressed, i, offs, x, y, w, h, dw, dh, bpp, color, len, pid;
+        op = new Uint32Array(data, 0, 1);
+        switch (op[0]) {
+            case 0:
+                // BeginPaint
+                // wsgate.log.debug('BeginPaint');
+                this._ctxS();
+                break;
+            case 1:
+                // EndPaint
+                // wsgate.log.debug('EndPaint');
+                this._ctxR();
+                break;
+            case 2:
+                // Single bitmap
+                //
+                //  0 uint32 Destination X
+                //  1 uint32 Destination Y
+                //  2 uint32 Width
+                //  3 uint32 Height
+                //  4 uint32 Destination Width
+                //  5 uint32 Destination Height
+                //  6 uint32 Bits per Pixel
+                //  7 uint32 Flag: Compressed
+                //  8 uint32 DataSize
+                //
+                hdr = new Uint32Array(data, 4, 9);
+                bmdata = new Uint8Array(data, 40);
+                x = hdr[0];
+                y = hdr[1];
+                w = hdr[2];
+                h = hdr[3];
+                dw = hdr[4];
+                dh = hdr[5];
+                bpp = hdr[6];
+                compressed =  (hdr[7] != 0);
+                len = hdr[8];
+                if ((bpp == 16) || (bpp == 15)) {
+                    if (this._ckclp(x, y) && this._ckclp(x + dw, y + dh))
+                    {
+                        // wsgate.log.debug('BMi:',(compressed ? ' C ' : ' U '),' x=',x,'y=',y,' w=',w,' h=',h,' l=',len);
+                        var outB = this.cctx.createImageData(w, h);
+                        if (compressed) {
+                            wsgate.dRLE16_RGBA(bmdata, len, w, outB.data);
+                            wsgate.flipV(outB.data, w, h);
+                        } else {
+                            wsgate.dRGB162RGBA(bmdata, len, outB.data);
+                        }
+                        this.cctx.putImageData(outB, x, y, 0, 0, dw, dh);
+                    } else {
+                        // wsgate.log.debug('BMc:',(compressed ? ' C ' : ' U '),' x=',x,'y=',y,' w=',w,' h=',h,' bpp=',bpp);
+                        // putImageData ignores the clipping region, so we must
+                        // clip ourselves: We first paint into a second canvas,
+                        // then use drawImage (which honors clipping).
+
+                        var outB = this.bctx.createImageData(w, h);
+                        if (compressed) {
+                            wsgate.dRLE16_RGBA(bmdata, len, w, outB.data);
+                            wsgate.flipV(outB.data, w, h);
+                        } else {
+                            wsgate.dRGB162RGBA(bmdata, len, outB.data);
+                        }
+                        this.bctx.putImageData(outB, 0, 0, 0, 0, dw, dh);
+                        this.cctx.drawImage(this.bstore, 0, 0, dw, dh, x, y, dw, dh);
+                    }
+                } else {
+                    wsgate.log.warn('BPP <> 15/16 not yet implemented');
+                }
+                break;
+            case 3:
+                // Primary: OPAQUE_RECT_ORDER
+                // x, y , w, h, color
+                hdr = new Int32Array(data, 4, 4);
+                rgba = new Uint8Array(data, 20, 4);
+                // wsgate.log.debug('Fill:',hdr[0], hdr[1], hdr[2], hdr[3], this._c2s(rgba));
+                this.cctx.fillStyle = this._c2s(rgba);
+                this.cctx.fillRect(hdr[0], hdr[1], hdr[2], hdr[3]);
+                break;
+            case 4:
+                // SetBounds
+                // left, top, right, bottom
+                hdr = new Int32Array(data, 4, 4);
+                this._cR(hdr[0], hdr[1], hdr[2] - hdr[0], hdr[3] - hdr[1], true);
+                break; 
+            case 5:
+                // PatBlt
+                if (28 == data.byteLength) {
+                    // Solid brush style
+                    // x, y, width, height, fgcolor, rop3
+                    hdr = new Int32Array(data, 4, 4);
                     x = hdr[0];
                     y = hdr[1];
                     w = hdr[2];
                     h = hdr[3];
-                    len = hdr[6];
-                    if ((hdr[4] == 16) || (hdr[4] == 15)) {
-                        if (this._ckclp(x, y) && this._ckclp(x + w, y + h))
-                        {
-                                // wsgate.log.debug('BMi:',(compressed ? ' C ' : ' U '),' x=',x,'y=',y,' w=',w,' h=',h,' l=',len);
-                            var outB = this.cctx.createImageData(w, h);
-                            if (compressed) {
-                                wsgate.dRLE16_RGBA(bmdata, len, w, outB.data);
-                                wsgate.flipV(outB.data, w, h);
-                            } else {
-                                wsgate.dRGB162RGBA(bmdata, len, outB.data);
-                            }
-                            this.cctx.putImageData(outB, x, y);
-                        } else {
-                            // wsgate.log.debug('BMc:',(compressed ? ' C ' : ' U '),' x=',x,'y=',y,' w=',w,' h=',h,' bpp=',hdr[4]);
-                            // putImageData ignores the clipping region, so we must
-                            // clip ourselves: We first paint into a second canvas,
-                            // then use drawImage (which honors clipping).
-
-                            var outB = this._bctx().createImageData(w, h);
-                            if (compressed) {
-                                wsgate.dRLE16_RGBA(bmdata, len, w, outB.data);
-                                wsgate.flipV(outB.data, w, h);
-                            } else {
-                                wsgate.dRGB162RGBA(bmdata, len, outB.data);
-                            }
-                            this.bctx.putImageData(outB, 0, 0);
-                            this.cctx.drawImage(this.bstore, 0, 0, w, h, x, y, w, h);
-                        }
-                    } else {
-                        wsgate.log.warn('BPP <> 15/16 not yet implemented');
-                    }
-                    break;
-                case 3:
-                    // Primary: OPAQUE_RECT_ORDER
-                    // x, y , w, h, color
-                    hdr = new Int32Array(data, 4, 4);
                     rgba = new Uint8Array(data, 20, 4);
-                    // wsgate.log.debug('Fill:',hdr[0], hdr[1], hdr[2], hdr[3], this._c2s(rgba));
-                    this.cctx.fillStyle = this._c2s(rgba);
-                    this.cctx.fillRect(hdr[0], hdr[1], hdr[2], hdr[3]);
-                    break;
-                case 4:
-                    // SetBounds
-                    // left, top, right, bottom
-                    hdr = new Int32Array(data, 4, 4);
-                    // All zero means: reset to full canvas size
-                    this.clx = hdr[0];
-                    this.cly = hdr[1];
-                    this.clw = hdr[2] - hdr[0];
-                    this.clh = hdr[3] - hdr[1];
-                    if (hdr[0] == hdr[1] == hdr[2] == hdr[3] == 0) {
-                        hdr[2] = this.canvas.width;
-                        hdr[3] = this.canvas.height;
+                    this._ctxS();
+                    this._cR(x, y, w, h, false);
+                    if (this._sROP(new Uint32Array(data, 24, 1)[0])) {
+                        this.cctx.fillStyle = this._c2s(rgba);
+                        this.cctx.fillRect(x, y, w, h);
                     }
-                    // Replace clipping region, NO intersection.
-                    this.cctx.beginPath();
-                    this.cctx.rect(0, 0, this.canvas.width, this.canvas.height);
-                    this.cctx.clip();
-                    // New clipping region
-                    this.cctx.beginPath();
-                    this.cctx.rect(hdr[0], hdr[1], hdr[2] - hdr[0], hdr[3] - hdr[1]);
-                    this.cctx.clip();
-                    break; 
-                case 5:
-                    // PatBlt
-                    if (28 == data.byteLength) {
-                        // Solid brush style
-                        // x, y, width, height, fgcolor, rop3
-                        hdr = new Int32Array(data, 4, 4);
-                        x = hdr[0];
-                        y = hdr[1];
-                        w = hdr[2];
-                        h = hdr[3];
-                        rgba = new Uint8Array(data, 20, 4);
-                        if (this._sROP(new Uint32Array(data, 24, 1)[0])) {
-                            this.cctx.fillStyle = this._c2s(rgba);
-                            this.cctx.fillRect(x, y, w, h);
-                        }
+                    this._ctxR();
+                } else {
+                    wsgate.log.warn('PatBlt: Patterned brush not yet implemented');
+                }
+                break; 
+            case 6:
+                // Multi Opaque rect
+                // color, nrects
+                // rect1.x,rect1.y,rect1.w,rect1.h ... rectn.x,rectn.y,rectn.w,rectn.h
+                rgba = new Uint8Array(data, 4, 4);
+                count = new Uint32Array(data, 8, 1);
+                rects = new Uint32Array(data, 12, count[0] * 4);
+                // wsgate.log.debug('MultiFill: ', count[0], " ", this._c2s(rgba));
+                this.cctx.fillStyle = this._c2s(rgba);
+                offs = 0;
+                // var c = this._c2s(rgba);
+                for (i = 0; i < count[0]; ++i) {
+                    this.cctx.fillRect(rects[offs], rects[offs+1], rects[offs+2], rects[offs+3]);
+                    // this._fR(rects[offs], rects[offs+1], rects[offs+2], rects[offs+3], c);
+                    offs += 4;
+                }
+                break; 
+            case 7:
+                // ScrBlt
+                // rop3, x, y, w, h, sx, sy
+                hdr = new Int32Array(data, 8, 6);
+                if ((hdr[2] > 0) && (hdr[3] > 0)) {
+                    if (this._sROP(new Uint32Array(data, 4, 1)[0])) {
+                        this.cctx.putImageData(this.cctx.getImageData(hdr[4], hdr[5], hdr[2], hdr[3]), hdr[0], hdr[1]);
                     }
-                    break; 
-                case 6:
-                    // Multi Opaque rect
-                    // color, nrects
-                    // rect1.x,rect1.y,rect1.w,rect1.h ... rectn.x,rectn.y,rectn.w,rectn.h
-                    rgba = new Uint8Array(data, 4, 4);
-                    count = new Uint32Array(data, 8, 1);
-                    rects = new Uint32Array(data, 12, count[0] * 4);
-                    wsgate.log.debug('MultiFill: ', count[0], " ", this._c2s(rgba));
-                    this.cctx.fillStyle = this._c2s(rgba);
-                    offs = 0;
-                    var c = this._c2s(rgba);
-                    for (i = 0; i < count[0]; ++i) {
-                        this.cctx.fillRect(rects[offs], rects[offs+1], rects[offs+2], rects[offs+3]);
-                        // this._fR(rects[offs], rects[offs+1], rects[offs+2], rects[offs+3], c);
-                        offs += 4;
-                    }
-                    break; 
-                default:
-                    wsgate.log.warn('Unknown BINRESP: ', data.byteLength);
+                } else {
+                    wsgate.log.warn('ScrBlt: width and/or height is zero');
+                }
+                break; 
+            default:
+                wsgate.log.warn('Unknown BINRESP: ', data.byteLength);
+        }
+    },
+    _cR: function(x, y, w, h, save) {
+        if (save) {
+            this.clx = x;
+            this.cly = y;
+            this.clw = w;
+            this.clh = h;
+        }
+        // Replace clipping region, NO intersection.
+        this.cctx.beginPath();
+        this.cctx.rect(0, 0, this.canvas.width, this.canvas.height);
+        this.cctx.clip();
+        if (x == y == 0) {
+            // All zero means: reset to full canvas size
+            if ((w == h == 0) || ((w == this.canvas.width) && (h == this.canvas.height))) {
+                return;
             }
         }
-        this.pMTX -= 1;
+        // New clipping region
+        this.cctx.beginPath();
+        this.cctx.rect(x, y, w, h);
+        this.cctx.clip();
     },
     _fR: function(x, y, w, h, color) {
         return;
@@ -270,84 +279,80 @@ wsgate.RDP = new Class( {
                 this.cctx.globalCompositeOperation = 'copy';
                 return true;
                 break;
+            case 0x00CC0020:
+                // GDI_SRCCOPY: D = S
+                this.cctx.globalCompositeOperation = 'source-over';
+                return true;
+                break;
             default:
                 wsgate.log.warn('Unsupported raster op: ', rop.toString(16));
                 break;
         }
         return false;
-            /*
-            case 0x00CC0020:
-                // GDI_SRCCOPY: D = S
-                wsgate.log.warn('Unsupported raster op: ', rop.toString(16));
-                return false;
-                break;
-            case 0x00EE0086:
-                // GDI_SRCPAINT: D = S | D
-                break;
-            case 0x008800C6:
-                // GDI_SRCAND: D = S & D
-                break;
-            case 0x00660046:
-                // GDI_SRCINVERT: D = S ^ D
-                break;
-            case 0x00440328:
-                // GDI_SRCERASE: D = S & ~D
-                break;
-            case 0x00330008:
-                // GDI_NOTSRCCOPY: D = ~S
-                break;
-            case 0x001100A6:
-                // GDI_NOTSRCERASE: D = ~S & ~D
-                break;
-            case 0x00C000CA:
-                // GDI_MERGECOPY: D = S & P
-                break;
-            case 0x00BB0226:
-                // GDI_MERGEPAINT: D = ~S | D
-                break;
-            case 0x00FB0A09:
-                // GDI_PATPAINT: D = D | (P | ~S)
-                break;
-            case 0x00550009:
-                // GDI_DSTINVERT: D = ~D
-                break;
-            case 0x00000042:
-                // GDI_BLACKNESS: D = 0
-                break;
-            case 0x00FF0062:
-                // GDI_WHITENESS: D = 1
-                break;
-            case 0x00E20746:
-                // GDI_DSPDxax: D = (S & P) | (~S & D)
-                break;
-            case 0x00B8074A:
-                // GDI_PSDPxax: D = (S & D) | (~S & P)
-                break;
-            case 0x000C0324:
-                // GDI_SPna: D = S & ~P
-                break;
-            case 0x00220326:
-                // GDI_DSna D = D & ~S
-                break;
-            case 0x00220326:
-                // GDI_DSna: D = D & ~S
-                break;
-            case 0x00A000C9:
-                // GDI_DPa: D = D & P
-                break;
-            case 0x00A50065:
-                // GDI_PDxn: D = D ^ ~P
-                break;
-            */
+        /*
+           case 0x00EE0086:
+        // GDI_SRCPAINT: D = S | D
+        break;
+        case 0x008800C6:
+        // GDI_SRCAND: D = S & D
+        break;
+        case 0x00660046:
+        // GDI_SRCINVERT: D = S ^ D
+        break;
+        case 0x00440328:
+        // GDI_SRCERASE: D = S & ~D
+        break;
+        case 0x00330008:
+        // GDI_NOTSRCCOPY: D = ~S
+        break;
+        case 0x001100A6:
+        // GDI_NOTSRCERASE: D = ~S & ~D
+        break;
+        case 0x00C000CA:
+        // GDI_MERGECOPY: D = S & P
+        break;
+        case 0x00BB0226:
+        // GDI_MERGEPAINT: D = ~S | D
+        break;
+        case 0x00FB0A09:
+        // GDI_PATPAINT: D = D | (P | ~S)
+        break;
+        case 0x00550009:
+        // GDI_DSTINVERT: D = ~D
+        break;
+        case 0x00000042:
+        // GDI_BLACKNESS: D = 0
+        break;
+        case 0x00FF0062:
+        // GDI_WHITENESS: D = 1
+        break;
+        case 0x00E20746:
+        // GDI_DSPDxax: D = (S & P) | (~S & D)
+        break;
+        case 0x00B8074A:
+        // GDI_PSDPxax: D = (S & D) | (~S & P)
+        break;
+        case 0x000C0324:
+        // GDI_SPna: D = S & ~P
+        break;
+        case 0x00220326:
+        // GDI_DSna D = D & ~S
+        break;
+        case 0x00220326:
+        // GDI_DSna: D = D & ~S
+        break;
+        case 0x00A000C9:
+        // GDI_DPa: D = D & P
+        break;
+        case 0x00A50065:
+        // GDI_PDxn: D = D ^ ~P
+        break;
+        */
     },
     /**
      * Reset our state to disconnected
      */
     _reset: function() {
-        this.pID && clearTimeout(this.pID);
-        this.pID = null;
-        this.mMTX = 0;
-        this.mq.empty();
         if (this.sock.readyState == this.sock.OPEN) {
             this.fireEvent('disconnected');
             this.sock.close();
@@ -358,10 +363,6 @@ wsgate.RDP = new Class( {
         this.clh = 0;
         this.canvas.removeEvents();
         document.removeEvents();
-        this.bctx = null;
-        if (this.bstore) {
-            this.bstore.destroy();
-        }
         while (this.ccnt > 0) {
             this.cctx.restore();
             this.ccnt -= 1;
@@ -530,9 +531,9 @@ wsgate.RDP = new Class( {
                             break;
                 }
                 break;
-            // ... and binary messages for the actual RDP stuff.
+                // ... and binary messages for the actual RDP stuff.
             case 'object':
-                this.mq.push(evt.data);
+                this._pmsg(evt.data);
                 break;
         }
 
@@ -541,8 +542,6 @@ wsgate.RDP = new Class( {
      * Event handler for WebSocket connect events
      */
     onWSopen: function(evt) {
-        // Start our message loop
-        this.pID = this._pmsg.periodical(10, this);
         // Add listeners for the various input events
         this.canvas.addEvent('mousemove', this.onMouseMove.bind(this));
         this.canvas.addEvent('mousedown', this.onMouseDown.bind(this));

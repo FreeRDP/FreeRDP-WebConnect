@@ -78,16 +78,41 @@ namespace wsgate {
         }
     }
 
-    void Primary::ScrBlt(rdpContext*, SCRBLT_ORDER*) {
-        log::debug << __PRETTY_FUNCTION__ << endl;
+    void Primary::ScrBlt(rdpContext*, SCRBLT_ORDER* sbo) {
+        // log::debug << __PRETTY_FUNCTION__ << endl;
+        uint32_t rop3 = gdi_rop3_code(sbo->bRop);
+        log::debug << "ScrBlt rop3=0x" << hex << rop3 << dec << endl;
+        struct {
+            uint32_t op;
+            uint32_t rop;
+            int32_t x;
+            int32_t y;
+            int32_t w;
+            int32_t h;
+            int32_t sx;
+            int32_t sy;
+        } tmp = {
+            WSOP_SC_SCRBLT,
+            rop3,
+            sbo->nLeftRect,
+            sbo->nTopRect,
+            sbo->nWidth,
+            sbo->nHeight,
+            sbo->nXSrc,
+            sbo->nYSrc
+        };
+        string buf(reinterpret_cast<const char *>(&tmp), sizeof(tmp));
+        m_wshandler->send_binary(buf);
     }
 
     void Primary::OpaqueRect(rdpContext* context, OPAQUE_RECT_ORDER* oro) {
-        log::debug << __PRETTY_FUNCTION__ << endl;
+        // log::debug << __PRETTY_FUNCTION__ << endl;
         HCLRCONV hclrconv = reinterpret_cast<wsgContext *>(context)->clrconv;
         uint32_t svcolor = oro->color;
         oro->color = freerdp_color_convert_var(oro->color, 16, 32, hclrconv);
         uint32_t op = WSOP_SC_OPAQUERECT;
+        log::debug << "FillRect " << ": x=" << oro->nLeftRect << " y=" << oro->nTopRect
+            << " w=" << oro->nWidth << " h=" << oro->nHeight << " col=0x" << hex << oro->color << dec << endl;
         string buf(reinterpret_cast<const char *>(&op), sizeof(op));
         buf.append(reinterpret_cast<const char *>(oro), sizeof(OPAQUE_RECT_ORDER));
         m_wshandler->send_binary(buf);
@@ -114,8 +139,8 @@ namespace wsgate {
         // log::debug << __PRETTY_FUNCTION__ << endl;
         HCLRCONV hclrconv = reinterpret_cast<wsgContext *>(context)->clrconv;
         uint32_t color = freerdp_color_convert_var(moro->color, 16, 32, hclrconv);
-#if 0
-        log::debug << "MultiOpaqueRect color=" << hex << moro->color << " (" << color << ")" << dec
+#if 1
+        log::debug << "MultiOpaqueRect color=0x" << hex << moro->color << " (0x" << color << ")" << dec
             << " nr=" << moro->numRectangles << endl;
         for (size_t i = 0; i < moro->numRectangles; ++i) {
             DELTA_RECT *r = &moro->rectangles[i+1];

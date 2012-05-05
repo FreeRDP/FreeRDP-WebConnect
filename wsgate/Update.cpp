@@ -11,7 +11,6 @@ namespace wsgate {
 
     Update::Update(wspp::wshandler *h)
         : m_wshandler(h)
-        , m_nBmCount(0)
     { }
 
     Update::~Update()
@@ -36,14 +35,14 @@ namespace wsgate {
     }
 
     void Update::BeginPaint(rdpContext*) {
-        // log::debug << __PRETTY_FUNCTION__ << endl;
+        log::debug << __PRETTY_FUNCTION__ << endl;
         uint32_t op = WSOP_SC_BEGINPAINT;
         string buf(reinterpret_cast<const char *>(&op), sizeof(op));
         m_wshandler->send_binary(buf);
     }
 
     void Update::EndPaint(rdpContext*) {
-        // log::debug << __PRETTY_FUNCTION__ << endl;
+        log::debug << __PRETTY_FUNCTION__ << endl;
         uint32_t op = WSOP_SC_ENDPAINT;
         string buf(reinterpret_cast<const char *>(&op), sizeof(op));
         m_wshandler->send_binary(buf);
@@ -84,6 +83,8 @@ namespace wsgate {
                 uint32_t y;
                 uint32_t w;
                 uint32_t h;
+                uint32_t dw;
+                uint32_t dh;
                 uint32_t bpp;
                 uint32_t cf;
                 uint32_t sz;
@@ -91,6 +92,8 @@ namespace wsgate {
                 WSOP_SC_BITMAP,
                 bmd->destLeft, bmd->destTop,
                 bmd->width, bmd->height,
+                bmd->destRight - bmd->destLeft + 1,
+                bmd->destBottom - bmd->destTop + 1,
                 bmd->bitsPerPixel,
                 bmd->compressed, bmd->bitmapLength
             };
@@ -101,13 +104,12 @@ namespace wsgate {
             string buf(reinterpret_cast<const char *>(&wxbm), sizeof(wxbm));
             buf.append(reinterpret_cast<const char *>(bmd->bitmapDataStream),
                     bmd->bitmapLength);
-#if 0
-            log::debug << "BM #" << m_nBmCount << (wxbm.cf ? " C " : " U ") << "x: "
-                << wxbm.x << " y: " << wxbm.y << " w:"
-                << wxbm.w << " h: " << wxbm.h << " bpp: " << wxbm.bpp << endl;
+#if 1
+            log::debug << "BM" << (wxbm.cf ? " C " : " U ") << "x="
+                << wxbm.x << " y=" << wxbm.y << " w=" << wxbm.w << " h=" << wxbm.h
+                << " bpp=" << wxbm.bpp << " dw=" << wxbm.dw << " dh=" << wxbm.dh << endl;
 #endif
             m_wshandler->send_binary(buf);
-            m_nBmCount++;
         }
     }
 
