@@ -116,6 +116,8 @@ namespace wsgate {
                 BINARY
             } MimeType;
 
+            typedef map<string, rdp_ptr> SessionMap;
+
             MimeType simpleMime(const string & filename)
             {
                 if (ends_with(filename, ".txt"))
@@ -141,6 +143,7 @@ namespace wsgate {
                 , m_sDocumentRoot()
                 , m_sPidFile()
                 , m_bDebug(false)
+                , m_SessionMap()
                 {
                 }
 
@@ -188,6 +191,32 @@ namespace wsgate {
                 }
                 string thisHost(m_sHostname.empty() ? request->Headers("Host") : m_sHostname);
 
+                // Request-URI for cursor image: /cur/0123456789ABCDEF/1
+                if (boost::starts_with(uri, "/cur/")) {
+                    string idpart(uri.substr(5));
+                    vector<string> parts;
+                    boost::split(parts, idpart, is_any_of("/"));
+                    SessionMap::iterator it = m_SessionMap.find(parts[0]);
+                    if (it != m_SessionMap.end()) {
+                        uint32_t cid = 0;
+                        try {
+                            cid = boost::lexical_cast<uint32_t>(parts[1]);
+                        } catch (const boost::bad_lexical_cast & e) { cid = 0; }
+                        if (cid) {
+                            string png = it->second->GetCursorPng(cid);
+                            if (!png.empty()) {
+                                response->SetHeader("Content-Type", "image/png");
+                                response->SetBody(png.data(), png.length());
+                                log::info << "Request from " << request->RemoteAddress()
+                                    << ": " << uri << " => 200 OK" << endl;
+                                return HTTPRESPONSECODE_200_OK;
+                            }
+                        }
+                    }
+                    log::warn << "Request from " << request->RemoteAddress()
+                        << ": " << uri << " => 404 Not found" << endl;
+                    return HTTPRESPONSECODE_404_NOTFOUND;
+                }
                 if (0 == uri.compare("/wsgate")) {
                     int dtwidth = 1024;
                     int dtheight = 768;
@@ -344,8 +373,8 @@ namespace wsgate {
                     response->SetHeader("Connection", "Upgrade");
                     response->SetHeader("Sec-WebSocket-Accept",
                             base64_encode(reinterpret_cast<const unsigned char *>(digest), 20));
-                        log::info << "Request from " << request->RemoteAddress()
-                            << ": " << uri << " => 101" << endl;
+                    log::info << "Request from " << request->RemoteAddress()
+                        << ": " << uri << " => 101" << endl;
                     return HTTPRESPONSECODE_101_SWITCHING_PROTOCOLS;
                 }
 
@@ -472,11 +501,24 @@ namespace wsgate {
                 m_bDebug = debug;
             }
 
+            void RegisterRdpSession(rdp_ptr rdp) {
+                ostringstream oss;
+                oss << hex << rdp.get();
+                m_SessionMap[oss.str()] = rdp;
+            }
+
+            void UnregisterRdpSession(rdp_ptr rdp) {
+                ostringstream oss;
+                oss << hex << rdp.get();
+                m_SessionMap.erase(oss.str());
+            }
+
         private:
             string m_sHostname;
             string m_sDocumentRoot;
             string m_sPidFile;
             bool m_bDebug;
+            SessionMap m_SessionMap;
     };
 
 #ifndef _WIN32
@@ -621,6 +663,7 @@ namespace wsgate {
     void MyRawSocketHandler:: OnDisconnect(EHSConnection *conn)
     {
         log::debug << "GOT WS DISCONNECT" << endl;
+        m_parent->UnregisterRdpSession(m_cmap[conn].get<2>());
         m_cmap.erase(conn);
     }
 
@@ -655,6 +698,7 @@ namespace wsgate {
         if (0 == mode.compare("rdp")) {
             dynamic_cast<MyWsHandler*>(h.get())->SetMode(MyWsHandler::Rdp);
             r->Connect(host, port, user, string() /*domain*/, pass, width, height);
+            m_parent->RegisterRdpSession(r);
         }
         return true;
     }
@@ -669,6 +713,8 @@ static bool g_service_background = true;
 static void terminate(int)
 {
     g_signaled = true;
+    signal(SIGINT, terminate);
+    signal(SIGTERM, terminate);
 }
 
 #ifdef _WIN32
@@ -912,7 +958,7 @@ int main (int argc, char **argv)
         if (daemon) {
             while (!(srv.ShouldTerminate() || g_signaled)) {
                 if (sleepInLoop) {
-                    usleep(1000);
+                    usleep(10000);
                 } else {
                     srv.HandleData(1000);
                 }

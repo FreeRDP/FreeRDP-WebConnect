@@ -313,6 +313,28 @@ AC_CHECK_LIB([freerdp-gdi],[gdi_init],
 AC_CHECK_LIB([freerdp-locale],[freerdp_keyboard_get_rdp_scancode_from_virtual_key_code],
     [WSGATE_LDADD="$WSGATE_LDADD -lfreerdp-locale"],
     [AC_MSG_ERROR([You need freerdp from GIT!])])
+AC_CHECK_LIB([freerdp-cache],[pointer_cache_register_callbacks],
+    [WSGATE_LDADD="$WSGATE_LDADD -lfreerdp-cache"],
+    [AC_MSG_ERROR([You need freerdp from GIT!])])
+
+dnl Test for libpng
+png_ok=no
+AC_LANG_PUSH([C])
+AC_CHECK_LIB([png],[png_read_info],AC_CHECK_HEADER([png.h],[png_ok=yes]),,[-lz -lm])
+if test "$png_ok" = yes; then
+    AC_MSG_CHECKING([for png_structp in png.h])
+    AC_COMPILE_IFELSE([AC_LANG_PROGRAM([[#include <png.h>]],
+            [[png_structp pp; png_infop info; png_colorp cmap; png_create_read_struct;]])]
+    ,,[png_ok=no])
+    AC_MSG_RESULT($png_ok)
+fi
+AC_LANG_POP
+if test "$png_ok" = yes; then
+    LIBPNG='-lpng -lz'
+else
+    AC_MSG_ERROR([Mandatory libpng is not available])
+fi
+AC_SUBST(LIBPNG)
 
 dnl Required for js and css compression: java
 AC_CHECK_TOOL([JAVA],[java],[])

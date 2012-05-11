@@ -3,12 +3,14 @@
 #endif
 
 #include <sstream>
+#include <iomanip>
 
 #include <pthread.h>
 
 #include "RDP.hpp"
 #include "Update.hpp"
 #include "Primary.hpp"
+#include "Png.hpp"
 
 #include "btexception.hpp"
 extern "C" {
@@ -25,6 +27,11 @@ namespace wsgate {
 
     map<freerdp *, RDP *> RDP::m_instances;
 
+    typedef struct {
+        rdpPointer pointer;
+        uint32_t id;
+    } MyPointer;
+
     RDP::RDP(wspp::wshandler *h)
         : m_freerdp(freerdp_new())
           , m_rdpContext(0)
@@ -38,6 +45,8 @@ namespace wsgate {
           , m_pUpdate(new Update(h))
           , m_pPrimary(new Primary(h))
           , m_lastError(0)
+          , m_ptrId(1)
+          , m_cursorMap()
     {
         if (!m_freerdp) {
             throw tracing::runtime_error("Could not create freerep instance");
@@ -319,6 +328,15 @@ namespace wsgate {
         freerdp_input_send_extended_mouse_event(m_rdpInput, flags, x, y);
     }
 
+    string RDP::GetCursorPng(uint32_t cid)
+    {
+        CursorMap::iterator it = m_cursorMap.find(cid);
+        if (it != m_cursorMap.end()) {
+            return it->second;
+        }
+        return string();
+    }
+
     // private
     void RDP::ContextNew(freerdp *inst, rdpContext *ctx)
     {
@@ -365,7 +383,7 @@ namespace wsgate {
         m_rdpSettings->color_depth = 16;
         m_rdpSettings->frame_acknowledge = 0;
         m_rdpSettings->performance_flags = 0;
-        m_rdpSettings->large_pointer = 1;
+        m_rdpSettings->large_pointer = 0;
         m_rdpSettings->glyph_cache = 0;
         m_rdpSettings->bitmap_cache = 0;
         m_rdpSettings->offscreen_bitmap_cache = 0;
@@ -403,6 +421,7 @@ namespace wsgate {
 
         reinterpret_cast<wsgContext *>(m_freerdp->context)->clrconv =
             freerdp_clrconv_new(CLRCONV_ALPHA|CLRCONV_INVERT);
+        m_freerdp->context->cache = cache_new(m_freerdp->settings);
 
         return 1;
     }
@@ -410,8 +429,22 @@ namespace wsgate {
     // private
     boolean RDP::PostConnect(freerdp *rdp)
     {
-        log::debug << "RDP::PostConnect " << hex << rdp << dec << endl;
+        log::debug << "RDP::PostConnect 0x" << hex << rdp << dec << endl;
         // gdi_init(rdp, CLRCONV_ALPHA | CLRCONV_INVERT | CLRBUF_16BPP | CLRBUF_32BPP, NULL);
+
+        ostringstream oss;
+        oss << "S:" << hex << this;
+        m_wshandler->send_text(oss.str());
+        rdpPointer p; 
+        memset(&p, 0, sizeof(p));
+        p.size = sizeof(MyPointer);
+        p.New = cbPointer_New;
+        p.Free = cbPointer_Free;
+        p.Set = cbPointer_Set;
+        p.SetNull = cbPointer_SetNull;
+        p.SetDefault = cbPointer_SetDefault;
+        graphics_register_pointer(rdp->context->graphics, &p);
+        pointer_cache_register_callbacks(rdp->update);
         return 1;
     }
 
@@ -427,6 +460,105 @@ namespace wsgate {
     {
         log::debug << "RDP::VerifyCertificate" << endl;
         return 1;
+    }
+
+    // private
+    void RDP::Pointer_New(rdpContext* context, rdpPointer* pointer)
+    {
+        // log::debug << __PRETTY_FUNCTION__ << endl;
+        log::debug << "PN id=" << m_ptrId
+            << " w=" << pointer->width << " h=" << pointer->height
+            << " hx=" << pointer->xPos << " hy=" << pointer->yPos << endl;
+        HCLRCONV hclrconv = reinterpret_cast<wsgContext *>(context)->clrconv;
+        size_t psize = pointer->width * pointer->height * 4;
+
+        MyPointer *p = reinterpret_cast<MyPointer *>(pointer);
+        p->id = m_ptrId++;
+        uint8_t *pixels = new uint8_t[psize];
+        memset(pixels, 0, psize);
+        if ((pointer->andMaskData != 0) && (pointer->xorMaskData != 0)) {
+            freerdp_alpha_cursor_convert(pixels,
+                    pointer->xorMaskData, pointer->andMaskData,
+                    pointer->width, pointer->height, pointer->xorBpp, hclrconv);
+        }
+        Png png;
+        m_cursorMap[p->id] = png.GenerateFromARGB(pointer->width, pointer->height, pixels);
+        delete []pixels;
+        struct {
+            uint32_t op;
+            uint32_t id;
+            uint32_t hx;
+            uint32_t hy;
+        } tmp = {
+            WSOP_SC_PTR_NEW,
+            p->id,
+            pointer->xPos,
+            pointer->yPos
+        };
+        string buf(reinterpret_cast<const char *>(&tmp), sizeof(tmp));
+        m_wshandler->send_binary(buf);
+    }
+
+    // private
+    void RDP::Pointer_Free(rdpContext*, rdpPointer* pointer)
+    {
+        // log::debug << __PRETTY_FUNCTION__ << endl;
+        MyPointer *p = reinterpret_cast<MyPointer *>(pointer);
+        if (p->id) {
+            log::debug << "PF " << p->id << endl;
+        } else {
+            log::debug << "PF ???" << endl;
+        }
+        if (p->id) {
+            struct {
+                uint32_t op;
+                uint32_t id;
+            } tmp = {
+                WSOP_SC_PTR_FREE,
+                p->id
+            };
+            m_cursorMap.erase(p->id);
+            p->id = 0;
+            string buf(reinterpret_cast<const char *>(&tmp), sizeof(tmp));
+            m_wshandler->send_binary(buf);
+        }
+    }
+
+    // private
+    void RDP::Pointer_Set(rdpContext*, rdpPointer* pointer)
+    {
+        // log::debug << __PRETTY_FUNCTION__ << endl;
+        MyPointer *p = reinterpret_cast<MyPointer *>(pointer);
+        log::debug << "PS " << p->id << endl;
+        struct {
+            uint32_t op;
+            uint32_t id;
+        } tmp = {
+            WSOP_SC_PTR_SET,
+            p->id
+        };
+        string buf(reinterpret_cast<const char *>(&tmp), sizeof(tmp));
+        m_wshandler->send_binary(buf);
+    }
+
+    // private
+    void RDP::Pointer_SetNull(rdpContext*)
+    {
+        // log::debug << __PRETTY_FUNCTION__ << endl;
+        log::debug << "PN" << endl;
+        uint32_t op = WSOP_SC_PTR_SETNULL;
+        string buf(reinterpret_cast<const char *>(&op), sizeof(op));
+        m_wshandler->send_binary(buf);
+    }
+
+    // private
+    void RDP::Pointer_SetDefault(rdpContext*)
+    {
+        // log::debug << __PRETTY_FUNCTION__ << endl;
+        log::debug << "PD" << endl;
+        uint32_t op = WSOP_SC_PTR_SETDEFAULT;
+        string buf(reinterpret_cast<const char *>(&op), sizeof(op));
+        m_wshandler->send_binary(buf);
     }
 
     // private
@@ -562,6 +694,51 @@ namespace wsgate {
             return self->VerifyCertificate(inst, subject, issuer, fprint);
         }
         return 0;
+    }
+
+    // private C callback
+    void RDP::cbPointer_New(rdpContext* context, rdpPointer* pointer)
+    {
+        RDP *self = reinterpret_cast<wsgContext *>(context)->pRDP;
+        if (self) {
+            self->Pointer_New(context, pointer);
+        }
+    }
+
+    // private C callback
+    void RDP::cbPointer_Free(rdpContext* context, rdpPointer* pointer)
+    {
+        RDP *self = reinterpret_cast<wsgContext *>(context)->pRDP;
+        if (self) {
+            self->Pointer_Free(context, pointer);
+        }
+    }
+
+    // private C callback
+    void RDP::cbPointer_Set(rdpContext* context, rdpPointer* pointer)
+    {
+        RDP *self = reinterpret_cast<wsgContext *>(context)->pRDP;
+        if (self) {
+            self->Pointer_Set(context, pointer);
+        }
+    }
+
+    // private C callback
+    void RDP::cbPointer_SetNull(rdpContext* context)
+    {
+        RDP *self = reinterpret_cast<wsgContext *>(context)->pRDP;
+        if (self) {
+            self->Pointer_SetNull(context);
+        }
+    }
+
+    // private C callback
+    void RDP::cbPointer_SetDefault(rdpContext* context)
+    {
+        RDP *self = reinterpret_cast<wsgContext *>(context)->pRDP;
+        if (self) {
+            self->Pointer_SetDefault(context);
+        }
     }
 
 }

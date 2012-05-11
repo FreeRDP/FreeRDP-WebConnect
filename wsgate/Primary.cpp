@@ -51,7 +51,7 @@ namespace wsgate {
         uint32_t rop3 = gdi_rop3_code(po->bRop);
         HCLRCONV hclrconv = reinterpret_cast<wsgContext *>(ctx)->clrconv;
         if (GDI_BS_SOLID == po->brush.style) {
-            log::debug << "PAT S " << hex << rop3 << dec << endl;
+            log::debug << "PB S " << hex << rop3 << dec << endl;
             struct {
                 uint32_t op;
                 int32_t x;
@@ -72,16 +72,16 @@ namespace wsgate {
             string buf(reinterpret_cast<const char *>(&tmp), sizeof(tmp));
             m_wshandler->send_binary(buf);
         } else if (GDI_BS_PATTERN ==  po->brush.style) {
-            log::debug << "PAT P " << hex << rop3 << dec << endl;
+            log::debug << "PB P " << hex << rop3 << dec << endl;
         } else {
-            log::debug << "PAT style " << hex << po->brush.style << dec << endl;
+            log::debug << "PB style " << hex << po->brush.style << dec << endl;
         }
     }
 
     void Primary::ScrBlt(rdpContext*, SCRBLT_ORDER* sbo) {
         // log::debug << __PRETTY_FUNCTION__ << endl;
         uint32_t rop3 = gdi_rop3_code(sbo->bRop);
-        log::debug << "ScrBlt rop3=0x" << hex << rop3 << dec << endl;
+        log::debug << "SB rop3=0x" << hex << rop3 << dec << endl;
         struct {
             uint32_t op;
             uint32_t rop;
@@ -111,7 +111,7 @@ namespace wsgate {
         uint32_t svcolor = oro->color;
         oro->color = freerdp_color_convert_var(oro->color, 16, 32, hclrconv);
         uint32_t op = WSOP_SC_OPAQUERECT;
-        log::debug << "FillRect " << ": x=" << oro->nLeftRect << " y=" << oro->nTopRect
+        log::debug << "OR " << ": x=" << oro->nLeftRect << " y=" << oro->nTopRect
             << " w=" << oro->nWidth << " h=" << oro->nHeight << " col=0x" << hex << oro->color << dec << endl;
         string buf(reinterpret_cast<const char *>(&op), sizeof(op));
         buf.append(reinterpret_cast<const char *>(oro), sizeof(OPAQUE_RECT_ORDER));
@@ -140,7 +140,7 @@ namespace wsgate {
         HCLRCONV hclrconv = reinterpret_cast<wsgContext *>(context)->clrconv;
         uint32_t color = freerdp_color_convert_var(moro->color, 16, 32, hclrconv);
 #if 1
-        log::debug << "MultiOpaqueRect color=0x" << hex << moro->color << " (0x" << color << ")" << dec
+        log::debug << "MOR color=0x" << hex << moro->color << " (0x" << color << ")" << dec
             << " nr=" << moro->numRectangles << endl;
         for (size_t i = 0; i < moro->numRectangles; ++i) {
             DELTA_RECT *r = &moro->rectangles[i+1];

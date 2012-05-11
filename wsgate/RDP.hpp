@@ -4,6 +4,7 @@
 #include <pthread.h>
 #include <map>
 #include <string>
+#include <boost/shared_ptr.hpp>
 
 #include "rdpcommon.hpp"
 
@@ -25,6 +26,8 @@ namespace wsgate {
                 STATE_CONNECTED,
                 STATE_CLOSED
             } State;
+
+            typedef std::map<uint32_t, std::string> CursorMap;
 
             /**
              * Constructor
@@ -68,6 +71,12 @@ namespace wsgate {
              * @param data The binary payload of the incoming message.
              */
             void OnWsMessage(const std::string & data);
+            /**
+             * Retrieves a custom cursor image by ID.
+             * @param cid Unique cursor ID (valid for current session).
+             * @return A PNG-encoded RGBA image or an empty String, if no cursor image is defined for the given Id.
+             */
+            std::string GetCursorPng(uint32_t cid);
 
         private:
             /**
@@ -117,6 +126,12 @@ namespace wsgate {
             int ReceiveChannelData(freerdp* inst, int chId, uint8_t* data, int size,
                     int flags, int total_size);
 
+            void Pointer_New(rdpContext* context, rdpPointer* pointer);
+            void Pointer_Free(rdpContext* context, rdpPointer* pointer);
+            void Pointer_Set(rdpContext* context, rdpPointer* pointer);
+            void Pointer_SetNull(rdpContext* context);
+            void Pointer_SetDefault(rdpContext* context);
+
             static std::map<freerdp *, RDP *> m_instances;
             freerdp *m_freerdp;
             rdpContext *m_rdpContext;
@@ -130,6 +145,8 @@ namespace wsgate {
             Update *m_pUpdate;
             Primary *m_pPrimary;
             uint32_t m_lastError;
+            uint32_t m_ptrId;
+            CursorMap m_cursorMap;
 
             // Callbacks from C pthreads - Must be static in order t be assigned to C fnPtrs.
             static void *cbThreadFunc(void *ctx);
@@ -144,6 +161,12 @@ namespace wsgate {
             static int cbSendChannelData(freerdp *inst, int chId, uint8_t* data, int size);
             static int cbReceiveChannelData(freerdp* inst, int chId, uint8_t* data, int size,
                     int flags, int total_size);
+
+            static void cbPointer_New(rdpContext* context, rdpPointer* pointer);
+            static void cbPointer_Free(rdpContext* context, rdpPointer* pointer);
+            static void cbPointer_Set(rdpContext* context, rdpPointer* pointer);
+            static void cbPointer_SetNull(rdpContext* context);
+            static void cbPointer_SetDefault(rdpContext* context);
     };
 }
 

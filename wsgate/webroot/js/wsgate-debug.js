@@ -58,12 +58,13 @@ wsgate.RDP = new Class( {
         });
         this.bctx = this.bstore.getContext('2d');
         this.ccnt = 0;
-        this.pID = null;
         this.clx = 0;
         this.cly = 0;
         this.clw = 0;
         this.clh = 0;
         this.modkeys = [8, 16, 17, 18, 20, 144, 145];
+        this.cursors = new Array();
+        this.sid = null;
     },
     Disconnect: function() {
         this._reset();
@@ -87,7 +88,7 @@ wsgate.RDP = new Class( {
      * Main message loop.
      */
     _pmsg: function(data) { // process a binary RDP message from our queue
-        var op, hdr, count, rects, bmdata, rgba, compressed, i, offs, x, y, w, h, dw, dh, bpp, color, len, pid;
+        var op, hdr, count, rects, bmdata, rgba, compressed, i, offs, x, y, w, h, dw, dh, bpp, color, len;
         op = new Uint32Array(data, 0, 1);
         switch (op[0]) {
             case 0:
@@ -222,6 +223,31 @@ wsgate.RDP = new Class( {
                     wsgate.log.warn('ScrBlt: width and/or height is zero');
                 }
                 break; 
+            case 8:
+                // PTR_NEW
+                // id, xhot, yhot
+                hdr = new Uint32Array(data, 4, 3);
+                this.cursors[hdr[0]] = 'url(/cur/'+this.sid+'/'+hdr[0]+') '+hdr[1]+' '+hdr[2]+',none';
+                break;
+            case 9:
+                // PTR_FREE
+                // id
+                this.cursors[new Uint32Array(data, 4, 1)[0]] = undefined;
+                break;
+            case 10:
+                // PTR_SET
+                // id
+                // wsgate.log.debug('PS:', this.cursors[new Uint32Array(data, 4, 1)[0]]);
+                this.canvas.setStyle('cursor', this.cursors[new Uint32Array(data, 4, 1)[0]]);
+                break;
+            case 11:
+                // PTR_SETNULL
+                this.canvas.setStyle('cursor', 'none');
+                break;
+            case 12:
+                // PTR_SETDEFAULT
+                this.canvas.setStyle('cursor', 'default');
+                break;
             default:
                 wsgate.log.warn('Unknown BINRESP: ', data.byteLength);
         }
@@ -369,11 +395,12 @@ wsgate.RDP = new Class( {
         }
         this.cctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
         document.title = document.title.replace(/:.*/, ': offline');
+        this.canvas.setStyle('cursor','default');
     },
     /**
      * Event handler for mouse move events
      */
-    onMouseMove: function(evt) {
+    onMm: function(evt) {
         var buf, a, x, y;
         evt.preventDefault();
         x = evt.client.x - evt.target.offsetLeft;
@@ -392,7 +419,7 @@ wsgate.RDP = new Class( {
     /**
      * Event handler for mouse down events
      */
-    onMouseDown: function(evt) {
+    onMd: function(evt) {
         var buf, a, x, y, which;
         evt.preventDefault();
         x = evt.client.x - evt.target.offsetLeft;
@@ -412,7 +439,7 @@ wsgate.RDP = new Class( {
     /**
      * Event handler for mouse up events
      */
-    onMouseUp: function(evt) {
+    onMu: function(evt) {
         var buf, a, x, y, which;
         evt.preventDefault();
         x = evt.client.x - evt.target.offsetLeft;
@@ -432,7 +459,7 @@ wsgate.RDP = new Class( {
     /**
      * Event handler for mouse wheel events
      */
-    onMouseWheel: function(evt) {
+    onMw: function(evt) {
         var buf, a, x, y;
         evt.preventDefault();
         x = evt.client.x - evt.target.offsetLeft;
@@ -451,7 +478,7 @@ wsgate.RDP = new Class( {
     /**
      * Event handler for key down events
      */
-    onKdown: function(evt) {
+    onKd: function(evt) {
         var a, buf;
         if (this.modkeys.contains(evt.code)) {
             evt.preventDefault();
@@ -469,7 +496,7 @@ wsgate.RDP = new Class( {
     /**
      * Event handler for key up events
      */
-    onKup: function(evt) {
+    onKu: function(evt) {
         var a, buf;
         if (this.modkeys.contains(evt.code)) {
             evt.preventDefault();
@@ -487,7 +514,7 @@ wsgate.RDP = new Class( {
     /**
      * Event handler for key pressed events
      */
-    onKpress: function(evt) {
+    onKp: function(evt) {
         var a, buf;
         evt.preventDefault();
         if (this.modkeys.contains(evt.code)) {
@@ -529,6 +556,9 @@ wsgate.RDP = new Class( {
                     case 'D:':
                             wsgate.log.debug(evt.data.substring(2));
                             break;
+                    case 'S:':
+                            this.sid = evt.data.substring(2);
+                            break;
                 }
                 break;
                 // ... and binary messages for the actual RDP stuff.
@@ -543,17 +573,18 @@ wsgate.RDP = new Class( {
      */
     onWSopen: function(evt) {
         // Add listeners for the various input events
-        this.canvas.addEvent('mousemove', this.onMouseMove.bind(this));
-        this.canvas.addEvent('mousedown', this.onMouseDown.bind(this));
-        this.canvas.addEvent('mouseup', this.onMouseUp.bind(this));
-        this.canvas.addEvent('mousewheel', this.onMouseWheel.bind(this));
+        this.canvas.addEvent('mousemove', this.onMm.bind(this));
+        this.canvas.addEvent('mousedown', this.onMd.bind(this));
+        this.canvas.addEvent('mouseup', this.onMu.bind(this));
+        this.canvas.addEvent('mousewheel', this.onMw.bind(this));
         // Disable the browser's context menu
         this.canvas.addEvent('contextmenu', function(e) {e.stop();});
         // The keyboard events need to be attached to the
         // document, because otherwise we seem to loose them.
-        document.addEvent('keydown', this.onKdown.bind(this));
-        document.addEvent('keyup', this.onKup.bind(this));
-        document.addEvent('keypress', this.onKpress.bind(this));
+        document.addEvent('keydown', this.onKd.bind(this));
+        document.addEvent('keyup', this.onKu.bind(this));
+        document.addEvent('keypress', this.onKp.bind(this));
+        // this.canvas.setStyle('cursor','none');
         this.fireEvent('connected');
     },
     /**

@@ -35,14 +35,14 @@ namespace wsgate {
     }
 
     void Update::BeginPaint(rdpContext*) {
-        log::debug << __PRETTY_FUNCTION__ << endl;
+        log::debug << "BP" << endl;
         uint32_t op = WSOP_SC_BEGINPAINT;
         string buf(reinterpret_cast<const char *>(&op), sizeof(op));
         m_wshandler->send_binary(buf);
     }
 
     void Update::EndPaint(rdpContext*) {
-        log::debug << __PRETTY_FUNCTION__ << endl;
+        log::debug << "EP" << endl;
         uint32_t op = WSOP_SC_ENDPAINT;
         string buf(reinterpret_cast<const char *>(&op), sizeof(op));
         m_wshandler->send_binary(buf);
@@ -57,7 +57,7 @@ namespace wsgate {
         } else {
             memset(&lB, 0, sizeof(rdpBounds));
         }
-        log::debug << "SetBounds l: " << lB.left << " t: " << lB.top
+        log::debug << "SB l: " << lB.left << " t: " << lB.top
             << " r: " << lB.right << " b: " << lB.bottom << endl;
         string buf(reinterpret_cast<const char *>(&op), sizeof(op));
         buf.append(reinterpret_cast<const char *>(&lB), sizeof(lB));
