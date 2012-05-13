@@ -117,10 +117,21 @@ fi
 
 %if %{is_el}
 %post
-/sbin/chkconfig --add wsgate
+if [ $1 -eq 1 ] ; then
+    /sbin/chkconfig --add wsgate
+fi
 
 %preun
-/sbin/chkconfig --del wsgate
+if [ $1 -eq 0 ] ; then
+    # Package removal, not upgrade
+    /sbin/chkconfig --del wsgate
+fi
+
+%postun
+if [ $1 -ge 1 ] ; then
+    # Package upgrade, not uninstall
+    /sbin/service wsgate condrestart
+fi
 %endif
 
 %files
