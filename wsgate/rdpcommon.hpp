@@ -54,6 +54,23 @@ namespace wsgate {
     } WsOPcs;
 
     /**
+     * Our set of form varables
+     */
+    typedef struct {
+        int port;
+        int width;
+        int height;
+        int perf;
+        int fntlm;
+        int notls;
+        int nonla;
+        int nowallp;
+        int nowdrag;
+        int nomani;
+        int notheme;
+    } WsRdpParams;
+
+    /**
      * Our extension of FreeRDP's context
      */
     typedef struct {

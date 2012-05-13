@@ -83,8 +83,8 @@ namespace wsgate {
         delete m_pPrimary;
     }
 
-    bool RDP::Connect(string host, int port, string user, string domain, string pass,
-            const int width, const int height)
+    bool RDP::Connect(string host, string user, string domain, string pass,
+            const WsRdpParams &params)
     {
         if (!m_rdpSettings) {
             throw tracing::runtime_error("m_rdpSettings is NULL");
@@ -92,9 +92,9 @@ namespace wsgate {
         if (!m_bThreadLoop) {
             throw tracing::runtime_error("worker thread has terminated");
         }
-        m_rdpSettings->width = width;
-        m_rdpSettings->height = height;
-        m_rdpSettings->port = port;
+        m_rdpSettings->width = params.width;
+        m_rdpSettings->height = params.height;
+        m_rdpSettings->port = params.port;
         m_rdpSettings->ignore_certificate = 1;
         m_rdpSettings->hostname = strdup(host.c_str());
         m_rdpSettings->username = strdup(user.c_str());
@@ -106,6 +106,54 @@ namespace wsgate {
         } else {
             m_rdpSettings->authentication = 0;
         }
+        switch (params.perf) {
+            case 0:
+                // LAN
+                m_rdpSettings->performance_flags = PERF_FLAG_NONE;
+                m_rdpSettings->connection_type = CONNECTION_TYPE_LAN;
+                break;
+            case 1:
+                // Broadband
+                m_rdpSettings->performance_flags = PERF_DISABLE_WALLPAPER;
+                m_rdpSettings->connection_type = CONNECTION_TYPE_BROADBAND_HIGH;
+                break;
+            case 2:
+                // Modem
+                m_rdpSettings->performance_flags =
+                    PERF_DISABLE_WALLPAPER | PERF_DISABLE_FULLWINDOWDRAG |
+                    PERF_DISABLE_MENUANIMATIONS | PERF_DISABLE_THEMING;
+                m_rdpSettings->connection_type = CONNECTION_TYPE_MODEM;
+                break;
+        }
+        if (params.nowallp) {
+            m_rdpSettings->disable_wallpaper = 1;
+            m_rdpSettings->performance_flags |= PERF_DISABLE_WALLPAPER;
+        }
+        if (params.nowdrag) {
+            m_rdpSettings->disable_full_window_drag = 1;
+            m_rdpSettings->performance_flags |= PERF_DISABLE_FULLWINDOWDRAG;
+        }
+        if (params.nomani) {
+            m_rdpSettings->disable_menu_animations = 1;
+            m_rdpSettings->performance_flags |= PERF_DISABLE_MENUANIMATIONS;
+        }
+        if (params.notheme) {
+            m_rdpSettings->disable_theming = 1;
+            m_rdpSettings->performance_flags |= PERF_DISABLE_THEMING;
+        }
+        if (params.notls) {
+            m_rdpSettings->tls_security = 0;
+        }
+        if (params.nonla) {
+            m_rdpSettings->nla_security = 0;
+        }
+        switch (params.fntlm) {
+            case 1:
+            case 2:
+                m_rdpSettings->ntlm_version = params.fntlm;
+                break;
+        }
+
         m_State = STATE_CONNECT;
         return true;
     }
@@ -367,22 +415,15 @@ namespace wsgate {
         m_rdpSettings->fastpath_output = 1;
         m_rdpSettings->color_depth = 32;
         m_rdpSettings->frame_acknowledge = 0;
-        m_rdpSettings->performance_flags = PERF_FLAG_NONE;
         m_rdpSettings->large_pointer = true;
 #endif
 
-        // TODO: configurable 
-        m_rdpSettings->disable_wallpaper = 0;
-        m_rdpSettings->disable_full_window_drag = 0;
-        m_rdpSettings->disable_menu_animations = 0;
-        m_rdpSettings->disable_theming = 0;
         // ? settings->dektop_composition = 0;
 
         m_rdpSettings->rfx_codec = 0;
         m_rdpSettings->fastpath_output = 1;
         m_rdpSettings->color_depth = 16;
         m_rdpSettings->frame_acknowledge = 0;
-        m_rdpSettings->performance_flags = 0;
         m_rdpSettings->large_pointer = 0;
         m_rdpSettings->glyph_cache = 0;
         m_rdpSettings->bitmap_cache = 0;

@@ -262,7 +262,8 @@ table td.key {
     color: #666666;
     font-weight: bold;
     text-align: right;
-    width: 160px;
+    white-space: nowrap;
+    width: 260px;
 }
 
 .dialog {
@@ -280,7 +281,7 @@ table td.key {
 	margin:					0;
 	padding:				0;
 	list-style:				none;
-	overflow:				auto;
+	/* overflow:				auto; */
 }
 .tab-menu li
 {

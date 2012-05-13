@@ -34,10 +34,15 @@ namespace wsgate {
             png_structp png_ptr;
             png_infop info_ptr;
             std::string ret;
-    
+
+            // non-copyable
+            Png(const Png &);
+            Png & operator=(const Png &);
+
             void PngWrite(png_bytep data, png_size_t len);
             void PngFlush();
 
+            // C callbacks
             static void cbPngWrite(png_structp, png_bytep, png_size_t);
             static void cbPngFlush(png_structp);
     };

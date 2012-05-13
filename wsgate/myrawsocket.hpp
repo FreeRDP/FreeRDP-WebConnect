@@ -64,17 +64,14 @@ namespace wsgate {
              * @param conn The EHSConnection which triggered thsi action.
              * @param mode The endpoint operation mode.
              * @param host The RDP host to connect to
-             * @param port The RDP port to connect to
              * @param user The user name to be used for the RDP session.
              * @param pass The password to be used for the RDP session.
-             * @param width The desktop width to be used for the RDP session.
-             * @param height The desktop height to be used for the RDP session.
+             * @param params Additional RDP parameters.
              * @return true on success.
              */
             bool Prepare(EHSConnection *conn, const std::string mode,
-                    const std::string host, uint16_t port,
-                    const std::string user, const std::string pass,
-                    const int &width, const int &height);
+                    const std::string host, const std::string user,
+                    const std::string pass, const WsRdpParams &params);
 
             /**
              * Event handler for WebSocket message events.

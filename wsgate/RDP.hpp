@@ -45,16 +45,14 @@ namespace wsgate {
             /**
              * Initiates the actual RDP session.
              * @param host The RDP host to connect to.
-             * @param port The RDP port to connect to.
              * @param user The user name to be used for the RDP session.
              * @param domain The domain name to be used for the RDP session.
              * @param pass The password to be used for the RDP session.
-             * @param width The desktop width to be used for the RDP session.
-             * @param height The desktop height to be used for the RDP session.
+             * @param params Additional parameters for the RDP session.
              * @return true on success.
              */
-            bool Connect(std::string host, int port, std::string user, std::string domain,
-                    std::string pass, const int width, const int height);
+            bool Connect(std::string host, std::string user, std::string domain,
+                    std::string pass, const WsRdpParams &params);
             /**
              * Actively terminates a session.
              * @return true on success.

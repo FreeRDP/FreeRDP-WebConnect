@@ -102,6 +102,17 @@ namespace wsgate {
 
     static const char * const ws_magic = "258EAFA5-E914-47DA-95CA-C5AB0DC85B11";
 
+    int nFormValue(HttpRequest *request, const string & name, int defval) {
+        string tmp(request->FormValues(name).m_sBody);
+        int ret = defval;
+        if (!tmp.empty()) {
+            try {
+                ret = boost::lexical_cast<int>(tmp);
+            } catch (const boost::bad_lexical_cast & e) {  ret = defval; }
+        }
+        return ret;
+    }
+
     // subclass of EHS that defines a custom HTTP response.
     class WsGate : public EHS
     {
@@ -218,19 +229,25 @@ namespace wsgate {
                     return HTTPRESPONSECODE_404_NOTFOUND;
                 }
                 if (0 == uri.compare("/wsgate")) {
-                    int dtwidth = 1024;
-                    int dtheight = 768;
                     string dtsize(request->FormValues("dtsize").m_sBody);
                     string rdphost(request->FormValues("host").m_sBody);
                     string rdpuser(request->FormValues("user").m_sBody);
                     string rdppass(base64_decode(request->FormValues("pass").m_sBody));
-                    uint16_t rdpport = 3389;
-                    if (!request->FormValues("port").m_sBody.empty()) {
-                        try {
-                            int tmp = boost::lexical_cast<int>(request->FormValues("port").m_sBody);
-                            rdpport = tmp;
-                        } catch (const boost::bad_lexical_cast & e) { }
-                    }
+
+                    WsRdpParams params = {
+                        nFormValue(request, "port", 3389),
+                        1024,
+                        768,
+                        nFormValue(request, "perf", 0),
+                        nFormValue(request, "fntlm", 0),
+                        nFormValue(request, "notls", 0),
+                        nFormValue(request, "nonla", 0),
+                        nFormValue(request, "nowallp", 0),
+                        nFormValue(request, "nowdrag", 0),
+                        nFormValue(request, "nomani", 0),
+                        nFormValue(request, "notheme", 0),
+                    };
+
                     string mode(request->FormValues("mode").m_sBody);
                     if (mode.empty()) {
                         mode = "echo";
@@ -240,12 +257,12 @@ namespace wsgate {
                             vector<string> wh;
                             boost::split(wh, dtsize, is_any_of("x"));
                             if (wh.size() == 2) {
-                                dtwidth = boost::lexical_cast<int>(wh[0]);
-                                dtheight = boost::lexical_cast<int>(wh[1]);
+                                params.width = boost::lexical_cast<int>(wh[0]);
+                                params.height = boost::lexical_cast<int>(wh[1]);
                             }
                         } catch (const exception &e) {
-                            dtwidth = 1024;
-                            dtheight = 768;
+                            params.width = 1024;
+                            params.height = 768;
                         }
                     }
                     response->SetBody("", 0);
@@ -308,7 +325,7 @@ namespace wsgate {
                     }
                     response->EnableIdleTimeout(false);
                     response->EnableKeepAlive(true);
-                    if (!sh->Prepare(request->Connection(), mode, rdphost, rdpport, rdpuser, rdppass, dtwidth, dtheight)) {
+                    if (!sh->Prepare(request->Connection(), mode, rdphost, rdpuser, rdppass, params)) {
                         log::warn << "Request from " << request->RemoteAddress()
                             << ": " << uri << " => 503 (RDP backend not available)" << endl;
                         response->EnableIdleTimeout(true);
@@ -675,15 +692,15 @@ namespace wsgate {
     }
 
     bool MyRawSocketHandler::Prepare(EHSConnection *conn, const string mode,
-            const string host, uint16_t port, const string user, const string pass,
-            const int &width, const int &height)
+            const string host, const string user, const string pass,
+            const WsRdpParams &params)
     {
         log::debug << "Mode:             '" << mode << "'" << endl;
         log::debug << "RDP Host:         '" << host << "'" << endl;
-        log::debug << "RDP Port:         '" << port << "'" << endl;
+        log::debug << "RDP Port:         '" << params.port << "'" << endl;
         log::debug << "RDP User:         '" << user << "'" << endl;
         log::debug << "RDP Password:     '" << pass << "'" << endl;
-        log::debug << "RDP Desktop size: " << width << "x" << height << endl;
+        log::debug << "RDP Desktop size: " << params.width << "x" << params.height << endl;
 
         handler_ptr h(new MyWsHandler(conn, m_parent, this));
         conn_ptr c(new wspp::wsendpoint(h.get()));
@@ -697,7 +714,7 @@ namespace wsgate {
         }
         if (0 == mode.compare("rdp")) {
             dynamic_cast<MyWsHandler*>(h.get())->SetMode(MyWsHandler::Rdp);
-            r->Connect(host, port, user, string() /*domain*/, pass, width, height);
+            r->Connect(host, user, string() /*domain*/, pass, params);
             m_parent->RegisterRdpSession(r);
         }
         return true;

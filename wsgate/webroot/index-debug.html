@@ -17,19 +17,27 @@
             var wsBase = "%WSURI%";
             function RDPrun() {
                 var wsUri = wsBase
-                    + '?host=' + encodeURIComponent(document.id('rdphost').value.trim())
-                    + '&user=' + encodeURIComponent(document.id('rdpuser').value.trim())
-                    + '&pass=' + encodeURIComponent(document.id('rdppass').value.toBase64())
-                    + '&dtsize=' + document.id('screen').width + 'x' + document.id('screen').height
+                    + '?host=' + encodeURIComponent($('rdphost').value.trim())
+                    + '&user=' + encodeURIComponent($('rdpuser').value.trim())
+                    + '&pass=' + encodeURIComponent($('rdppass').value.toBase64())
+                    + '&perf=' + $('perf').value.trim()
+                    + '&fntlm=' + $('fntlm').value.trim()
+                    + '&nowallp=' + ($('nowallp').checked ? '1' : '0')
+                    + '&nowdrag=' + ($('nowdrag').checked ? '1' : '0')
+                    + '&nomani=' + ($('nomani').checked ? '1' : '0')
+                    + '&notheme=' + ($('notheme').checked ? '1' : '0')
+                    + '&nonla=' + ($('nonla').checked ? '1' : '0')
+                    + '&notls=' + ($('notls').checked ? '1' : '0')
+                    + '&dtsize=' + $('screen').width + 'x' + $('screen').height
                     + '&mode=rdp';
-                var rdp = new wsgate.RDP(wsUri, document.id('screen'));
+                var rdp = new wsgate.RDP(wsUri, $('screen'));
                 rdp.addEvent('alert', function(msg) {
                         alert(msg);
                         });
                 rdp.addEvent('connected', function() {
                         document.title = "FreeRDP WebConnect: connected to " +
-                        document.id('rdphost').value.trim();
-                        button = document.id("rdpconnect");
+                        $('rdphost').value.trim();
+                        button = $("rdpconnect");
                         button.removeEvents();
                         window.removeEvent('resize', OnDesktopSize);
                         /* button.value = 'Disconnect';
@@ -38,7 +46,7 @@
                         });
                 rdp.addEvent('disconnected', function() {
                         showDialog(true);
-                        button = document.id("rdpconnect");
+                        button = $("rdpconnect");
                         button.removeEvents();
                         button.value = 'Connect';
                         button.addEvent('click', RDPrun);
@@ -61,15 +69,15 @@ function ResizeCanvas(sz) {
         var w = sza[0];
         var h = sza[1];
     }
-    document.id('screen').width = w;
-    document.id('screen').height = h;
+    $('screen').width = w;
+    $('screen').height = h;
 }
 function OnDesktopSize() {
-    ResizeCanvas(document.id('dtsize').value);
+    ResizeCanvas($('dtsize').value);
 }
 function showDialog(show) {
     if (show) {
-        var dlg = document.id('maindialog');
+        var dlg = $('maindialog');
         var x = Math.round((window.getCoordinates().width - dlg.getCoordinates().width) / 2) + 'px';
         var y = Math.round((window.getCoordinates().height - dlg.getCoordinates().height) / 2) + 'px';
         dlg.setStyles({
@@ -79,12 +87,12 @@ function showDialog(show) {
                 'z-index': 999
                 }).removeClass('invisible');
     } else {
-        document.id('maindialog').addClass('invisible');
+        $('maindialog').addClass('invisible');
     }
 }
 window.addEvent('domready', function() {
-        document.id('rdpconnect').addEvent('click', RDPrun);
-        document.id('dtsize').addEvent('change', OnDesktopSize);
+        $('rdpconnect').addEvent('click', RDPrun);
+        $('dtsize').addEvent('change', OnDesktopSize);
         var tabs = new SimpleTabs('rdpdialog',{selector:'h4'});
         OnDesktopSize();
         showDialog(true);
@@ -139,9 +147,59 @@ window.addEvent('domready', function() {
                             </fieldset>
                         </form>
                     </div>
-                    <h4 title="Currently empty">Advanced</h4>
+                    <h4 title="Advanced session parameters">Advanced</h4>
                     <div>
-                        This page is intentionally blank ;)
+                        <form>
+                            <fieldset>
+                                <legend>Advanced session parameters</legend>
+                                <table>
+                                    <tr>
+                                        <td class="key"><label for="perf">Performance:</label></td>
+                                        <td>
+                                            <select id="perf" name="perf">
+                                                <option value="0">LAN</option>
+                                                <option value="1">Broadband</option>
+                                                <option value="2">Modem</option>
+                                            </select>
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td class="key"><label for="nowallp">Disable wallpaper:</label></td>
+                                        <td><input id="nowallp" name="nowallp" type="checkbox" /></td>
+                                    </tr>
+                                    <tr>
+                                        <td class="key"><label for="nowdrag">Disable full window drag:</label></td>
+                                        <td><input id="nowdrag" name="nowdrag" type="checkbox" /></td>
+                                    </tr>
+                                    <tr>
+                                        <td class="key"><label for="nomani">Disable menu animation:</label></td>
+                                        <td><input id="nomani" name="nomani" type="checkbox" /></td>
+                                    </tr>
+                                    <tr>
+                                        <td class="key"><label for="notheme">Disable theming:</label></td>
+                                        <td><input id="notheme" name="notheme" type="checkbox" /></td>
+                                    </tr>
+                                    <tr>
+                                        <td class="key"><label for="nonla">Disable network level authentication:</label></td>
+                                        <td><input id="nonla" name="nonla" type="checkbox" /></td>
+                                    </tr>
+                                    <tr>
+                                        <td class="key"><label for="notls">Disable TLS:</label></td>
+                                        <td><input id="notls" name="notls" type="checkbox" /></td>
+                                    </tr>
+                                    <tr>
+                                        <td class="key"><label for="fntlm">Force NTLM auth:</label></td>
+                                        <td>
+                                            <select id="fntlm" name="fntlm">
+                                                <option value="0">disabled</option>
+                                                <option value="1">NTLM v1</option>
+                                                <option value="2">NTLM v2</option>
+                                            </select>
+                                        </td>
+                                    </tr>
+                                </table>
+                            </fieldset>
+                        </form>
                     </div>
                     <h4 title="Show version info">About</h4>
                     <div class="about">
