@@ -21,22 +21,19 @@ namespace wsgate {
     }
 
     Png::~Png() {
+        png_destroy_write_struct(&png_ptr, &info_ptr);
     }
 
     string Png::GenerateFromARGB(int width, int height, uint8_t *data)
     {
-        png_ptr = png_create_write_struct(PNG_LIBPNG_VER_STRING, NULL, NULL, NULL);
+        png_ptr = png_create_write_struct(PNG_LIBPNG_VER_STRING, this, cbPngError, cbPngWarn);
         if (!png_ptr) {
-            throw new tracing::runtime_error("Could not allocate png_struct");
+            throw tracing::runtime_error("Could not allocate png_struct");
         }
         info_ptr = png_create_info_struct(png_ptr);
         if (!info_ptr) {
             png_destroy_write_struct(&png_ptr, (png_infopp)NULL);
-            throw new tracing::runtime_error("Could not allocate png_info_struct");
-        }
-        if (setjmp(png_jmpbuf(png_ptr))) {
-            png_destroy_write_struct(&png_ptr, &info_ptr);
-            throw new tracing::runtime_error("Could not set longjump");
+            throw tracing::runtime_error("Could not allocate png_info_struct");
         }
         png_set_write_fn(png_ptr, this, cbPngWrite, cbPngFlush);
         png_set_IHDR(png_ptr, info_ptr, width, height, 8,
@@ -63,6 +60,16 @@ namespace wsgate {
     void Png::PngFlush() {
     }
 
+    // private
+    void Png::PngFailure(bool err, const char *msg) {
+        if (err) {
+            log::err << "Png: " << (msg ? msg : "unknown error") << endl;
+            throw tracing::runtime_error(msg);
+        } else {
+            log::warn << "Png: " << (msg ? msg : "unknown warning") << endl;
+        }
+    }
+
     // private static (C callback)
     void Png::cbPngWrite(png_structp png, png_bytep data, png_size_t len) {
         Png *self = reinterpret_cast<Png *>(png_get_io_ptr(png));
@@ -78,4 +85,21 @@ namespace wsgate {
             self->PngFlush();
         }
     }
+
+    // private static (C callback)
+    void Png::cbPngError(png_structp png, png_const_charp msg) {
+        Png *self = reinterpret_cast<Png *>(png_get_error_ptr(png));
+        if (NULL != self) {
+            self->PngFailure(true, msg);
+        }
+    }
+
+    // private static (C callback)
+    void Png::cbPngWarn(png_structp png, png_const_charp msg) {
+        Png *self = reinterpret_cast<Png *>(png_get_error_ptr(png));
+        if (NULL != self) {
+            self->PngFailure(false, msg);
+        }
+    }
+
 }

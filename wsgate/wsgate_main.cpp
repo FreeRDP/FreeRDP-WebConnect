@@ -248,10 +248,6 @@ namespace wsgate {
                         nFormValue(request, "notheme", 0),
                     };
 
-                    string mode(request->FormValues("mode").m_sBody);
-                    if (mode.empty()) {
-                        mode = "echo";
-                    }
                     if (!dtsize.empty()) {
                         try {
                             vector<string> wh;
@@ -325,7 +321,7 @@ namespace wsgate {
                     }
                     response->EnableIdleTimeout(false);
                     response->EnableKeepAlive(true);
-                    if (!sh->Prepare(request->Connection(), mode, rdphost, rdpuser, rdppass, params)) {
+                    if (!sh->Prepare(request->Connection(), rdphost, rdpuser, rdppass, params)) {
                         log::warn << "Request from " << request->RemoteAddress()
                             << ": " << uri << " => 503 (RDP backend not available)" << endl;
                         response->EnableIdleTimeout(true);
@@ -584,39 +580,14 @@ namespace wsgate {
     class MyWsHandler : public wspp::wshandler
     {
         public:
-            typedef enum {
-                SimpleEcho,
-                SpeedTest,
-                Rdp
-            } Mode;
-
             MyWsHandler(EHSConnection *econn, EHS *ehs, MyRawSocketHandler *rsh)
                 : m_econn(econn)
                   , m_ehs(ehs)
                   , m_rsh(rsh)
-                  , m_emode(SimpleEcho)
         {}
 
-            void SetMode(Mode mode) {
-                m_emode = mode;
-            }
-
             virtual void on_message(std::string, std::string data) {
-                switch (m_emode) {
-                    case SimpleEcho:
-                        log::debug << "GOT Message: '" << data << "'" << endl;
-                        data.insert(0, "Yes, ");
-                        send_text(data);
-                        break;
-                    case SpeedTest:
-                        log::debug << "GOT Message, size: " << data.length() << endl;
-                        send_binary(data);
-                        break;
-                    case Rdp:
-                        // log::debug << "GOT Message, size: " << data.length() << endl;
-                        m_rsh->OnMessage(m_econn, data);
-                        break;
-                }
+                m_rsh->OnMessage(m_econn, data);
             }
             virtual void on_close() {
                 log::debug << "GOT Close" << endl;
@@ -631,17 +602,7 @@ namespace wsgate {
                 log::debug << "GOT Pong: '" << data << "'" << endl;
             }
             virtual void do_response(const std::string data) {
-                switch (m_emode) {
-                    case SimpleEcho:
-                        log::debug << "Send WS response '" << data << "'" << endl;
-                        break;
-                    case SpeedTest:
-                        log::debug << "Send WS response, size: " << data.length() << endl;
-                        break;
-                    case Rdp:
-                        // log::debug << "Send WS response, size: " << data.length() << endl;
-                        break;
-                }
+                // log::debug << "Send WS response, size: " << data.length() << endl;
                 ehs_autoptr<GenericResponse> r(new GenericResponse(0, m_econn));
                 r->SetBody(data.data(), data.length());
                 m_ehs->AddResponse(ehs_move(r));
@@ -655,7 +616,6 @@ namespace wsgate {
             EHSConnection *m_econn;
             EHS *m_ehs;
             MyRawSocketHandler *m_rsh;
-            Mode m_emode;
     };
 
     MyRawSocketHandler::MyRawSocketHandler(WsGate *parent)
@@ -691,11 +651,9 @@ namespace wsgate {
         }
     }
 
-    bool MyRawSocketHandler::Prepare(EHSConnection *conn, const string mode,
-            const string host, const string user, const string pass,
-            const WsRdpParams &params)
+    bool MyRawSocketHandler::Prepare(EHSConnection *conn, const string host,
+            const string user, const string pass, const WsRdpParams &params)
     {
-        log::debug << "Mode:             '" << mode << "'" << endl;
         log::debug << "RDP Host:         '" << host << "'" << endl;
         log::debug << "RDP Port:         '" << params.port << "'" << endl;
         log::debug << "RDP User:         '" << user << "'" << endl;
@@ -706,17 +664,8 @@ namespace wsgate {
         conn_ptr c(new wspp::wsendpoint(h.get()));
         rdp_ptr r(new RDP(h.get()));
         m_cmap[conn] = conn_tuple(c, h, r);
-        if (0 == mode.compare("echo")) {
-            dynamic_cast<MyWsHandler*>(h.get())->SetMode(MyWsHandler::SimpleEcho);
-        }
-        if (0 == mode.compare("speed")) {
-            dynamic_cast<MyWsHandler*>(h.get())->SetMode(MyWsHandler::SpeedTest);
-        }
-        if (0 == mode.compare("rdp")) {
-            dynamic_cast<MyWsHandler*>(h.get())->SetMode(MyWsHandler::Rdp);
-            r->Connect(host, user, string() /*domain*/, pass, params);
-            m_parent->RegisterRdpSession(r);
-        }
+        r->Connect(host, user, string() /*domain*/, pass, params);
+        m_parent->RegisterRdpSession(r);
         return true;
     }
 

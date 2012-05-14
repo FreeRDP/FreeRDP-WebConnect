@@ -56,158 +56,159 @@
                 showDialog(false);
                 rdp.Run();
             }
-function ResizeCanvas(sz) {
-    var w, h;
-    if (sz == 'auto') {
-        w = window.getCoordinates().width;
-        h = window.getCoordinates().height;
-        if (w % 2) {
-            w -= 1;
-        }
-    } else {
-        var sza = sz.split('x');
-        var w = sza[0];
-        var h = sza[1];
-    }
-    $('screen').width = w;
-    $('screen').height = h;
-}
-function OnDesktopSize() {
-    ResizeCanvas($('dtsize').value);
-}
-function showDialog(show) {
-    if (show) {
-        var dlg = $('maindialog');
-        var x = Math.round((window.getCoordinates().width - dlg.getCoordinates().width) / 2) + 'px';
-        var y = Math.round((window.getCoordinates().height - dlg.getCoordinates().height) / 2) + 'px';
-        dlg.setStyles({
-                'position': 'absolute',
-                'top': y,
-                'left': x,
-                'z-index': 999
-                }).removeClass('invisible');
-    } else {
-        $('maindialog').addClass('invisible');
-    }
-}
-window.addEvent('domready', function() {
-        $('rdpconnect').addEvent('click', RDPrun);
-        $('dtsize').addEvent('change', OnDesktopSize);
-        var tabs = new SimpleTabs('rdpdialog',{selector:'h4'});
-        OnDesktopSize();
-        showDialog(true);
-        window.addEvent('resize', OnDesktopSize);
-        });
-    </script>
-</head>
-<body>
-    <canvas id="screen" width="640px" height="480px">
-    <p class="error">Sorry, It looks as though your browser does not support the canvas tag.</p>
-    </canvas>
-    <noscript><p class="error">Please enable JavaScript.</p></noscript>
-    <table width="400px" id="maindialog" class="invisible">
-        <tr>
-            <td>
-                <div id="rdpdialog" class="dialog">
-                    <h4 title="Main connection settings">General</h4>
-                    <div>
-                        <form>
-                            <fieldset>
-                                <legend>Session parameters</legend>
-                                <table>
-                                    <tr>
-                                        <td class="key"><label for="host">Hostname:</label></td>
-                                        <td><input id="rdphost" type="text" name="host" value="%COOKIE_LASTHOST%" /></td>
-                                    </tr>
-                                    <tr>
-                                        <td class="key"><label for="user">User:</label></td>
-                                        <td><input id="rdpuser" type="text" name="user" value="%COOKIE_LASTUSER%" /></td>
-                                    </tr>
-                                    <tr>
-                                        <td class="key"><label for="pass">Password:</label></td>
-                                        <td><input id="rdppass" type="password" name="pass" value="%COOKIE_LASTPASS%" /></td>
-                                    </tr>
-                                    <tr>
-                                        <td class="key"><label for="dtsize">Desktop size:</label></td>
-                                        <td>
-                                            <select id="dtsize" name="dtsize">
-                                                <option>640x480</option>
-                                                <option>800x600</option>
-                                                <option>1024x768</option>
-                                                <option>1280x960</option>
-                                                <option>1280x1024</option>
-                                                <option value="auto" selected>Available Area</option>
-                                            </select>
-                                        </td>
-                                    </tr>
-                                    <tr>
-                                        <td class="buttons" colspan="2"><input id="rdpconnect" type="button" value="Connect" /></td>
-                                    </tr>
-                                </table>
-                            </fieldset>
-                        </form>
+            function ResizeCanvas(sz) {
+                var w, h;
+                if (sz == 'auto') {
+                    w = window.getCoordinates().width;
+                    h = window.getCoordinates().height;
+                    if (w % 2) {
+                        w -= 1;
+                    }
+                } else {
+                    var sza = sz.split('x');
+                    var w = sza[0];
+                    var h = sza[1];
+                }
+                $('screen').width = w;
+                $('screen').height = h;
+            }
+            function OnDesktopSize() {
+                ResizeCanvas($('dtsize').value);
+            }
+            function showDialog(show) {
+                if (show) {
+                    var dlg = $('maindialog');
+                    var x = Math.round((window.getCoordinates().width - dlg.getCoordinates().width) / 2) + 'px';
+                    var y = Math.round((window.getCoordinates().height - dlg.getCoordinates().height) / 2) + 'px';
+                    dlg.setStyles({
+                            'position': 'absolute',
+                            'top': y,
+                            'left': x,
+                            'z-index': 999
+                            }).removeClass('invisible');
+                } else {
+                    $('maindialog').addClass('invisible');
+                }
+            }
+            window.addEvent('domready', function() {
+                    $('rdpconnect').addEvent('click', RDPrun);
+                    $('dtsize').addEvent('change', OnDesktopSize);
+                    var tabs = new SimpleTabs('rdpdialog',{selector:'h4'});
+                    OnDesktopSize();
+                    showDialog(true);
+                    window.addEvent('resize', OnDesktopSize);
+                    });
+        </script>
+    </head>
+    <body>
+        <canvas id="screen" width="640px" height="480px">
+        <p class="error">Sorry, It looks as though your browser does not support the canvas tag.</p>
+        </canvas>
+        <noscript><p class="error">Please enable JavaScript.</p></noscript>
+        <table width="400px" id="maindialog" class="invisible">
+            <tr>
+                <td>
+                    <div id="rdpdialog" class="dialog">
+                        <h4 title="Main connection settings">General</h4>
+                        <div>
+                            <form>
+                                <fieldset>
+                                    <legend>Session parameters</legend>
+                                    <table>
+                                        <tr>
+                                            <td class="key"><label for="host">Hostname:</label></td>
+                                            <td><input id="rdphost" type="text" name="host" value="%COOKIE_LASTHOST%" /></td>
+                                        </tr>
+                                        <tr>
+                                            <td class="key"><label for="user">User:</label></td>
+                                            <td><input id="rdpuser" type="text" name="user" value="%COOKIE_LASTUSER%" /></td>
+                                        </tr>
+                                        <tr>
+                                            <td class="key"><label for="pass">Password:</label></td>
+                                            <td><input id="rdppass" type="password" name="pass" value="%COOKIE_LASTPASS%" /></td>
+                                        </tr>
+                                        <tr>
+                                            <td class="key"><label for="dtsize">Desktop size:</label></td>
+                                            <td>
+                                                <select id="dtsize" name="dtsize">
+                                                    <option>640x480</option>
+                                                    <option>800x600</option>
+                                                    <option>1024x768</option>
+                                                    <option>1280x960</option>
+                                                    <option>1280x1024</option>
+                                                    <option value="auto" selected>Available Area</option>
+                                                </select>
+                                            </td>
+                                        </tr>
+                                        <tr>
+                                            <td class="buttons" colspan="2"><input id="rdpconnect" type="button" value="Connect" /></td>
+                                        </tr>
+                                    </table>
+                                </fieldset>
+                            </form>
+                        </div>
+                        <h4 title="Advanced session parameters">Advanced</h4>
+                        <div>
+                            <form>
+                                <fieldset>
+                                    <legend>Advanced session parameters</legend>
+                                    <table>
+                                        <tr>
+                                            <td class="key"><label for="perf">Performance:</label></td>
+                                            <td>
+                                                <select id="perf" name="perf">
+                                                    <option value="0">LAN</option>
+                                                    <option value="1">Broadband</option>
+                                                    <option value="2">Modem</option>
+                                                </select>
+                                            </td>
+                                        </tr>
+                                        <tr>
+                                            <td class="key"><label for="nowallp">Disable wallpaper:</label></td>
+                                            <td><input id="nowallp" name="nowallp" type="checkbox" /></td>
+                                        </tr>
+                                        <tr>
+                                            <td class="key"><label for="nowdrag">Disable full window drag:</label></td>
+                                            <td><input id="nowdrag" name="nowdrag" type="checkbox" /></td>
+                                        </tr>
+                                        <tr>
+                                            <td class="key"><label for="nomani">Disable menu animation:</label></td>
+                                            <td><input id="nomani" name="nomani" type="checkbox" /></td>
+                                        </tr>
+                                        <tr>
+                                            <td class="key"><label for="notheme">Disable theming:</label></td>
+                                            <td><input id="notheme" name="notheme" type="checkbox" checked="checked" /></td>
+                                        </tr>
+                                        <tr>
+                                            <td class="key"><label for="nonla">Disable network level authentication:</label></td>
+                                            <td><input id="nonla" name="nonla" type="checkbox" /></td>
+                                        </tr>
+                                        <tr>
+                                            <td class="key"><label for="notls">Disable TLS:</label></td>
+                                            <td><input id="notls" name="notls" type="checkbox" /></td>
+                                        </tr>
+                                        <tr>
+                                            <td class="key"><label for="fntlm">Force NTLM auth:</label></td>
+                                            <td>
+                                                <select id="fntlm" name="fntlm">
+                                                    <option value="0">disabled</option>
+                                                    <option value="1">NTLM v1</option>
+                                                    <option value="2">NTLM v2</option>
+                                                </select>
+                                            </td>
+                                        </tr>
+                                    </table>
+                                </fieldset>
+                            </form>
+                        </div>
+                        <h4 title="Show version info">About</h4>
+                        <div class="about">
+                            <h2>FreeRDP WebConnect</h2>
+                            Version %VERSION%
+                        </div>
                     </div>
-                    <h4 title="Advanced session parameters">Advanced</h4>
-                    <div>
-                        <form>
-                            <fieldset>
-                                <legend>Advanced session parameters</legend>
-                                <table>
-                                    <tr>
-                                        <td class="key"><label for="perf">Performance:</label></td>
-                                        <td>
-                                            <select id="perf" name="perf">
-                                                <option value="0">LAN</option>
-                                                <option value="1">Broadband</option>
-                                                <option value="2">Modem</option>
-                                            </select>
-                                        </td>
-                                    </tr>
-                                    <tr>
-                                        <td class="key"><label for="nowallp">Disable wallpaper:</label></td>
-                                        <td><input id="nowallp" name="nowallp" type="checkbox" /></td>
-                                    </tr>
-                                    <tr>
-                                        <td class="key"><label for="nowdrag">Disable full window drag:</label></td>
-                                        <td><input id="nowdrag" name="nowdrag" type="checkbox" /></td>
-                                    </tr>
-                                    <tr>
-                                        <td class="key"><label for="nomani">Disable menu animation:</label></td>
-                                        <td><input id="nomani" name="nomani" type="checkbox" /></td>
-                                    </tr>
-                                    <tr>
-                                        <td class="key"><label for="notheme">Disable theming:</label></td>
-                                        <td><input id="notheme" name="notheme" type="checkbox" /></td>
-                                    </tr>
-                                    <tr>
-                                        <td class="key"><label for="nonla">Disable network level authentication:</label></td>
-                                        <td><input id="nonla" name="nonla" type="checkbox" /></td>
-                                    </tr>
-                                    <tr>
-                                        <td class="key"><label for="notls">Disable TLS:</label></td>
-                                        <td><input id="notls" name="notls" type="checkbox" /></td>
-                                    </tr>
-                                    <tr>
-                                        <td class="key"><label for="fntlm">Force NTLM auth:</label></td>
-                                        <td>
-                                            <select id="fntlm" name="fntlm">
-                                                <option value="0">disabled</option>
-                                                <option value="1">NTLM v1</option>
-                                                <option value="2">NTLM v2</option>
-                                            </select>
-                                        </td>
-                                    </tr>
-                                </table>
-                            </fieldset>
-                        </form>
-                    </div>
-                    <h4 title="Show version info">About</h4>
-                    <div class="about">
-                        <h2>FreeRDP WebConnect<h2>
-                        Version %VERSION%
-                    </div>
-                </div>
-            </td>
-        </tr>
-    </table>
-</body></html> 
+                </td>
+            </tr>
+        </table>
+    </body>
+</html> 

@@ -41,10 +41,13 @@ namespace wsgate {
 
             void PngWrite(png_bytep data, png_size_t len);
             void PngFlush();
+            void PngFailure(bool err, const char *msg);
 
             // C callbacks
             static void cbPngWrite(png_structp, png_bytep, png_size_t);
             static void cbPngFlush(png_structp);
+            static void cbPngError(png_structp, png_const_charp);
+            static void cbPngWarn(png_structp, png_const_charp);
     };
 }
 #endif
