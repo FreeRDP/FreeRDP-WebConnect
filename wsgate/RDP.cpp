@@ -416,9 +416,18 @@ namespace wsgate {
     }
 
     // private
-    void RDP::ContextFree(freerdp *, rdpContext *)
+    void RDP::ContextFree(freerdp *, rdpContext *ctx)
     {
         log::debug << "RDP::ContextFree" << endl;
+        if (NULL != ctx->cache) {
+            cache_free(ctx->cache);
+            ctx->cache = NULL;
+        }
+        wsgContext *wctx = reinterpret_cast<wsgContext *>(ctx);
+        if (NULL != wctx->clrconv) {
+            freerdp_clrconv_free(wctx->clrconv);
+            wctx->clrconv = NULL;
+        }
     }
 
     // private
