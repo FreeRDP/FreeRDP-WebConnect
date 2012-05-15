@@ -1,3 +1,22 @@
+/* vim: set et ts=4 sw=4 cindent:
+ *
+ * FreeRDP-WebConnect,
+ * A gateway for seamless access to your RDP-Sessions in any HTML5-compliant browser.
+ *
+ * Copyright 2012 Fritz Elfert <wsgate@fritz-elfert.de>
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 #ifdef HAVE_CONFIG_H
 # include "config.h"
 #endif
@@ -35,14 +54,18 @@ namespace wsgate {
     }
 
     void Update::BeginPaint(rdpContext*) {
+#ifdef DBGLOG_BEGINPAINT
         log::debug << "BP" << endl;
+#endif
         uint32_t op = WSOP_SC_BEGINPAINT;
         string buf(reinterpret_cast<const char *>(&op), sizeof(op));
         m_wshandler->send_binary(buf);
     }
 
     void Update::EndPaint(rdpContext*) {
+#ifdef DBGLOG_ENDPAINT
         log::debug << "EP" << endl;
+#endif
         uint32_t op = WSOP_SC_ENDPAINT;
         string buf(reinterpret_cast<const char *>(&op), sizeof(op));
         m_wshandler->send_binary(buf);
@@ -54,11 +77,15 @@ namespace wsgate {
         uint32_t op = WSOP_SC_SETBOUNDS;
         if (bounds) {
             memcpy(&lB, bounds, sizeof(rdpBounds));
+            lB.right++;
+            lB.bottom++;
         } else {
             memset(&lB, 0, sizeof(rdpBounds));
         }
-        log::debug << "SB l: " << lB.left << " t: " << lB.top
+#ifdef DBGLOG_SETBOUNDS
+        log::debug << "CL l: " << lB.left << " t: " << lB.top
             << " r: " << lB.right << " b: " << lB.bottom << endl;
+#endif
         string buf(reinterpret_cast<const char *>(&op), sizeof(op));
         buf.append(reinterpret_cast<const char *>(&lB), sizeof(lB));
         m_wshandler->send_binary(buf);
@@ -104,7 +131,7 @@ namespace wsgate {
             string buf(reinterpret_cast<const char *>(&wxbm), sizeof(wxbm));
             buf.append(reinterpret_cast<const char *>(bmd->bitmapDataStream),
                     bmd->bitmapLength);
-#if 1
+#ifdef DBGLOG_BITMAP
             log::debug << "BM" << (wxbm.cf ? " C " : " U ") << "x="
                 << wxbm.x << " y=" << wxbm.y << " w=" << wxbm.w << " h=" << wxbm.h
                 << " bpp=" << wxbm.bpp << " dw=" << wxbm.dw << " dh=" << wxbm.dh << endl;

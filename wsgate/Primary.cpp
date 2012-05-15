@@ -1,3 +1,22 @@
+/* vim: set et ts=4 sw=4 cindent:
+ *
+ * FreeRDP-WebConnect,
+ * A gateway for seamless access to your RDP-Sessions in any HTML5-compliant browser.
+ *
+ * Copyright 2012 Fritz Elfert <wsgate@fritz-elfert.de>
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 #ifdef HAVE_CONFIG_H
 # include "config.h"
 #endif
@@ -51,7 +70,9 @@ namespace wsgate {
         uint32_t rop3 = gdi_rop3_code(po->bRop);
         HCLRCONV hclrconv = reinterpret_cast<wsgContext *>(ctx)->clrconv;
         if (GDI_BS_SOLID == po->brush.style) {
+#ifdef DBGLOG_PATBLT
             log::debug << "PB S " << hex << rop3 << dec << endl;
+#endif
             struct {
                 uint32_t op;
                 int32_t x;
@@ -72,16 +93,29 @@ namespace wsgate {
             string buf(reinterpret_cast<const char *>(&tmp), sizeof(tmp));
             m_wshandler->send_binary(buf);
         } else if (GDI_BS_PATTERN ==  po->brush.style) {
+#ifdef DBGLOG_PATBLT
             log::debug << "PB P " << hex << rop3 << dec << endl;
+#endif
         } else {
+#ifdef DBGLOG_PATBLT
             log::debug << "PB style " << hex << po->brush.style << dec << endl;
+#endif
         }
     }
 
     void Primary::ScrBlt(rdpContext*, SCRBLT_ORDER* sbo) {
         // log::debug << __PRETTY_FUNCTION__ << endl;
         uint32_t rop3 = gdi_rop3_code(sbo->bRop);
-        log::debug << "SB rop3=0x" << hex << rop3 << dec << endl;
+#ifdef DBGLOG_SCRBLT
+        log::debug << "SB rop3=0x" << hex << rop3 << dec
+            << " sx=" << sbo->nXSrc
+            << " sy=" << sbo->nYSrc
+            << " x=" << sbo->nLeftRect
+            << " y=" << sbo->nTopRect
+            << " w=" << sbo->nWidth
+            << " h=" << sbo->nHeight
+            << endl;
+#endif
         struct {
             uint32_t op;
             uint32_t rop;
@@ -111,8 +145,10 @@ namespace wsgate {
         uint32_t svcolor = oro->color;
         oro->color = freerdp_color_convert_var(oro->color, 16, 32, hclrconv);
         uint32_t op = WSOP_SC_OPAQUERECT;
-        log::debug << "OR " << ": x=" << oro->nLeftRect << " y=" << oro->nTopRect
+#ifdef DBGLOG_OPAQUERECT
+        log::debug << "OR" << " x=" << oro->nLeftRect << " y=" << oro->nTopRect
             << " w=" << oro->nWidth << " h=" << oro->nHeight << " col=0x" << hex << oro->color << dec << endl;
+#endif
         string buf(reinterpret_cast<const char *>(&op), sizeof(op));
         buf.append(reinterpret_cast<const char *>(oro), sizeof(OPAQUE_RECT_ORDER));
         m_wshandler->send_binary(buf);
@@ -139,7 +175,7 @@ namespace wsgate {
         // log::debug << __PRETTY_FUNCTION__ << endl;
         HCLRCONV hclrconv = reinterpret_cast<wsgContext *>(context)->clrconv;
         uint32_t color = freerdp_color_convert_var(moro->color, 16, 32, hclrconv);
-#if 1
+#ifdef DBGLOG_MULTI_OPAQUERECT
         log::debug << "MOR color=0x" << hex << moro->color << " (0x" << color << ")" << dec
             << " nr=" << moro->numRectangles << endl;
         for (size_t i = 0; i < moro->numRectangles; ++i) {

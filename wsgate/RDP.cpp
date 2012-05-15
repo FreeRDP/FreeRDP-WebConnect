@@ -1,3 +1,22 @@
+/* vim: set et ts=4 sw=4 cindent:
+ *
+ * FreeRDP-WebConnect,
+ * A gateway for seamless access to your RDP-Sessions in any HTML5-compliant browser.
+ *
+ * Copyright 2012 Fritz Elfert <wsgate@fritz-elfert.de>
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 #ifdef HAVE_CONFIG_H
 # include "config.h"
 #endif
@@ -423,8 +442,8 @@ namespace wsgate {
         m_rdpSettings->rfx_codec = 0;
         m_rdpSettings->fastpath_output = 1;
         m_rdpSettings->color_depth = 16;
-        m_rdpSettings->frame_acknowledge = 0;
-        m_rdpSettings->large_pointer = 0;
+        m_rdpSettings->frame_acknowledge = 1;
+        m_rdpSettings->large_pointer = 1;
         m_rdpSettings->glyph_cache = 0;
         m_rdpSettings->bitmap_cache = 0;
         m_rdpSettings->offscreen_bitmap_cache = 0;
@@ -507,9 +526,11 @@ namespace wsgate {
     void RDP::Pointer_New(rdpContext* context, rdpPointer* pointer)
     {
         // log::debug << __PRETTY_FUNCTION__ << endl;
+#ifdef DBGLOG_POINTER_NEW
         log::debug << "PN id=" << m_ptrId
             << " w=" << pointer->width << " h=" << pointer->height
             << " hx=" << pointer->xPos << " hy=" << pointer->yPos << endl;
+#endif
         HCLRCONV hclrconv = reinterpret_cast<wsgContext *>(context)->clrconv;
         size_t psize = pointer->width * pointer->height * 4;
 
@@ -545,11 +566,13 @@ namespace wsgate {
     {
         // log::debug << __PRETTY_FUNCTION__ << endl;
         MyPointer *p = reinterpret_cast<MyPointer *>(pointer);
+#ifdef DBGLOG_POINTER_FREE
         if (p->id) {
             log::debug << "PF " << p->id << endl;
         } else {
             log::debug << "PF ???" << endl;
         }
+#endif
         if (p->id) {
             struct {
                 uint32_t op;
@@ -570,7 +593,9 @@ namespace wsgate {
     {
         // log::debug << __PRETTY_FUNCTION__ << endl;
         MyPointer *p = reinterpret_cast<MyPointer *>(pointer);
+#ifdef DBGLOG_POINTER_SET
         log::debug << "PS " << p->id << endl;
+#endif
         struct {
             uint32_t op;
             uint32_t id;
@@ -586,7 +611,9 @@ namespace wsgate {
     void RDP::Pointer_SetNull(rdpContext*)
     {
         // log::debug << __PRETTY_FUNCTION__ << endl;
+#ifdef DBGLOG_POINTER_SETNULL
         log::debug << "PN" << endl;
+#endif
         uint32_t op = WSOP_SC_PTR_SETNULL;
         string buf(reinterpret_cast<const char *>(&op), sizeof(op));
         m_wshandler->send_binary(buf);
@@ -596,7 +623,9 @@ namespace wsgate {
     void RDP::Pointer_SetDefault(rdpContext*)
     {
         // log::debug << __PRETTY_FUNCTION__ << endl;
+#ifdef DBGLOG_POINTER_SETDEFAULT
         log::debug << "PD" << endl;
+#endif
         uint32_t op = WSOP_SC_PTR_SETDEFAULT;
         string buf(reinterpret_cast<const char *>(&op), sizeof(op));
         m_wshandler->send_binary(buf);

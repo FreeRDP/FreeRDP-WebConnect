@@ -1,3 +1,22 @@
+/* vim: set et ts=4 sw=4 cindent:
+ *
+ * FreeRDP-WebConnect,
+ * A gateway for seamless access to your RDP-Sessions in any HTML5-compliant browser.
+ *
+ * Copyright 2012 Fritz Elfert <wsgate@fritz-elfert.de>
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 #ifndef _WSGATE_RDPCOMMON_H_
 #define _WSGATE_RDPCOMMON_H_
 
@@ -10,6 +29,20 @@ extern "C" {
 
 #include "wsgate.hpp"
 #include "wshandler.hpp"
+
+// #define DBGLOG_POINTER_NEW
+// #define DBGLOG_POINTER_FREE
+// #define DBGLOG_POINTER_SET
+// #define DBGLOG_POINTER_SETNULL
+// #define DBGLOG_POINTER_SETDEFAULT
+// #define DBGLOG_BEGINPAINT
+// #define DBGLOG_ENDPAINT
+// #define DBGLOG_SETBOUNDS
+// #define DBGLOG_BITMAP
+// #define DBGLOG_OPAQUERECT
+// #define DBGLOG_MULTI_OPAQUERECT
+// #define DBGLOG_PATBLT
+// #define DBGLOG_SCRBLT
 
 typedef struct rdp_freerdp freerdp;
 typedef struct rdp_context rdpContext;
@@ -54,19 +87,31 @@ namespace wsgate {
     } WsOPcs;
 
     /**
-     * Our set of form varables
+     * Our set of session parameters
+     * (from html form).
      */
     typedef struct {
+        /// The RDP port to connect to
         int port;
+        /// The desktop width for the RDP session.
         int width;
+        /// The desktop height for the RDP session.
         int height;
+        /// The performance flags for the RDP session.
         int perf;
+        /// The NTLM auth version.
         int fntlm;
+        /// Flag: Disable TLS.
         int notls;
+        /// Flag: Disable network level authentication.
         int nonla;
+        /// Flag: Disable wallpaper.
         int nowallp;
+        /// Flag: Disable full window drag.
         int nowdrag;
+        /// Flag: Disable menu animations.
         int nomani;
+        /// Flag: Disable theming.
         int notheme;
     } WsRdpParams;
 

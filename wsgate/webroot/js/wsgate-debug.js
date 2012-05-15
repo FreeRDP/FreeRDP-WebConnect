@@ -88,7 +88,7 @@ wsgate.RDP = new Class( {
      * Main message loop.
      */
     _pmsg: function(data) { // process a binary RDP message from our queue
-        var op, hdr, count, rects, bmdata, rgba, compressed, i, offs, x, y, w, h, dw, dh, bpp, color, len;
+        var op, hdr, count, rects, bmdata, rgba, compressed, i, offs, x, y, sx, sy, w, h, dw, dh, bpp, color, len;
         op = new Uint32Array(data, 0, 1);
         switch (op[0]) {
             case 0:
@@ -126,8 +126,7 @@ wsgate.RDP = new Class( {
                 compressed =  (hdr[7] != 0);
                 len = hdr[8];
                 if ((bpp == 16) || (bpp == 15)) {
-                    if (this._ckclp(x, y) && this._ckclp(x + dw, y + dh))
-                    {
+                    if (this._ckclp(x, y) && this._ckclp(x + dw, y + dh)) {
                         // wsgate.log.debug('BMi:',(compressed ? ' C ' : ' U '),' x=',x,'y=',y,' w=',w,' h=',h,' l=',len);
                         var outB = this.cctx.createImageData(w, h);
                         if (compressed) {
@@ -215,9 +214,22 @@ wsgate.RDP = new Class( {
                 // ScrBlt
                 // rop3, x, y, w, h, sx, sy
                 hdr = new Int32Array(data, 8, 6);
-                if ((hdr[2] > 0) && (hdr[3] > 0)) {
+                x = hdr[0];
+                y = hdr[1];
+                w = hdr[2];
+                h = hdr[3];
+                sx = hdr[4];
+                sy = hdr[5];
+                if ((w > 0) && (h > 0)) {
                     if (this._sROP(new Uint32Array(data, 4, 1)[0])) {
-                        this.cctx.putImageData(this.cctx.getImageData(hdr[4], hdr[5], hdr[2], hdr[3]), hdr[0], hdr[1]);
+                        if (this._ckclp(x, y) && this._ckclp(x + w, y + h)) {
+                            // No clipping necessary
+                            this.cctx.putImageData(this.cctx.getImageData(sx, sy, w, h), x, y);
+                        } else {
+                            // Clipping necessary
+                            this.bctx.putImageData(this.cctx.getImageData(sx, sy, w, h), 0, 0);
+                            this.cctx.drawImage(this.bstore, 0, 0, w, h, x, y, w, h);
+                        }
                     }
                 } else {
                     wsgate.log.warn('ScrBlt: width and/or height is zero');

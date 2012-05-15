@@ -1,11 +1,16 @@
-Minimalistic build instructions
+Minimalistic build instructions (from GIT checkout)
 
 Prerequisites:
 
-autotools, g++, boost-devel, pcre-devel, openssl-devel, ehs-devel >= 1.5.0-114
+autotools, g++, boost-devel, pcre-devel, openssl-devel, libpng-devel,
+ehs-devel >= 1.5.0-114, FreeRDP GIT-HEAD,
+
 (For tracing exceptions additionally elfutils-devel or bfd-devel)
 
 The EHS package is available at http://sourceforge.net/projects/ehs/ (Source-tarball, windows-package) and at http://download.opensuse.org/repositories/home:/felfert/Fedora_15/ or http://download.opensuse.org/repositories/home:/felfert/Fedora_16/ (RPMs for F15 and F16)
+
+Suitable prebuild packages of FreeRDP-GIT for various distributions can be found at
+http://download.opensuse.org/repositories/home:/felfert/*/
 
 Only after initial checkout, run make -f Makefile.am
  
@@ -23,7 +28,8 @@ make dist-platform
 
 mingw32 cross-build on Fedora:
 Prerequisites: The mingw32-aequivalent of the devel packages, for generating
-an installer executable: wine, InnoSetup (installed in wine)
+an installer executable: wine and iscc.
+The iscc package is available at http://download.opensuse.org/repositories/home:/felfert/Fedora_16/
 
 mingw32-configure
 make
@@ -31,8 +37,5 @@ make
 mingw32 cross-build of an installer on Fedora:
 
 mingw32-configure \
-    --with-dllpath=/usr/i686-pc-mingw32/sys-root/mingw/bin \
-    --with-wine-iscc="$HOME/.wine/drive_c/Program Files/Inno Setup 5/ISCC.exe"
-
+    --with-dllpath=/usr/i686-pc-mingw32/sys-root/mingw/bin
 make dist-platform
-
