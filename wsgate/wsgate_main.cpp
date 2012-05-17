@@ -37,6 +37,7 @@
 #include <boost/filesystem/fstream.hpp>
 #include <boost/date_time/posix_time/posix_time.hpp>
 #include <boost/tuple/tuple.hpp>
+#include <boost/regex.hpp>
 
 #ifdef HAVE_SIGNAL_H
 # include <signal.h>
@@ -80,11 +81,13 @@
 #endif
 
 using namespace std;
+using boost::algorithm::iequals;
 using boost::algorithm::to_lower_copy;
 using boost::algorithm::ends_with;
 using boost::algorithm::replace_all;
 using boost::algorithm::to_upper_copy;
 using boost::algorithm::trim_right_copy_if;
+using boost::algorithm::trim;
 using boost::algorithm::is_any_of;
 using boost::algorithm::split;
 namespace po = boost::program_options;
@@ -149,6 +152,25 @@ namespace wsgate {
                 , m_sPidFile()
                 , m_bDebug(false)
                 , m_SessionMap()
+                , m_allowedHosts()
+                , m_deniedHosts()
+                , m_bOrderDenyAllow(true)
+                , m_bOverrideRdpHost(false)
+                , m_bOverrideRdpPort(false)
+                , m_bOverrideRdpUser(false)
+                , m_bOverrideRdpPass(false)
+                , m_bOverrideRdpPerf(false)
+                , m_bOverrideRdpNowallp(false)
+                , m_bOverrideRdpNowdrag(false)
+                , m_bOverrideRdpNomani(false)
+                , m_bOverrideRdpNotheme(false)
+                , m_bOverrideRdpNotls(false)
+                , m_bOverrideRdpNonla(false)
+                , m_bOverrideRdpFntlm(false)
+                , m_sRdpOverrideHost()
+                , m_sRdpOverrideUser()
+                , m_sRdpOverridePass()
+                , m_RdpOverrideParams()
                 {
                 }
 
@@ -228,18 +250,63 @@ namespace wsgate {
                     string rdpuser(request->FormValues("user").m_sBody);
                     string rdppass(base64_decode(request->FormValues("pass").m_sBody));
 
+                    if (m_bOverrideRdpHost) {
+                        rdphost.assign(m_sRdpOverrideHost);
+                    }
+                    if (m_bOverrideRdpUser) {
+                        rdpuser.assign(m_sRdpOverrideUser);
+                    }
+                    if (m_bOverrideRdpPass) {
+                        rdppass.assign(m_sRdpOverridePass);
+                    }
+                    bool denied = true;
+                    vector<boost::regex>::iterator ri;
+                    if (m_bOrderDenyAllow) {
+                        denied = false;
+                        for (ri = m_deniedHosts.begin(); ri != m_deniedHosts.end(); ++ri) {
+                            if (regex_match(rdphost, *ri)) {
+                                denied = true;
+                                break;
+                            }
+                        }
+                        for (ri = m_allowedHosts.begin(); ri != m_allowedHosts.end(); ++ri) {
+                            if (regex_match(rdphost, *ri)) {
+                                denied = false;
+                                break;
+                            }
+                        }
+                    } else {
+                        for (ri = m_allowedHosts.begin(); ri != m_allowedHosts.end(); ++ri) {
+                            if (regex_match(rdphost, *ri)) {
+                                denied = false;
+                                break;
+                            }
+                        }
+                        for (ri = m_deniedHosts.begin(); ri != m_deniedHosts.end(); ++ri) {
+                            if (regex_match(rdphost, *ri)) {
+                                denied = true;
+                                break;
+                            }
+                        }
+                    }
+                    if (denied) {
+                        log::warn << "Connect from " << request->RemoteAddress()
+                            << " to " << rdphost << " denied by access rules" << endl;
+                        return HTTPRESPONSECODE_403_FORBIDDEN;
+                    }
+
                     WsRdpParams params = {
                         nFormValue(request, "port", 3389),
                         1024,
                         768,
-                        nFormValue(request, "perf", 0),
-                        nFormValue(request, "fntlm", 0),
-                        nFormValue(request, "notls", 0),
-                        nFormValue(request, "nonla", 0),
-                        nFormValue(request, "nowallp", 0),
-                        nFormValue(request, "nowdrag", 0),
-                        nFormValue(request, "nomani", 0),
-                        nFormValue(request, "notheme", 0),
+                        m_bOverrideRdpPerf ? m_RdpOverrideParams.perf : nFormValue(request, "perf", 0),
+                        m_bOverrideRdpFntlm ? m_RdpOverrideParams.fntlm : nFormValue(request, "fntlm", 0),
+                        m_bOverrideRdpNotls ? m_RdpOverrideParams.notls : nFormValue(request, "notls", 0),
+                        m_bOverrideRdpNonla ? m_RdpOverrideParams.nonla : nFormValue(request, "nonla", 0),
+                        m_bOverrideRdpNowallp ? m_RdpOverrideParams.nowallp : nFormValue(request, "nowallp", 0),
+                        m_bOverrideRdpNowdrag ? m_RdpOverrideParams.nowdrag : nFormValue(request, "nowdrag", 0),
+                        m_bOverrideRdpNomani ? m_RdpOverrideParams.nomani : nFormValue(request, "nomani", 0),
+                        m_bOverrideRdpNotheme ? m_RdpOverrideParams.notheme : nFormValue(request, "notheme", 0),
                     };
 
                     if (!dtsize.empty()) {
@@ -355,17 +422,25 @@ namespace wsgate {
                         setcookie["value"] = rdpuser;
                         response->SetCookie(setcookie);
                     }
-                    if (rdppass.empty()) {
-                        delcookie["name"] = "lastpass";
-                        delcookie["value"] = base64_encode(
-                                reinterpret_cast<const unsigned char *>("%20"), 3);
-                        response->SetCookie(delcookie);
-                    } else {
+                    if (m_bOverrideRdpPass) {
+                        // Don't expose real RDP password to browser
                         setcookie["name"] = "lastpass";
                         setcookie["value"] = base64_encode(
-                                reinterpret_cast<const unsigned char *>(rdppass.c_str()),
-                                rdppass.length());
+                                reinterpret_cast<const unsigned char *>("SomthingUseless"), 15);
                         response->SetCookie(setcookie);
+                    } else {
+                        if (rdppass.empty()) {
+                            delcookie["name"] = "lastpass";
+                            delcookie["value"] = base64_encode(
+                                    reinterpret_cast<const unsigned char *>("%20"), 3);
+                            response->SetCookie(delcookie);
+                        } else {
+                            setcookie["name"] = "lastpass";
+                            setcookie["value"] = base64_encode(
+                                    reinterpret_cast<const unsigned char *>(rdppass.c_str()),
+                                    rdppass.length());
+                            response->SetCookie(setcookie);
+                        }
                     }
 
                     response->RemoveHeader("Content-Type");
@@ -454,14 +529,73 @@ namespace wsgate {
                         << request->LocalPort() << "/wsgate";
                     replace_all(body, "%WSURI%", oss.str());
                     replace_all(body, "%JSDEBUG%", (m_bDebug ? "-debug" : ""));
-                    string tmp(request->Cookies("lastuser"));
+                    string tmp;
+                    tmp.assign(m_bOverrideRdpUser ? m_sRdpOverrideUser : request->Cookies("lastuser"));
                     replace_all(body, "%COOKIE_LASTUSER%", tmp);
-                    tmp = base64_decode(request->Cookies("lastpass"));
+                    tmp.assign(m_bOverrideRdpPass ? "SomthingUseless" : base64_decode(request->Cookies("lastpass")));
                     replace_all(body, "%COOKIE_LASTPASS%", tmp);
-                    tmp = request->Cookies("lasthost");
+                    tmp.assign(m_bOverrideRdpHost ? m_sRdpOverrideHost : request->Cookies("lasthost"));
                     replace_all(body, "%COOKIE_LASTHOST%", tmp);
                     tmp.assign(VERSION).append(".").append(GITREV);
                     replace_all(body, "%VERSION%", tmp);
+                    if (m_bOverrideRdpPerf) {
+                        replace_all(body, "%DISABLED_PERF%", "disabled=\"disabled\"");
+                        replace_all(body, "%SELECTED_PERF0%", (0 == m_RdpOverrideParams.perf) ? "selected" : "");
+                        replace_all(body, "%SELECTED_PERF1%", (1 == m_RdpOverrideParams.perf) ? "selected" : "");
+                        replace_all(body, "%SELECTED_PERF2%", (2 == m_RdpOverrideParams.perf) ? "selected" : "");
+                    } else {
+                        replace_all(body, "%DISABLED_PERF%", "");
+                        replace_all(body, "%SELECTED_PERF0%", "");
+                        replace_all(body, "%SELECTED_PERF1%", "");
+                        replace_all(body, "%SELECTED_PERF2%", "");
+                    }
+                    if (m_bOverrideRdpFntlm) {
+                        replace_all(body, "%DISABLED_FNTLM%", "disabled=\"disabled\"");
+                        replace_all(body, "%SELECTED_FNTLM0%", (0 == m_RdpOverrideParams.fntlm) ? "selected" : "");
+                        replace_all(body, "%SELECTED_FNTLM1%", (1 == m_RdpOverrideParams.fntlm) ? "selected" : "");
+                        replace_all(body, "%SELECTED_FNTLM2%", (2 == m_RdpOverrideParams.fntlm) ? "selected" : "");
+                    } else {
+                        replace_all(body, "%DISABLED_FNTLM%", "");
+                        replace_all(body, "%SELECTED_FNTLM0%", "");
+                        replace_all(body, "%SELECTED_FNTLM1%", "");
+                        replace_all(body, "%SELECTED_FNTLM2%", "");
+                    }
+                    if (m_bOverrideRdpNowallp) {
+                        tmp.assign("disabled=\"disabled\"").append((m_RdpOverrideParams.nowallp) ? " checked=\"checked\"" : "");
+                    } else {
+                        tmp.assign("");
+                    }
+                    replace_all(body, "%CHECKED_NOWALLP%", tmp);
+                    if (m_bOverrideRdpNowdrag) {
+                        tmp.assign("disabled=\"disabled\"").append((m_RdpOverrideParams.nowdrag) ? " checked=\"checked\"" : "");
+                    } else {
+                        tmp.assign("");
+                    }
+                    replace_all(body, "%CHECKED_NOWDRAG%", tmp);
+                    if (m_bOverrideRdpNomani) {
+                        tmp.assign("disabled=\"disabled\"").append((m_RdpOverrideParams.nomani) ? " checked=\"checked\"" : "");
+                    } else {
+                        tmp.assign("");
+                    }
+                    replace_all(body, "%CHECKED_NOMANI%", tmp);
+                    if (m_bOverrideRdpNotheme) {
+                        tmp.assign("disabled=\"disabled\"").append((m_RdpOverrideParams.notheme) ? " checked=\"checked\"" : "");
+                    } else {
+                        tmp.assign("");
+                    }
+                    replace_all(body, "%CHECKED_NOTHEME%", tmp);
+                    if (m_bOverrideRdpNotls) {
+                        tmp.assign("disabled=\"disabled\"").append((m_RdpOverrideParams.notls) ? " checked=\"checked\"" : "");
+                    } else {
+                        tmp.assign("");
+                    }
+                    replace_all(body, "%CHECKED_NOTLS%", tmp);
+                    if (m_bOverrideRdpNonla) {
+                        tmp.assign("disabled=\"disabled\"").append((m_RdpOverrideParams.nonla) ? " checked=\"checked\"" : "");
+                    } else {
+                        tmp.assign("");
+                    }
+                    replace_all(body, "%CHECKED_NONLA%", tmp);
                 }
                 switch (mt) {
                     case TEXT:
@@ -492,6 +626,63 @@ namespace wsgate {
                 return HTTPRESPONSECODE_200_OK;
             }
 
+            void ConvertToPattern(string &wildcards) {
+                boost::replace_all(wildcards, "\\", "\\\\");
+                boost::replace_all(wildcards, "^", "\\^");
+                boost::replace_all(wildcards, ".", "\\.");
+                boost::replace_all(wildcards, "$", "\\$");
+                boost::replace_all(wildcards, "|", "\\|");
+                boost::replace_all(wildcards, "(", "\\(");
+                boost::replace_all(wildcards, ")", "\\)");
+                boost::replace_all(wildcards, "[", "\\[");
+                boost::replace_all(wildcards, "]", "\\]");
+                boost::replace_all(wildcards, "*", "\\*");
+                boost::replace_all(wildcards, "+", "\\+");
+                boost::replace_all(wildcards, "?", "\\?");
+                boost::replace_all(wildcards, "/", "\\/");
+                boost::replace_all(wildcards, "\\?", ".");
+                boost::replace_all(wildcards, "\\*", ".*");
+                wildcards.insert(0, "^").append("$");
+            }
+
+            bool SetOrder(const string &order) {
+                vector<string> parts;
+                boost::split(parts, order, is_any_of(","));
+                if (2 == parts.size()) {
+                    trim(parts[0]);
+                    trim(parts[1]);
+                    if (iequals(parts[0],"deny") && iequals(parts[1],"allow")) {
+                        m_bOrderDenyAllow = true;
+                        return true;
+                    }
+                    if (iequals(parts[0],"allow") && iequals(parts[1],"deny")) {
+                        m_bOrderDenyAllow = false;
+                        return true;
+                    }
+                }
+                return false;
+            }
+
+            void SetAllowedHosts(const vector<string> &hosts) {
+                vector<string> tmp(hosts);
+                vector<string>::iterator i;
+                for (i = tmp.begin(); i != tmp.end(); ++i) {
+                    ConvertToPattern(*i);
+                    boost::regex re(*i, boost::regex::icase);
+                    m_allowedHosts.push_back(re);
+                }
+            }
+
+            void SetDeniedHosts(const vector<string> &hosts) {
+                vector<string> tmp(hosts);
+                vector<string>::iterator i;
+                for (i = tmp.begin(); i != tmp.end(); ++i) {
+                    ConvertToPattern(*i);
+                    boost::regex re(*i, boost::regex::icase);
+                    m_deniedHosts.push_back(re);
+                }
+            }
+
             void SetHostname(const string &name) {
                 m_sHostname = name;
             }
@@ -506,6 +697,66 @@ namespace wsgate {
 
             void SetDebug(const bool debug) {
                 m_bDebug = debug;
+            }
+
+            void SetOverrideHost(const string &s) {
+                m_sRdpOverrideHost = s;
+                m_bOverrideRdpHost = true;
+            }
+
+            void SetOverrideUser(const string &s) {
+                m_sRdpOverrideUser = s;
+                m_bOverrideRdpUser = true;
+            }
+
+            void SetOverridePass(const string &s) {
+                m_sRdpOverridePass = s;
+                m_bOverrideRdpPass = true;
+            }
+
+            void SetOverridePort(int n) {
+                m_RdpOverrideParams.port = n;
+                m_bOverrideRdpPort = true;
+            }
+
+            void SetOverridePerf(int n) {
+                m_RdpOverrideParams.perf = n;
+                m_bOverrideRdpPerf = true;
+            }
+
+            void SetOverrideFntlm(int n) {
+                m_RdpOverrideParams.fntlm = n;
+                m_bOverrideRdpFntlm = true;
+            }
+
+            void SetOverrideNotls(bool b) {
+                m_RdpOverrideParams.notls = b ? 1 : 0;
+                m_bOverrideRdpNotls = true;
+            }
+
+            void SetOverrideNonla(bool b) {
+                m_RdpOverrideParams.nonla = b ? 1 : 0;
+                m_bOverrideRdpNonla = true;
+            }
+
+            void SetOverrideNowallp(bool b) {
+                m_RdpOverrideParams.nowallp = b ? 1 : 0;
+                m_bOverrideRdpNowallp = true;
+            }
+
+            void SetOverrideNowdrag(bool b) {
+                m_RdpOverrideParams.nowdrag = b ? 1 : 0;
+                m_bOverrideRdpNowdrag = true;
+            }
+
+            void SetOverrideNomani(bool b) {
+                m_RdpOverrideParams.nomani = b ? 1 : 0;
+                m_bOverrideRdpNomani = true;
+            }
+
+            void SetOverrideNotheme(bool b) {
+                m_RdpOverrideParams.notheme = b ? 1 : 0;
+                m_bOverrideRdpNotheme = true;
             }
 
             void RegisterRdpSession(rdp_ptr rdp) {
@@ -526,6 +777,25 @@ namespace wsgate {
             string m_sPidFile;
             bool m_bDebug;
             SessionMap m_SessionMap;
+            vector<boost::regex> m_allowedHosts;
+            vector<boost::regex> m_deniedHosts;
+            bool m_bOrderDenyAllow;
+            bool m_bOverrideRdpHost;
+            bool m_bOverrideRdpPort;
+            bool m_bOverrideRdpUser;
+            bool m_bOverrideRdpPass;
+            bool m_bOverrideRdpPerf;
+            bool m_bOverrideRdpNowallp;
+            bool m_bOverrideRdpNowdrag;
+            bool m_bOverrideRdpNomani;
+            bool m_bOverrideRdpNotheme;
+            bool m_bOverrideRdpNotls;
+            bool m_bOverrideRdpNonla;
+            bool m_bOverrideRdpFntlm;
+            string m_sRdpOverrideHost;
+            string m_sRdpOverrideUser;
+            string m_sRdpOverridePass;
+            WsRdpParams m_RdpOverrideParams;
     };
 
 #ifndef _WIN32
@@ -665,6 +935,38 @@ namespace wsgate {
 
 }
 
+static bool str2bool(const string &s) {
+    string v(s);
+    trim(v);
+    if (!v.empty()) {
+        if (iequals(v, "true")) {
+            return true;
+        }
+        if (iequals(v, "yes")) {
+            return true;
+        }
+        if (iequals(v, "on")) {
+            return true;
+        }
+        if (iequals(v, "1")) {
+            return true;
+        }
+        if (iequals(v, "false")) {
+            return false;
+        }
+        if (iequals(v, "no")) {
+            return false;
+        }
+        if (iequals(v, "off")) {
+            return false;
+        }
+        if (iequals(v, "0")) {
+            return false;
+        }
+    }
+    throw tracing::invalid_argument("Invalid boolean value");
+}
+
 static bool g_signaled = false;
 #ifdef _WIN32
 static bool g_service_background = true;
@@ -685,6 +987,7 @@ int main (int argc, char **argv)
 {
     wsgate::logger log("wsgate");
 
+    // commandline options
     po::options_description desc("Supported options");
     desc.add_options()
         ("help,h", "Show this message and exit.")
@@ -695,6 +998,7 @@ int main (int argc, char **argv)
         ("config,c", po::value<string>()->default_value(DEFAULTCFG), "Specify config file")
         ;
 
+    // config file options
     po::options_description cfg("");
     cfg.add_options()
         ("global.daemon", po::value<string>(), "enable/disable daemon mode")
@@ -713,6 +1017,22 @@ int main (int argc, char **argv)
         ("threading.poolsize", po::value<int>(), "specify threading pool size")
         ("http.maxrequestsize", po::value<unsigned long>(), "specify maximum http request size")
         ("http.documentroot", po::value<string>(), "specify http document root")
+        ("acl.allow", po::value<vector<string>>()->multitoken(), "Allowed destination hosts or nets")
+        ("acl.deny", po::value<vector<string>>()->multitoken(), "Denied destination hosts or nets")
+        ("acl.order", po::value<string>(), "Order (deny,allow or allow,deny)")
+        ("rdpoverride.host", po::value<string>(), "Predefined RDP destination host")
+        ("rdpoverride.port", po::value<uint16_t>(), "Predefined RDP port")
+        ("rdpoverride.user", po::value<string>(), "Predefined RDP user")
+        ("rdpoverride.pass", po::value<string>(), "Predefined RDP password")
+        ("rdpoverride.performance", po::value<int>(), "Predefined RDP performance")
+        ("rdpoverride.nowallpaper", po::value<string>(), "Predefined RDP flag: No wallpaper")
+        ("rdpoverride.nofullwindowdrag", po::value<string>(), "Predefined RDP flag: No full window drag")
+        ("rdpoverride.nomenuanimation", po::value<string>(), "Predefined RDP flag: No full menu animation")
+        ("rdpoverride.notheming", po::value<string>(), "Predefined RDP flag: No theming")
+        ("rdpoverride.notls", po::value<string>(), "Predefined RDP flag: Disable TLS")
+        ("rdpoverride.nonla", po::value<string>(), "Predefined RDP flag: Disable NLA")
+        ("rdpoverride.forcentlm", po::value<int>(), "Predefined RDP flag: Force NTLM")
+        ("rdpoverride.size", po::value<string>(), "Predefined RDP desktop size")
         ;
 
     po::variables_map vm;
@@ -764,7 +1084,7 @@ int main (int argc, char **argv)
 
     // Examine values from config file
     if (vm.count("global.debug")) {
-        srv.SetDebug(0 == vm["global.debug"].as<string>().compare("true"));
+        srv.SetDebug(str2bool(vm["global.debug"].as<string>()));
     }
 
     if (vm.count("global.logmask")) {
@@ -788,6 +1108,61 @@ int main (int argc, char **argv)
         return -1;
     }
 
+    if (vm.count("acl.order")) {
+        if (!srv.SetOrder(vm["acl.order"].as<string>())) {
+            cerr << "Invalid order directive." << endl;
+            return -1;
+        }
+    }
+
+    if (vm.count("acl.allow")) {
+        srv.SetAllowedHosts(vm["acl.allow"].as<vector <string>>());
+    }
+    if (vm.count("acl.deny")) {
+        srv.SetDeniedHosts(vm["acl.allow"].as<vector <string>>());
+    }
+    if (vm.count("rdpoverride.host")) {
+        srv.SetOverrideHost(vm["rdpoverride.host"].as<string>());
+    }
+
+    try {
+        if (vm.count("rdpoverride.user")) {
+            srv.SetOverrideUser(vm["rdpoverride.user"].as<string>());
+        }
+        if (vm.count("rdpoverride.pass")) {
+            srv.SetOverridePass(vm["rdpoverride.pass"].as<string>());
+        }
+        if (vm.count("rdpoverride.port")) {
+            srv.SetOverridePort(vm["rdpoverride.port"].as<int>());
+        }
+        if (vm.count("rdpoverride.performance")) {
+            srv.SetOverridePerf(vm["rdpoverride.performance"].as<int>());
+        }
+        if (vm.count("rdpoverride.forcentlm")) {
+            srv.SetOverrideFntlm(vm["rdpoverride.forcentlm"].as<int>());
+        }
+        if (vm.count("rdpoverride.nowallpaper")) {
+            srv.SetOverrideNowallp(str2bool(vm["rdpoverride.nowallpaper"].as<string>()));
+        }
+        if (vm.count("rdpoverride.nofullwindowdrag")) {
+            srv.SetOverrideNowdrag(str2bool(vm["rdpoverride.nofullwindowdrag"].as<string>()));
+        }
+        if (vm.count("rdpoverride.nomenuanimation")) {
+            srv.SetOverrideNomani(str2bool(vm["rdpoverride.nomenuanimation"].as<string>()));
+        }
+        if (vm.count("rdpoverride.notheming")) {
+            srv.SetOverrideNotheme(str2bool(vm["rdpoverride.notheming"].as<string>()));
+        }
+        if (vm.count("rdpoverride.notls")) {
+            srv.SetOverrideNotls(str2bool(vm["rdpoverride.notls"].as<string>()));
+        }
+        if (vm.count("rdpoverride.nonla")) {
+            srv.SetOverrideNonla(str2bool(vm["rdpoverride.nonla"].as<string>()));
+        }
+    } catch (const tracing::invalid_argument & e) {
+        cerr << e.what() << endl;
+        return -1;
+    }
 
     if (vm.count("global.hostname")) {
         srv.SetHostname(vm["global.hostname"].as<string>());
@@ -868,7 +1243,7 @@ int main (int argc, char **argv)
 #else
     bool daemon = false;
     if (vm.count("global.daemon") && (0 == vm.count("foreground"))) {
-        daemon = (0 == vm["global.daemon"].as<string>().compare("true"));
+        daemon = (str2bool(vm["global.daemon"].as<string>()));
         if (daemon) {
             pid_t pid = fork();
             switch (pid) {

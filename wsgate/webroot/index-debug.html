@@ -29,7 +29,7 @@
                     + '&nonla=' + ($('nonla').checked ? '1' : '0')
                     + '&notls=' + ($('notls').checked ? '1' : '0')
                     + '&dtsize=' + $('screen').width + 'x' + $('screen').height
-                    + '&mode=rdp';
+                    ;
                 var rdp = new wsgate.RDP(wsUri, $('screen'));
                 rdp.addEvent('alert', function(msg) {
                         alert(msg);
@@ -97,7 +97,7 @@
                     OnDesktopSize();
                     showDialog(true);
                     window.addEvent('resize', OnDesktopSize);
-                    });
+            });
         </script>
     </head>
     <body>
@@ -156,44 +156,44 @@
                                         <tr>
                                             <td class="key"><label for="perf">Performance:</label></td>
                                             <td>
-                                                <select id="perf" name="perf">
-                                                    <option value="0">LAN</option>
-                                                    <option value="1">Broadband</option>
-                                                    <option value="2">Modem</option>
+                                                <select id="perf" name="perf" %DISABLED_PERF%>
+                                                    <option value="0" %SELECTED_PERF0%>LAN</option>
+                                                    <option value="1" %SELECTED_PERF1%>Broadband</option>
+                                                    <option value="2" %SELECTED_PERF2%>Modem</option>
                                                 </select>
                                             </td>
                                         </tr>
                                         <tr>
                                             <td class="key"><label for="nowallp">Disable wallpaper:</label></td>
-                                            <td><input id="nowallp" name="nowallp" type="checkbox" /></td>
+                                            <td><input id="nowallp" name="nowallp" type="checkbox" %CHECKED_NOWALLP%/></td>
                                         </tr>
                                         <tr>
                                             <td class="key"><label for="nowdrag">Disable full window drag:</label></td>
-                                            <td><input id="nowdrag" name="nowdrag" type="checkbox" /></td>
+                                            <td><input id="nowdrag" name="nowdrag" type="checkbox" %CHECKED_NOWDRAG%/></td>
                                         </tr>
                                         <tr>
                                             <td class="key"><label for="nomani">Disable menu animation:</label></td>
-                                            <td><input id="nomani" name="nomani" type="checkbox" /></td>
+                                            <td><input id="nomani" name="nomani" type="checkbox" %CHECKED_NOMANI%/></td>
                                         </tr>
                                         <tr>
                                             <td class="key"><label for="notheme">Disable theming:</label></td>
-                                            <td><input id="notheme" name="notheme" type="checkbox" checked="checked" /></td>
+                                            <td><input id="notheme" name="notheme" type="checkbox" %CHECKED_NOTHEME%/></td>
                                         </tr>
                                         <tr>
                                             <td class="key"><label for="nonla">Disable network level authentication:</label></td>
-                                            <td><input id="nonla" name="nonla" type="checkbox" /></td>
+                                            <td><input id="nonla" name="nonla" type="checkbox" %CHECKED_NONLA%/></td>
                                         </tr>
                                         <tr>
                                             <td class="key"><label for="notls">Disable TLS:</label></td>
-                                            <td><input id="notls" name="notls" type="checkbox" /></td>
+                                            <td><input id="notls" name="notls" type="checkbox" %CHECKED_NOTLS%/></td>
                                         </tr>
                                         <tr>
                                             <td class="key"><label for="fntlm">Force NTLM auth:</label></td>
                                             <td>
-                                                <select id="fntlm" name="fntlm">
-                                                    <option value="0">disabled</option>
-                                                    <option value="1">NTLM v1</option>
-                                                    <option value="2">NTLM v2</option>
+                                                <select id="fntlm" name="fntlm" %DISABLED_FNTLM%>
+                                                    <option value="0" %SELECTED_FNTLM0%>disabled</option>
+                                                    <option value="1" %SELECTED_FNTLM1%>NTLM v1</option>
+                                                    <option value="2" %SELECTED_FNTLM2%>NTLM v2</option>
                                                 </select>
                                             </td>
                                         </tr>
