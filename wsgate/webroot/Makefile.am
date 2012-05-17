@@ -21,5 +21,5 @@ CLEANFILES = index.html css/style.css $(JS_GENERATED)
 
 MAINTAINERCLEANFILES = Makefile.in
 
-EXTRA_DIST = index-debug.html favicon.ico \
+EXTRA_DIST = index-debug.html favicon.ico FreeRDP_Logo.png \
 	css/style-debug.css $(JS_SOURCES)
