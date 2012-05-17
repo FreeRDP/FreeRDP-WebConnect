@@ -178,6 +178,7 @@ namespace wsgate {
                 , m_sConfigFile()
                 , m_pVm(NULL)
                 , m_bDaemon(false)
+                , m_bRedirect(false)
                 {
                 }
 
@@ -186,10 +187,8 @@ namespace wsgate {
                 if (!m_sPidFile.empty()) {
                     unlink(m_sPidFile.c_str());
                 }
-                if (NULL != m_pVm) {
-                    delete m_pVm;
-                    m_pVm = NULL;
-                }
+                delete m_pVm;
+                m_pVm = NULL;
             }
 
             HttpResponse *HandleThreadException(ehs_threadid_t, HttpRequest *request, exception &ex)
@@ -210,6 +209,8 @@ namespace wsgate {
                         body.insert(body.find("</body>"), tmsg);
                         ret->SetBody(body.c_str(), body.length());
                     }
+                } else {
+                    ret = HttpResponse::Error(HTTPRESPONSECODE_500_INTERNALSERVERERROR, request);
                 }
                 return ret;
             }
@@ -218,16 +219,21 @@ namespace wsgate {
             ResponseCode HandleRequest(HttpRequest *request, HttpResponse *response)
             {
                 if (REQUESTMETHOD_GET != request->Method()) {
-                    // We cuurently need to support GET requests only.
+                    // We currently need to support GET requests only.
                     return HTTPRESPONSECODE_400_BADREQUEST;
                 }
 
                 string uri(request->Uri());
-                size_t pos = uri.find('?');
-                if (uri.npos != pos) {
-                    uri.erase(pos);
-                }
                 string thisHost(m_sHostname.empty() ? request->Headers("Host") : m_sHostname);
+
+                if (m_bRedirect && (!request->Secure())) {
+                    string dest(boost::starts_with(uri, "/wsgate?") ? "wss" : "https");
+                    dest.append("://").append(thisHost).append(uri);
+                    response->SetHeader("Location", dest);
+                    log::info << "Request from " << request->RemoteAddress()
+                        << ": " << uri << " => 301 Moved permanently" << endl;
+                    return HTTPRESPONSECODE_301_MOVEDPERMANENTLY;
+                }
 
                 // Request-URI for cursor image: /cur/0123456789ABCDEF/1
                 if (boost::starts_with(uri, "/cur/")) {
@@ -255,7 +261,7 @@ namespace wsgate {
                         << ": " << uri << " => 404 Not found" << endl;
                     return HTTPRESPONSECODE_404_NOTFOUND;
                 }
-                if (0 == uri.compare("/wsgate")) {
+                if (boost::starts_with(uri, "/wsgate?")) {
                     string dtsize(request->FormValues("dtsize").m_sBody);
                     string rdphost(request->FormValues("host").m_sBody);
                     string rdpuser(request->FormValues("user").m_sBody);
@@ -471,7 +477,7 @@ namespace wsgate {
                     return HTTPRESPONSECODE_101_SWITCHING_PROTOCOLS;
                 }
 
-                // Regular (non WebSockets request
+                // Regular (non WebSockets) request
                 if (0 != thisHost.compare(request->Headers("Host"))) {
                     log::warn << "Request from " << request->RemoteAddress()
                         << ": " << uri << " => 404 Not found" << endl;
@@ -643,6 +649,10 @@ namespace wsgate {
                 return m_pVm;
             }
 
+            const string & GetConfigFile() {
+                return m_sConfigFile;
+            }
+
             bool SetConfigFile(const string &name) {
                 if (name.empty()) {
 #ifdef _WIN32
@@ -665,6 +675,7 @@ namespace wsgate {
                     ("global.hostname", po::value<string>(), "specify host name")
                     ("global.port", po::value<uint16_t>(), "specify listening port")
                     ("global.bindaddr", po::value<string>(), "specify bind address")
+                    ("global.redirect", po::value<string>(), "Flag: Always redirect non-SSL to SSL")
                     ("global.logmask", po::value<string>(), "specify syslog mask")
                     ("global.logfacility", po::value<string>(), "specify syslog facility")
                     ("ssl.port", po::value<uint16_t>(), "specify listening port for SSL")
@@ -709,6 +720,10 @@ namespace wsgate {
                     try {
                         // Examine values from config file
 
+                        if (m_pVm->count("global.daemon")) {
+                            m_bDaemon = str2bool((*m_pVm)["global.daemon"].as<string>());
+                        }
+                        m_bDebug = false;
                         if (m_pVm->count("global.debug")) {
                             m_bDebug = str2bool((*m_pVm)["global.debug"].as<string>());
                         }
@@ -729,23 +744,19 @@ namespace wsgate {
                         if (0 == (m_pVm->count("http.documentroot"))) {
                             throw tracing::invalid_argument("No documentroot defined.");
                         }
-
-                        if (m_pVm->count("acl.order")) {
-                            vector<string> parts;
-                            boost::split(parts, (*m_pVm)["acl.order"].as<string>(), is_any_of(","));
-                            if (2 == parts.size()) {
-                                trim(parts[0]);
-                                trim(parts[1]);
-                                if (iequals(parts[0],"deny") && iequals(parts[1],"allow")) {
-                                    m_bOrderDenyAllow = true;
-                                }
-                                if (iequals(parts[0],"allow") && iequals(parts[1],"deny")) {
-                                    m_bOrderDenyAllow = false;
-                                }
-                            }
-                            throw tracing::invalid_argument("Invalid performance value.");
+                        m_sDocumentRoot.assign((*m_pVm)["http.documentroot"].as<string>());
+                        if (m_sDocumentRoot.empty()) {
+                            throw tracing::invalid_argument("documentroot is empty.");
                         }
 
+                        m_bRedirect = false;
+                        if (m_pVm->count("global.redirect")) {
+                            m_bRedirect = str2bool((*m_pVm)["global.redirect"].as<string>());
+                        }
+
+                        if (m_pVm->count("acl.order")) {
+                            setAclOrder((*m_pVm)["acl.order"].as<string>());
+                        }
                         if (m_pVm->count("acl.allow")) {
                             setHostList((*m_pVm)["acl.allow"].as<vector <string>>(), m_allowedHosts);
                         }
@@ -833,6 +844,11 @@ namespace wsgate {
                         } else {
                             m_bOverrideRdpNonla = false;
                         }
+                        if (m_pVm->count("global.hostname")) {
+                            m_sHostname.assign((*m_pVm)["global.hostname"].as<string>());
+                        } else {
+                            m_sHostname.clear();
+                        }
                     } catch (const tracing::invalid_argument & e) {
                         cerr << e.what() << endl;
                         wsgate::log::err << e.what() << endl;
@@ -840,13 +856,6 @@ namespace wsgate {
                         return false;
                     }
 
-                    if (m_pVm->count("global.hostname")) {
-                        m_sHostname.assign((*m_pVm)["global.hostname"].as<string>());
-                    }
-                    m_sDocumentRoot.assign((*m_pVm)["http.documentroot"].as<string>());
-                    if (m_pVm->count("global.daemon")) {
-                        m_bDaemon = str2bool((*m_pVm)["global.daemon"].as<string>());
-                    }
                 } catch (const po::error &e) {
                     cerr << e.what() << endl;
                     return false;
@@ -921,6 +930,24 @@ namespace wsgate {
                 }
             }
 
+            void setAclOrder(const string &order) {
+                vector<string> parts;
+                boost::split(parts, order, is_any_of(","));
+                if (2 == parts.size()) {
+                    trim(parts[0]);
+                    trim(parts[1]);
+                    if (iequals(parts[0],"deny") && iequals(parts[1],"allow")) {
+                        m_bOrderDenyAllow = true;
+                        return;
+                    }
+                    if (iequals(parts[0],"allow") && iequals(parts[1],"deny")) {
+                        m_bOrderDenyAllow = false;
+                        return;
+                    }
+                }
+                throw tracing::invalid_argument("Invalid acl order value.");
+            }
+
         public:
             bool GetDaemon() {
                 return m_bDaemon;
@@ -970,6 +997,7 @@ namespace wsgate {
             string m_sConfigFile;
             po::variables_map *m_pVm;
             bool m_bDaemon;
+            bool m_bRedirect;
     };
 
 #ifndef _WIN32
@@ -1123,11 +1151,15 @@ static void terminate(int)
 
 #ifndef _WIN32
 static wsgate::WsGate *g_srv = NULL;
+static wsgate::WsGate *g_psrv = NULL;
 static void reload(int)
 {
     wsgate::log::info << "Got SIGHUP, reloading config file." << endl;
     if (NULL != g_srv) {
         g_srv->ReadConfig();
+    }
+    if (NULL != g_psrv) {
+        g_psrv->ReadConfig();
     }
     signal(SIGHUP, reload);
 }
@@ -1196,15 +1228,15 @@ int main (int argc, char **argv)
 
     int port = -1;
     bool https = false;
-    // bool need2 = false;
-    if (pvm->count("global.port")) {
-        port = (*pvm)["global.port"].as<uint16_t>();
-        if (pvm->count("ssl.port")) {
-            // need2 = true;
-        }
-    } else if (pvm->count("ssl.port")) {
+    bool need2 = false;
+    if (pvm->count("ssl.port")) {
         port = (*pvm)["ssl.port"].as<uint16_t>();
         https = true;
+        if (pvm->count("global.port")) {
+            need2 = true;
+        }
+    } else if (pvm->count("global.port")) {
+        port = (*pvm)["global.port"].as<uint16_t>();
     }
 
 #ifndef _WIN32
@@ -1312,38 +1344,67 @@ int main (int argc, char **argv)
     signal(SIGINT, terminate);
     signal(SIGTERM, terminate);
 
+    wsgate::WsGate *psrv = NULL;
     try {
         wsgate::log::info << "wsgate v" << VERSION << "." << GITREV << " starting" << endl;
         srv.StartServer(oSP);
-
         wsgate::log::info << "Listening on " << oSP["bindaddress"].GetCharString() << ":" << oSP["port"].GetInt() << endl;
 
+        if (need2) {
+            // Add second instance on insecure port
+            psrv = new wsgate::WsGate();
+#ifndef _WIN32
+            psrv->SetBindHelper(&h);
+#endif
+            psrv->SetConfigFile(srv.GetConfigFile());
+            psrv->ReadConfig();
+            oSP["https"] = 0;
+            oSP["port"] = (*pvm)["global.port"].as<uint16_t>();
+            if (pvm->count("global.bindaddr")) {
+                oSP["bindaddress"] = (*pvm)["global.bindaddr"].as<string>();
+            }
+            psrv->SetSourceEHS(srv);
+            psrv->StartServer(oSP);
+            g_psrv = psrv;
+            wsgate::log::info << "Listening on " << oSP["bindaddress"].GetCharString() << ":" << oSP["port"].GetInt() << endl;
+        }
+
         if (daemon) {
-            while (!(srv.ShouldTerminate() || g_signaled)) {
+            while (!(srv.ShouldTerminate() || (psrv && psrv->ShouldTerminate()) || g_signaled)) {
                 if (sleepInLoop) {
                     usleep(50000);
                 } else {
                     srv.HandleData(1000);
+                    if (NULL != psrv) {
+                        psrv->HandleData(1000);
+                    }
                 }
             }
         } else {
             wsgate::kbdio kbd;
             cout << "Press q to terminate ..." << endl;
-            while (!(srv.ShouldTerminate() || g_signaled || kbd.qpressed())) {
+            while (!(srv.ShouldTerminate()  || (psrv && psrv->ShouldTerminate()) || g_signaled || kbd.qpressed())) {
                 if (sleepInLoop) {
                     usleep(1000);
                 } else {
                     srv.HandleData(1000);
+                    if (NULL != psrv) {
+                        psrv->HandleData(1000);
+                    }
                 }
             }
         }
         wsgate::log::info << "terminating" << endl;
         srv.StopServer();
+        if (NULL != psrv) {
+            psrv->StopServer();
+        }
     } catch (exception &e) {
         cerr << "ERROR: " << e.what() << endl;
         wsgate::log::err << e.what() << endl;
     }
 
+    delete psrv;
     return 0;
 }
 
