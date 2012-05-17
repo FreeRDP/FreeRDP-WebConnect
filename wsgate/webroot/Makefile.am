@@ -4,7 +4,7 @@ JS_SOURCES = \
 JS_GENERATED = $(JS_SOURCES:%-debug.js=%.js)
 
 nobase_pkgdata_DATA = \
-	index-debug.html index.html favicon.ico \
+	index-debug.html index.html favicon.ico FreeRDP_Logo.png \
 	css/style-debug.css css/style.css \
 	$(JS_SOURCES) $(JS_GENERATED)
 

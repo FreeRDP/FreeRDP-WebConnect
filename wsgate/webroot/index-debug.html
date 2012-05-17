@@ -56,6 +56,15 @@
                 showDialog(false);
                 rdp.Run();
             }
+            function DrawLogo() {
+                    var logo = new Element('img', {'src': 'FreeRDP_Logo.png'});
+                    logo.addEvent('load', function() {
+                            var iw = this.width;
+                            var ih = this.height;
+                            var scale = ($('screen').height - 20) / ih;
+                            $('screen').getContext('2d').drawImage(this, 10, 10, Math.round(iw * scale), Math.round(ih * scale));
+                    }.bind(logo));
+            }
             function ResizeCanvas(sz) {
                 var w, h;
                 if (sz == 'auto') {
@@ -74,12 +83,14 @@
             }
             function OnDesktopSize() {
                 ResizeCanvas($('dtsize').value);
+                DrawLogo();
             }
             function showDialog(show) {
                 if (show) {
                     var dlg = $('maindialog');
                     var x = Math.round((window.getCoordinates().width - dlg.getCoordinates().width) / 2) + 'px';
                     var y = Math.round((window.getCoordinates().height - dlg.getCoordinates().height) / 2) + 'px';
+                    DrawLogo();
                     dlg.setStyles({
                             'position': 'absolute',
                             'top': y,
