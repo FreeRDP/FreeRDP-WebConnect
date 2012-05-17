@@ -143,6 +143,10 @@ namespace wsgate {
                 return BINARY;
             }
 
+            // Non-copyable
+            WsGate(const wsgate::WsGate&);
+            WsGate & operator=(const wsgate::WsGate&);
+
         public:
 
             WsGate(EHS *parent = NULL, std::string registerpath = "")
@@ -171,6 +175,9 @@ namespace wsgate {
                 , m_sRdpOverrideUser()
                 , m_sRdpOverridePass()
                 , m_RdpOverrideParams()
+                , m_sConfigFile()
+                , m_pVm(NULL)
+                , m_bDaemon(false)
                 {
                 }
 
@@ -178,6 +185,10 @@ namespace wsgate {
             {
                 if (!m_sPidFile.empty()) {
                     unlink(m_sPidFile.c_str());
+                }
+                if (NULL != m_pVm) {
+                    delete m_pVm;
+                    m_pVm = NULL;
                 }
             }
 
@@ -296,7 +307,7 @@ namespace wsgate {
                     }
 
                     WsRdpParams params = {
-                        nFormValue(request, "port", 3389),
+                        m_bOverrideRdpPort ? m_RdpOverrideParams.port : nFormValue(request, "port", 3389),
                         1024,
                         768,
                         m_bOverrideRdpPerf ? m_RdpOverrideParams.perf : nFormValue(request, "perf", 0),
@@ -536,6 +547,8 @@ namespace wsgate {
                     replace_all(body, "%COOKIE_LASTPASS%", tmp);
                     tmp.assign(m_bOverrideRdpHost ? m_sRdpOverrideHost : request->Cookies("lasthost"));
                     replace_all(body, "%COOKIE_LASTHOST%", tmp);
+                    tmp.assign(m_bOverrideRdpPort ? boost::lexical_cast<string>(m_RdpOverrideParams.port) : "3389");
+                    replace_all(body, "%DEFAULT_PORT%", tmp);
                     tmp.assign(VERSION).append(".").append(GITREV);
                     replace_all(body, "%VERSION%", tmp);
                     if (m_bOverrideRdpPerf) {
@@ -626,7 +639,259 @@ namespace wsgate {
                 return HTTPRESPONSECODE_200_OK;
             }
 
-            void ConvertToPattern(string &wildcards) {
+            po::variables_map *GetConfig() {
+                return m_pVm;
+            }
+
+            bool SetConfigFile(const string &name) {
+                if (name.empty()) {
+#ifdef _WIN32
+                    wsgate::log::err << "Config filename is empty." << endl;
+#endif
+                    cerr << "Config filename is empty." << endl;
+                    return false;
+                }
+                m_sConfigFile = name;
+                return true;
+            }
+
+            bool ReadConfig(wsgate::log *logger = NULL) {
+                // config file options
+                po::options_description cfg("");
+                cfg.add_options()
+                    ("global.daemon", po::value<string>(), "enable/disable daemon mode")
+                    ("global.pidfile", po::value<string>(), "path of PID file in daemon mode")
+                    ("global.debug", po::value<string>(), "enable/disable debugging")
+                    ("global.hostname", po::value<string>(), "specify host name")
+                    ("global.port", po::value<uint16_t>(), "specify listening port")
+                    ("global.bindaddr", po::value<string>(), "specify bind address")
+                    ("global.logmask", po::value<string>(), "specify syslog mask")
+                    ("global.logfacility", po::value<string>(), "specify syslog facility")
+                    ("ssl.port", po::value<uint16_t>(), "specify listening port for SSL")
+                    ("ssl.bindaddr", po::value<string>(), "specify bind address for SSL")
+                    ("ssl.certfile", po::value<string>(), "specify certificate file")
+                    ("ssl.certpass", po::value<string>(), "specify certificate passphrase")
+                    ("threading.mode", po::value<string>(), "specify threading mode")
+                    ("threading.poolsize", po::value<int>(), "specify threading pool size")
+                    ("http.maxrequestsize", po::value<unsigned long>(), "specify maximum http request size")
+                    ("http.documentroot", po::value<string>(), "specify http document root")
+                    ("acl.allow", po::value<vector<string>>()->multitoken(), "Allowed destination hosts or nets")
+                    ("acl.deny", po::value<vector<string>>()->multitoken(), "Denied destination hosts or nets")
+                    ("acl.order", po::value<string>(), "Order (deny,allow or allow,deny)")
+                    ("rdpoverride.host", po::value<string>(), "Predefined RDP destination host")
+                    ("rdpoverride.port", po::value<uint16_t>(), "Predefined RDP port")
+                    ("rdpoverride.user", po::value<string>(), "Predefined RDP user")
+                    ("rdpoverride.pass", po::value<string>(), "Predefined RDP password")
+                    ("rdpoverride.performance", po::value<int>(), "Predefined RDP performance")
+                    ("rdpoverride.nowallpaper", po::value<string>(), "Predefined RDP flag: No wallpaper")
+                    ("rdpoverride.nofullwindowdrag", po::value<string>(), "Predefined RDP flag: No full window drag")
+                    ("rdpoverride.nomenuanimation", po::value<string>(), "Predefined RDP flag: No full menu animation")
+                    ("rdpoverride.notheming", po::value<string>(), "Predefined RDP flag: No theming")
+                    ("rdpoverride.notls", po::value<string>(), "Predefined RDP flag: Disable TLS")
+                    ("rdpoverride.nonla", po::value<string>(), "Predefined RDP flag: Disable NLA")
+                    ("rdpoverride.forcentlm", po::value<int>(), "Predefined RDP flag: Force NTLM")
+                    ("rdpoverride.size", po::value<string>(), "Predefined RDP desktop size")
+                    ;
+
+                m_pVm = new po::variables_map();
+                try {
+                    ifstream f(m_sConfigFile.c_str());
+                    if (f.fail()) {
+#ifdef _WIN32
+                        wsgate::log::err << "Could not read config file '" << m_sConfigFile << "'." << endl;
+#endif
+                        cerr << "Could not read config file '" << m_sConfigFile << "'." << endl;
+                        return false;
+                    }
+                    po::store(po::parse_config_file(f, cfg, true), *m_pVm);
+                    po::notify(*m_pVm);
+
+                    try {
+                        // Examine values from config file
+
+                        if (m_pVm->count("global.debug")) {
+                            m_bDebug = str2bool((*m_pVm)["global.debug"].as<string>());
+                        }
+
+                        if (m_pVm->count("global.logmask")) {
+                            if (NULL != logger) {
+                                logger->setmaskByName(to_upper_copy((*m_pVm)["global.logmask"].as<string>()));
+                            }
+                        }
+                        if (m_pVm->count("global.logfacility")) {
+                            if (NULL != logger) {
+                                logger->setfacilityByName(to_upper_copy((*m_pVm)["global.logfacility"].as<string>()));
+                            }
+                        }
+                        if (0 == (m_pVm->count("global.port") + m_pVm->count("ssl.port"))) {
+                            throw tracing::invalid_argument("No listening ports defined.");
+                        }
+                        if (0 == (m_pVm->count("http.documentroot"))) {
+                            throw tracing::invalid_argument("No documentroot defined.");
+                        }
+
+                        if (m_pVm->count("acl.order")) {
+                            vector<string> parts;
+                            boost::split(parts, (*m_pVm)["acl.order"].as<string>(), is_any_of(","));
+                            if (2 == parts.size()) {
+                                trim(parts[0]);
+                                trim(parts[1]);
+                                if (iequals(parts[0],"deny") && iequals(parts[1],"allow")) {
+                                    m_bOrderDenyAllow = true;
+                                }
+                                if (iequals(parts[0],"allow") && iequals(parts[1],"deny")) {
+                                    m_bOrderDenyAllow = false;
+                                }
+                            }
+                            throw tracing::invalid_argument("Invalid performance value.");
+                        }
+
+                        if (m_pVm->count("acl.allow")) {
+                            setHostList((*m_pVm)["acl.allow"].as<vector <string>>(), m_allowedHosts);
+                        }
+                        if (m_pVm->count("acl.deny")) {
+                            setHostList((*m_pVm)["acl.deny"].as<vector <string>>(), m_deniedHosts);
+                        }
+
+                        if (m_pVm->count("rdpoverride.host")) {
+                            m_sRdpOverrideHost.assign((*m_pVm)["rdpoverride.host"].as<string>());
+                            m_bOverrideRdpHost = true;
+                        } else {
+                            m_bOverrideRdpHost = false;
+                        }
+                        if (m_pVm->count("rdpoverride.user")) {
+                            m_sRdpOverrideUser.assign((*m_pVm)["rdpoverride.user"].as<string>());
+                            m_bOverrideRdpUser = true;
+                        } else {
+                            m_bOverrideRdpUser = false;
+                        }
+                        if (m_pVm->count("rdpoverride.pass")) {
+                            m_sRdpOverridePass.assign((*m_pVm)["rdpoverride.pass"].as<string>());
+                            m_bOverrideRdpPass = true;
+                        } else {
+                            m_bOverrideRdpPass = false;
+                        }
+                        if (m_pVm->count("rdpoverride.port")) {
+                            m_RdpOverrideParams.port = (*m_pVm)["rdpoverride.port"].as<uint16_t>();
+                            m_bOverrideRdpPort = true;
+                        } else {
+                            m_bOverrideRdpPort = false;
+                        }
+                        if (m_pVm->count("rdpoverride.performance")) {
+                            int n = (*m_pVm)["rdpoverride.performance"].as<int>();
+                            if ((0 > n) || (2 < n)) {
+                                throw tracing::invalid_argument("Invalid performance value.");
+                            }
+                            m_RdpOverrideParams.perf = n;
+                            m_bOverrideRdpPerf = true;
+                        } else {
+                            m_bOverrideRdpPerf = false;
+                        }
+                        if (m_pVm->count("rdpoverride.forcentlm")) {
+                            int n = (*m_pVm)["rdpoverride.forcentlm"].as<int>();
+                            if ((0 > n) || (2 < n)) {
+                                throw tracing::invalid_argument("Invalid forcentlm value.");
+                            }
+                            m_RdpOverrideParams.fntlm = n;
+                            m_bOverrideRdpFntlm = true;
+                        } else {
+                            m_bOverrideRdpFntlm = false;
+                        }
+                        if (m_pVm->count("rdpoverride.nowallpaper")) {
+                            m_RdpOverrideParams.nowallp = str2bint((*m_pVm)["rdpoverride.nowallpaper"].as<string>());
+                            m_bOverrideRdpNowallp = true;
+                        } else {
+                            m_bOverrideRdpNowallp = false;
+                        }
+                        if (m_pVm->count("rdpoverride.nofullwindowdrag")) {
+                            m_RdpOverrideParams.nowdrag = str2bint((*m_pVm)["rdpoverride.nofullwindowdrag"].as<string>());
+                            m_bOverrideRdpNowdrag = true;
+                        } else {
+                            m_bOverrideRdpNowdrag = false;
+                        }
+                        if (m_pVm->count("rdpoverride.nomenuanimation")) {
+                            m_RdpOverrideParams.nomani = str2bint((*m_pVm)["rdpoverride.nomenuanimation"].as<string>());
+                            m_bOverrideRdpNomani = true;
+                        } else {
+                            m_bOverrideRdpNomani = false;
+                        }
+                        if (m_pVm->count("rdpoverride.notheming")) {
+                            m_RdpOverrideParams.notheme = str2bint((*m_pVm)["rdpoverride.notheming"].as<string>());
+                            m_bOverrideRdpNotheme = true;
+                        } else {
+                            m_bOverrideRdpNotheme = false;
+                        }
+                        if (m_pVm->count("rdpoverride.notls")) {
+                            m_RdpOverrideParams.notls = str2bint((*m_pVm)["rdpoverride.notls"].as<string>());
+                            m_bOverrideRdpNotls = true;
+                        } else {
+                            m_bOverrideRdpNotls = false;
+                        }
+                        if (m_pVm->count("rdpoverride.nonla")) {
+                            m_RdpOverrideParams.nonla = str2bint((*m_pVm)["rdpoverride.nonla"].as<string>());
+                            m_bOverrideRdpNonla = true;
+                        } else {
+                            m_bOverrideRdpNonla = false;
+                        }
+                    } catch (const tracing::invalid_argument & e) {
+                        cerr << e.what() << endl;
+                        wsgate::log::err << e.what() << endl;
+                        wsgate::log::err << e.where() << endl;
+                        return false;
+                    }
+
+                    if (m_pVm->count("global.hostname")) {
+                        m_sHostname.assign((*m_pVm)["global.hostname"].as<string>());
+                    }
+                    m_sDocumentRoot.assign((*m_pVm)["http.documentroot"].as<string>());
+                    if (m_pVm->count("global.daemon")) {
+                        m_bDaemon = str2bool((*m_pVm)["global.daemon"].as<string>());
+                    }
+                } catch (const po::error &e) {
+                    cerr << e.what() << endl;
+                    return false;
+                }
+                return true;
+            }
+
+        private:
+            int str2bint(const string &s) {
+                string v(s);
+                trim(v);
+                if (!v.empty()) {
+                    if (iequals(v, "true")) {
+                        return 1;
+                    }
+                    if (iequals(v, "yes")) {
+                        return 1;
+                    }
+                    if (iequals(v, "on")) {
+                        return 1;
+                    }
+                    if (iequals(v, "1")) {
+                        return 1;
+                    }
+                    if (iequals(v, "false")) {
+                        return 0;
+                    }
+                    if (iequals(v, "no")) {
+                        return 0;
+                    }
+                    if (iequals(v, "off")) {
+                        return 0;
+                    }
+                    if (iequals(v, "0")) {
+                        return 0;
+                    }
+                }
+                throw tracing::invalid_argument("Invalid boolean value");
+            }
+
+            bool str2bool(const string &s) {
+                return (1 == str2bint(s));
+            }
+
+            void wc2pat(string &wildcards) {
                 boost::replace_all(wildcards, "\\", "\\\\");
                 boost::replace_all(wildcards, "^", "\\^");
                 boost::replace_all(wildcards, ".", "\\.");
@@ -645,118 +910,24 @@ namespace wsgate {
                 wildcards.insert(0, "^").append("$");
             }
 
-            bool SetOrder(const string &order) {
-                vector<string> parts;
-                boost::split(parts, order, is_any_of(","));
-                if (2 == parts.size()) {
-                    trim(parts[0]);
-                    trim(parts[1]);
-                    if (iequals(parts[0],"deny") && iequals(parts[1],"allow")) {
-                        m_bOrderDenyAllow = true;
-                        return true;
-                    }
-                    if (iequals(parts[0],"allow") && iequals(parts[1],"deny")) {
-                        m_bOrderDenyAllow = false;
-                        return true;
-                    }
-                }
-                return false;
-            }
-
-            void SetAllowedHosts(const vector<string> &hosts) {
+            void setHostList(const vector<string> &hosts, vector<boost::regex> &hostlist) {
                 vector<string> tmp(hosts);
                 vector<string>::iterator i;
+                hostlist.clear();
                 for (i = tmp.begin(); i != tmp.end(); ++i) {
-                    ConvertToPattern(*i);
+                    wc2pat(*i);
                     boost::regex re(*i, boost::regex::icase);
-                    m_allowedHosts.push_back(re);
+                    hostlist.push_back(re);
                 }
             }
 
-            void SetDeniedHosts(const vector<string> &hosts) {
-                vector<string> tmp(hosts);
-                vector<string>::iterator i;
-                for (i = tmp.begin(); i != tmp.end(); ++i) {
-                    ConvertToPattern(*i);
-                    boost::regex re(*i, boost::regex::icase);
-                    m_deniedHosts.push_back(re);
-                }
-            }
-
-            void SetHostname(const string &name) {
-                m_sHostname = name;
-            }
-
-            void SetDocumentRoot(const string &name) {
-                m_sDocumentRoot = name;
+        public:
+            bool GetDaemon() {
+                return m_bDaemon;
             }
 
             void SetPidFile(const string &name) {
                 m_sPidFile = name;
-            }
-
-            void SetDebug(const bool debug) {
-                m_bDebug = debug;
-            }
-
-            void SetOverrideHost(const string &s) {
-                m_sRdpOverrideHost = s;
-                m_bOverrideRdpHost = true;
-            }
-
-            void SetOverrideUser(const string &s) {
-                m_sRdpOverrideUser = s;
-                m_bOverrideRdpUser = true;
-            }
-
-            void SetOverridePass(const string &s) {
-                m_sRdpOverridePass = s;
-                m_bOverrideRdpPass = true;
-            }
-
-            void SetOverridePort(int n) {
-                m_RdpOverrideParams.port = n;
-                m_bOverrideRdpPort = true;
-            }
-
-            void SetOverridePerf(int n) {
-                m_RdpOverrideParams.perf = n;
-                m_bOverrideRdpPerf = true;
-            }
-
-            void SetOverrideFntlm(int n) {
-                m_RdpOverrideParams.fntlm = n;
-                m_bOverrideRdpFntlm = true;
-            }
-
-            void SetOverrideNotls(bool b) {
-                m_RdpOverrideParams.notls = b ? 1 : 0;
-                m_bOverrideRdpNotls = true;
-            }
-
-            void SetOverrideNonla(bool b) {
-                m_RdpOverrideParams.nonla = b ? 1 : 0;
-                m_bOverrideRdpNonla = true;
-            }
-
-            void SetOverrideNowallp(bool b) {
-                m_RdpOverrideParams.nowallp = b ? 1 : 0;
-                m_bOverrideRdpNowallp = true;
-            }
-
-            void SetOverrideNowdrag(bool b) {
-                m_RdpOverrideParams.nowdrag = b ? 1 : 0;
-                m_bOverrideRdpNowdrag = true;
-            }
-
-            void SetOverrideNomani(bool b) {
-                m_RdpOverrideParams.nomani = b ? 1 : 0;
-                m_bOverrideRdpNomani = true;
-            }
-
-            void SetOverrideNotheme(bool b) {
-                m_RdpOverrideParams.notheme = b ? 1 : 0;
-                m_bOverrideRdpNotheme = true;
             }
 
             void RegisterRdpSession(rdp_ptr rdp) {
@@ -796,6 +967,9 @@ namespace wsgate {
             string m_sRdpOverrideUser;
             string m_sRdpOverridePass;
             WsRdpParams m_RdpOverrideParams;
+            string m_sConfigFile;
+            po::variables_map *m_pVm;
+            bool m_bDaemon;
     };
 
 #ifndef _WIN32
@@ -935,38 +1109,6 @@ namespace wsgate {
 
 }
 
-static bool str2bool(const string &s) {
-    string v(s);
-    trim(v);
-    if (!v.empty()) {
-        if (iequals(v, "true")) {
-            return true;
-        }
-        if (iequals(v, "yes")) {
-            return true;
-        }
-        if (iequals(v, "on")) {
-            return true;
-        }
-        if (iequals(v, "1")) {
-            return true;
-        }
-        if (iequals(v, "false")) {
-            return false;
-        }
-        if (iequals(v, "no")) {
-            return false;
-        }
-        if (iequals(v, "off")) {
-            return false;
-        }
-        if (iequals(v, "0")) {
-            return false;
-        }
-    }
-    throw tracing::invalid_argument("Invalid boolean value");
-}
-
 static bool g_signaled = false;
 #ifdef _WIN32
 static bool g_service_background = true;
@@ -978,6 +1120,18 @@ static void terminate(int)
     signal(SIGINT, terminate);
     signal(SIGTERM, terminate);
 }
+
+#ifndef _WIN32
+static wsgate::WsGate *g_srv = NULL;
+static void reload(int)
+{
+    wsgate::log::info << "Got SIGHUP, reloading config file." << endl;
+    if (NULL != g_srv) {
+        g_srv->ReadConfig();
+    }
+    signal(SIGHUP, reload);
+}
+#endif
 
 #ifdef _WIN32
 static int _service_main (int argc, char **argv)
@@ -996,43 +1150,6 @@ int main (int argc, char **argv)
         ("foreground,f", "Run in foreground.")
 #endif
         ("config,c", po::value<string>()->default_value(DEFAULTCFG), "Specify config file")
-        ;
-
-    // config file options
-    po::options_description cfg("");
-    cfg.add_options()
-        ("global.daemon", po::value<string>(), "enable/disable daemon mode")
-        ("global.pidfile", po::value<string>(), "path of PID file in daemon mode")
-        ("global.debug", po::value<string>(), "enable/disable debugging")
-        ("global.hostname", po::value<string>(), "specify host name")
-        ("global.port", po::value<uint16_t>(), "specify listening port")
-        ("global.bindaddr", po::value<string>(), "specify bind address")
-        ("global.logmask", po::value<string>(), "specify syslog mask")
-        ("global.logfacility", po::value<string>(), "specify syslog facility")
-        ("ssl.port", po::value<uint16_t>(), "specify listening port for SSL")
-        ("ssl.bindaddr", po::value<string>(), "specify bind address for SSL")
-        ("ssl.certfile", po::value<string>(), "specify certificate file")
-        ("ssl.certpass", po::value<string>(), "specify certificate passphrase")
-        ("threading.mode", po::value<string>(), "specify threading mode")
-        ("threading.poolsize", po::value<int>(), "specify threading pool size")
-        ("http.maxrequestsize", po::value<unsigned long>(), "specify maximum http request size")
-        ("http.documentroot", po::value<string>(), "specify http document root")
-        ("acl.allow", po::value<vector<string>>()->multitoken(), "Allowed destination hosts or nets")
-        ("acl.deny", po::value<vector<string>>()->multitoken(), "Denied destination hosts or nets")
-        ("acl.order", po::value<string>(), "Order (deny,allow or allow,deny)")
-        ("rdpoverride.host", po::value<string>(), "Predefined RDP destination host")
-        ("rdpoverride.port", po::value<uint16_t>(), "Predefined RDP port")
-        ("rdpoverride.user", po::value<string>(), "Predefined RDP user")
-        ("rdpoverride.pass", po::value<string>(), "Predefined RDP password")
-        ("rdpoverride.performance", po::value<int>(), "Predefined RDP performance")
-        ("rdpoverride.nowallpaper", po::value<string>(), "Predefined RDP flag: No wallpaper")
-        ("rdpoverride.nofullwindowdrag", po::value<string>(), "Predefined RDP flag: No full window drag")
-        ("rdpoverride.nomenuanimation", po::value<string>(), "Predefined RDP flag: No full menu animation")
-        ("rdpoverride.notheming", po::value<string>(), "Predefined RDP flag: No theming")
-        ("rdpoverride.notls", po::value<string>(), "Predefined RDP flag: Disable TLS")
-        ("rdpoverride.nonla", po::value<string>(), "Predefined RDP flag: Disable NLA")
-        ("rdpoverride.forcentlm", po::value<int>(), "Predefined RDP flag: Force NTLM")
-        ("rdpoverride.size", po::value<string>(), "Predefined RDP desktop size")
         ;
 
     po::variables_map vm;
@@ -1055,21 +1172,9 @@ int main (int argc, char **argv)
         cout << "wsgate v" << VERSION << "." << GITREV << endl << getEHSconfig() << endl;
         return 0;
     }
+    wsgate::WsGate srv;
     if (vm.count("config")) {
-        string cfgname(vm["config"].as<string>());
-        ifstream f(cfgname.c_str());
-        if (f.fail()) {
-#ifdef _WIN32
-            wsgate::log::err << "Could not read config file '" << cfgname << "'." << endl;
-#endif
-            cerr << "Could not read config file '" << cfgname << "'." << endl;
-            return -1;
-        }
-        try {
-            po::store(po::parse_config_file(f, cfg, true), vm);
-            po::notify(vm);
-        } catch (const po::error &e) {
-            cerr << e.what() << endl;
+        if (!srv.SetConfigFile(vm["config"].as<string>())) {
             return -1;
         }
     } else {
@@ -1080,106 +1185,27 @@ int main (int argc, char **argv)
         return -1;
     }
 
-    wsgate::WsGate srv;
 
-    // Examine values from config file
-    if (vm.count("global.debug")) {
-        srv.SetDebug(str2bool(vm["global.debug"].as<string>()));
-    }
-
-    if (vm.count("global.logmask")) {
-        log.setmaskByName(to_upper_copy(vm["global.logmask"].as<string>()));
-    }
-    if (vm.count("global.logfacility")) {
-        log.setfacilityByName(to_upper_copy(vm["global.logfacility"].as<string>()));
-    }
-    if (0 == (vm.count("global.port") + vm.count("ssl.port"))) {
-#ifdef _WIN32
-        wsgate::log::err << "No listening ports defined." << endl;
-#endif
-        cerr << "No listening ports defined." << endl;
+    if (!srv.ReadConfig(&log)) {
         return -1;
     }
-    if (0 == (vm.count("http.documentroot"))) {
-#ifdef _WIN32
-        wsgate::log::err << "No documentroot defined." << endl;
-#endif
-        cerr << "No documentroot defined." << endl;
+    po::variables_map *pvm = srv.GetConfig();
+    if (NULL == pvm) {
         return -1;
     }
 
-    if (vm.count("acl.order")) {
-        if (!srv.SetOrder(vm["acl.order"].as<string>())) {
-            cerr << "Invalid order directive." << endl;
-            return -1;
-        }
-    }
-
-    if (vm.count("acl.allow")) {
-        srv.SetAllowedHosts(vm["acl.allow"].as<vector <string>>());
-    }
-    if (vm.count("acl.deny")) {
-        srv.SetDeniedHosts(vm["acl.allow"].as<vector <string>>());
-    }
-    if (vm.count("rdpoverride.host")) {
-        srv.SetOverrideHost(vm["rdpoverride.host"].as<string>());
-    }
-
-    try {
-        if (vm.count("rdpoverride.user")) {
-            srv.SetOverrideUser(vm["rdpoverride.user"].as<string>());
-        }
-        if (vm.count("rdpoverride.pass")) {
-            srv.SetOverridePass(vm["rdpoverride.pass"].as<string>());
-        }
-        if (vm.count("rdpoverride.port")) {
-            srv.SetOverridePort(vm["rdpoverride.port"].as<int>());
-        }
-        if (vm.count("rdpoverride.performance")) {
-            srv.SetOverridePerf(vm["rdpoverride.performance"].as<int>());
-        }
-        if (vm.count("rdpoverride.forcentlm")) {
-            srv.SetOverrideFntlm(vm["rdpoverride.forcentlm"].as<int>());
-        }
-        if (vm.count("rdpoverride.nowallpaper")) {
-            srv.SetOverrideNowallp(str2bool(vm["rdpoverride.nowallpaper"].as<string>()));
-        }
-        if (vm.count("rdpoverride.nofullwindowdrag")) {
-            srv.SetOverrideNowdrag(str2bool(vm["rdpoverride.nofullwindowdrag"].as<string>()));
-        }
-        if (vm.count("rdpoverride.nomenuanimation")) {
-            srv.SetOverrideNomani(str2bool(vm["rdpoverride.nomenuanimation"].as<string>()));
-        }
-        if (vm.count("rdpoverride.notheming")) {
-            srv.SetOverrideNotheme(str2bool(vm["rdpoverride.notheming"].as<string>()));
-        }
-        if (vm.count("rdpoverride.notls")) {
-            srv.SetOverrideNotls(str2bool(vm["rdpoverride.notls"].as<string>()));
-        }
-        if (vm.count("rdpoverride.nonla")) {
-            srv.SetOverrideNonla(str2bool(vm["rdpoverride.nonla"].as<string>()));
-        }
-    } catch (const tracing::invalid_argument & e) {
-        cerr << e.what() << endl;
-        return -1;
-    }
-
-    if (vm.count("global.hostname")) {
-        srv.SetHostname(vm["global.hostname"].as<string>());
-    }
     int port = -1;
     bool https = false;
     // bool need2 = false;
-    if (vm.count("global.port")) {
-        port = vm["global.port"].as<uint16_t>();
-        if (vm.count("ssl.port")) {
+    if (pvm->count("global.port")) {
+        port = (*pvm)["global.port"].as<uint16_t>();
+        if (pvm->count("ssl.port")) {
             // need2 = true;
         }
-    } else if (vm.count("ssl.port")) {
-        port = vm["ssl.port"].as<uint16_t>();
+    } else if (pvm->count("ssl.port")) {
+        port = (*pvm)["ssl.port"].as<uint16_t>();
         https = true;
     }
-    srv.SetDocumentRoot(vm["http.documentroot"].as<string>());
 
 #ifndef _WIN32
     wsgate::MyBindHelper h;
@@ -1193,34 +1219,34 @@ int main (int argc, char **argv)
     oSP["bindaddress"] = "0.0.0.0";
     oSP["norouterequest"] = 1;
     if (https) {
-        if (vm.count("ssl.bindaddr")) {
-            oSP["bindaddress"] = vm["ssl.bindaddr"].as<string>();
+        if (pvm->count("ssl.bindaddr")) {
+            oSP["bindaddress"] = (*pvm)["ssl.bindaddr"].as<string>();
         }
         oSP["https"] = 1;
-        if (vm.count("ssl.certfile")) {
-            oSP["certificate"] = vm["ssl.certfile"].as<string>();
+        if (pvm->count("ssl.certfile")) {
+            oSP["certificate"] = (*pvm)["ssl.certfile"].as<string>();
         }
-        if (vm.count("ssl.certpass")) {
-            oSP["passphrase"] = vm["ssl.certpass"].as<string>();
+        if (pvm->count("ssl.certpass")) {
+            oSP["passphrase"] = (*pvm)["ssl.certpass"].as<string>();
         }
     } else {
-        if (vm.count("global.bindaddr")) {
-            oSP["bindaddress"] = vm["global.bindaddr"].as<string>();
+        if (pvm->count("global.bindaddr")) {
+            oSP["bindaddress"] = (*pvm)["global.bindaddr"].as<string>();
         }
     }
-    if (vm.count("http.maxrequestsize")) {
-        oSP["maxrequestsize"] = vm["http.maxrequestsize"].as<unsigned long>();
+    if (pvm->count("http.maxrequestsize")) {
+        oSP["maxrequestsize"] = (*pvm)["http.maxrequestsize"].as<unsigned long>();
     }
     bool sleepInLoop = true;
-    if (vm.count("threading.mode")) {
-        string mode(vm["threading.mode"].as<string>());
+    if (pvm->count("threading.mode")) {
+        string mode((*pvm)["threading.mode"].as<string>());
         if (0 == mode.compare("single")) {
             oSP["mode"] = "singlethreaded";
             sleepInLoop = false;
         } else if (0 == mode.compare("pool")) {
             oSP["mode"] = "threadpool";
-            if (vm.count("threading.poolsize")) {
-                oSP["threadcount"] = vm["threading.poolsize"].as<int>();
+            if (pvm->count("threading.poolsize")) {
+                oSP["threadcount"] = (*pvm)["threading.poolsize"].as<int>();
             }
         } else if (0 == mode.compare("perrequest")) {
             oSP["mode"] = "onethreadperrequest";
@@ -1231,19 +1257,19 @@ int main (int argc, char **argv)
     } else {
         oSP["mode"] = "onethreadperrequest";
     }
-    if (vm.count("ssl.certfile")) {
-        oSP["certificate"] = vm["ssl.certfile"].as<string>();
+    if (pvm->count("ssl.certfile")) {
+        oSP["certificate"] = (*pvm)["ssl.certfile"].as<string>();
     }
-    if (vm.count("ssl.certpass")) {
-        oSP["passphrase"] = vm["ssl.certpass"].as<string>();
+    if (pvm->count("ssl.certpass")) {
+        oSP["passphrase"] = (*pvm)["ssl.certpass"].as<string>();
     }
 
 #ifdef _WIN32
-    bool daemon = (vm.count("foreground")) ? false : g_service_background;
+    bool daemon = (pvm->count("foreground")) ? false : g_service_background;
 #else
     bool daemon = false;
-    if (vm.count("global.daemon") && (0 == vm.count("foreground"))) {
-        daemon = (str2bool(vm["global.daemon"].as<string>()));
+    if (pvm->count("global.daemon") && (0 == pvm->count("foreground"))) {
+        daemon = srv.GetDaemon();
         if (daemon) {
             pid_t pid = fork();
             switch (pid) {
@@ -1257,8 +1283,8 @@ int main (int argc, char **argv)
                         close(nfd);
                         (void)chdir("/");
                         setsid();
-                        if (vm.count("global.pidfile")) {
-                            const string pidfn(vm["global.pidfile"].as<string>());
+                        if (pvm->count("global.pidfile")) {
+                            const string pidfn((*pvm)["global.pidfile"].as<string>());
                             if (!pidfn.empty()) {
                                 ofstream pidfile(pidfn.c_str());
                                 pidfile << getpid() << endl;
@@ -1279,7 +1305,9 @@ int main (int argc, char **argv)
 #endif
 
 #ifndef _WIN32
+    g_srv = &srv;
     signal(SIGPIPE, SIG_IGN);
+    signal(SIGHUP, reload);
 #endif
     signal(SIGINT, terminate);
     signal(SIGTERM, terminate);
@@ -1293,7 +1321,7 @@ int main (int argc, char **argv)
         if (daemon) {
             while (!(srv.ShouldTerminate() || g_signaled)) {
                 if (sleepInLoop) {
-                    usleep(10000);
+                    usleep(50000);
                 } else {
                     srv.HandleData(1000);
                 }
