@@ -65,6 +65,7 @@ wsgate.RDP = new Class( {
         this.modkeys = [8, 16, 17, 18, 20, 144, 145];
         this.cursors = new Array();
         this.sid = null;
+        this.open = false;
     },
     Disconnect: function() {
         this._reset();
@@ -584,6 +585,7 @@ wsgate.RDP = new Class( {
      * Event handler for WebSocket connect events
      */
     onWSopen: function(evt) {
+        this.open = true;
         // Add listeners for the various input events
         this.canvas.addEvent('mousemove', this.onMm.bind(this));
         this.canvas.addEvent('mousedown', this.onMd.bind(this));
@@ -603,6 +605,15 @@ wsgate.RDP = new Class( {
      * Event handler for WebSocket disconnect events
      */
     onWSclose: function(evt) {
+        if (Browser.name == 'chrome') {
+            // Current chrome is buggy in that it does not
+            // fire WebSockets error events, so we use the
+            // wasClean flag in the close event.
+            if ((!evt.wasClean) && (!this.open)) {
+                this.fireEvent('alert', 'Could not connect to WebSockets gateway');
+            }
+        }
+        this.open = false;
         this._reset();
         this.fireEvent('disconnected');
     },
@@ -610,6 +621,7 @@ wsgate.RDP = new Class( {
      * Event handler for WebSocket error events
      */
     onWSerr: function (evt) {
+        this.open = false;
         switch (this.sock.readyState) {
             case this.sock.CONNECTING:
                 this.fireEvent('alert', 'Could not connect to WebSockets gateway');
