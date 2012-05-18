@@ -1385,7 +1385,9 @@ int main (int argc, char **argv)
             }
             psrv->SetSourceEHS(srv);
             psrv->StartServer(oSP);
+#ifndef _WIN32
             g_psrv = psrv;
+#endif
             wsgate::log::info << "Listening on " << oSP["bindaddress"].GetCharString() << ":" << oSP["port"].GetInt() << endl;
         }
 
