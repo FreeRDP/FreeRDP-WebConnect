@@ -49,7 +49,8 @@ start() {
 
         /usr/libexec/wsgate/keygen.sh
         echo -n $"Starting $prog: "
-        daemon --pidfile="$PIDFILE" $exec -c $WSGATE_CONFIG $WSGATE_OPTIONS
+        touch "$PIDFILE" && chown wsgate "$PIDFILE" && chmod 0644 "$PIDFILE"
+        daemon --pidfile="$PIDFILE" --user=wsgate $exec -c $WSGATE_CONFIG $WSGATE_OPTIONS
         RETVAL=$?
         echo
         [ $RETVAL -eq 0 ] && touch $lockfile
