@@ -128,15 +128,15 @@
                                     <table>
                                         <tr>
                                             <td class="key"><label for="host">Hostname:</label></td>
-                                            <td><input id="rdphost" type="text" name="host" value="%COOKIE_LASTHOST%" /></td>
+                                            <td><input id="rdphost" type="text" name="host" value="%COOKIE_LASTHOST%" %DISABLED_HOST%/></td>
                                         </tr>
                                         <tr>
                                             <td class="key"><label for="user">User:</label></td>
-                                            <td><input id="rdpuser" type="text" name="user" value="%COOKIE_LASTUSER%" /></td>
+                                            <td><input id="rdpuser" type="text" name="user" value="%COOKIE_LASTUSER%" %DISABLED_USER% /></td>
                                         </tr>
                                         <tr>
                                             <td class="key"><label for="pass">Password:</label></td>
-                                            <td><input id="rdppass" type="password" name="pass" value="%COOKIE_LASTPASS%" autocomplete="off" /></td>
+                                            <td><input id="rdppass" type="password" name="pass" value="%COOKIE_LASTPASS%" autocomplete="off" %DISABLED_PASS% /></td>
                                         </tr>
                                         <tr>
                                             <td class="key"><label for="dtsize">Desktop size:</label></td>
@@ -166,7 +166,7 @@
                                     <table>
                                         <tr>
                                             <td class="key"><label for="port">Port:</label></td>
-                                            <td><input id="port" name="port" type="text" size="6" maxlen="5" value="%DEFAULT_PORT%" /></td>
+                                            <td><input id="port" name="port" type="text" size="6" maxlen="5" value="%DEFAULT_PORT%" %DISABLED_PORT% /></td>
                                         </tr>
                                         <tr>
                                             <td class="key"><label for="perf">Performance:</label></td>

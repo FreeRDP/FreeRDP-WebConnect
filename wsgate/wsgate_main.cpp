@@ -430,7 +430,7 @@ namespace wsgate {
                         response->SetCookie(delcookie);
                     } else {
                         setcookie["name"] = "lasthost";
-                        setcookie["value"] = rdphost;
+                        setcookie["value"] = (m_bOverrideRdpHost ? "%3cpredefined%3e" : rdphost);
                         response->SetCookie(setcookie);
                     }
                     if (rdpuser.empty()) {
@@ -439,7 +439,7 @@ namespace wsgate {
                         response->SetCookie(delcookie);
                     } else {
                         setcookie["name"] = "lastuser";
-                        setcookie["value"] = rdpuser;
+                        setcookie["value"] = (m_bOverrideRdpUser ? "%3cpredefined%3e" : rdpuser);
                         response->SetCookie(setcookie);
                     }
                     if (m_bOverrideRdpPass) {
@@ -564,14 +564,22 @@ namespace wsgate {
                     replace_all(body, "%WSURI%", oss.str());
                     replace_all(body, "%JSDEBUG%", (m_bDebug ? "-debug" : ""));
                     string tmp;
-                    tmp.assign(m_bOverrideRdpUser ? m_sRdpOverrideUser : request->Cookies("lastuser"));
+                    tmp.assign(m_bOverrideRdpUser ? "<predefined>" : request->Cookies("lastuser"));
                     replace_all(body, "%COOKIE_LASTUSER%", tmp);
+                    tmp.assign(m_bOverrideRdpUser ? "disabled=\"disabled\"" : "");
+                    replace_all(body, "%DISABLED_USER%", tmp);
                     tmp.assign(m_bOverrideRdpPass ? "SomthingUseless" : base64_decode(request->Cookies("lastpass")));
                     replace_all(body, "%COOKIE_LASTPASS%", tmp);
-                    tmp.assign(m_bOverrideRdpHost ? m_sRdpOverrideHost : request->Cookies("lasthost"));
+                    tmp.assign(m_bOverrideRdpPass ? "disabled=\"disabled\"" : "");
+                    replace_all(body, "%DISABLED_PASS%", tmp);
+                    tmp.assign(m_bOverrideRdpHost ? "<predefined>" : request->Cookies("lasthost"));
                     replace_all(body, "%COOKIE_LASTHOST%", tmp);
+                    tmp.assign(m_bOverrideRdpHost ? "disabled=\"disabled\"" : "");
+                    replace_all(body, "%DISABLED_HOST%", tmp);
                     tmp.assign(m_bOverrideRdpPort ? boost::lexical_cast<string>(m_RdpOverrideParams.port) : "3389");
                     replace_all(body, "%DEFAULT_PORT%", tmp);
+                    tmp.assign(m_bOverrideRdpPort ? "disabled=\"disabled\"" : "");
+                    replace_all(body, "%DISABLED_PORT%", tmp);
                     tmp.assign(VERSION).append(".").append(GITREV);
                     replace_all(body, "%VERSION%", tmp);
                     if (m_bOverrideRdpPerf) {
