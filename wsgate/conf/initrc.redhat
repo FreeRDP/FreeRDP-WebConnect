@@ -64,8 +64,10 @@ stop() {
         return $RETVAL
 }
 reload()  {
-        stop
-        start
+        # Force LSB behaviour from killproc
+        LSB=1 killproc -p "$PIDFILE" $exec -HUP
+        RETVAL=$?
+        return $RETVAL
 }
 rhstatus() {
         status -p "$PIDFILE" -l $prog $exec

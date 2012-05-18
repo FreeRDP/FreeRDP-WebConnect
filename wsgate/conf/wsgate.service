@@ -1,5 +1,5 @@
 [Unit]
-Description=FreeRDO WebAccess Gateway
+Description=FreeRDP WebAccess Gateway
 After=syslog.target network.target
 
 [Service]
