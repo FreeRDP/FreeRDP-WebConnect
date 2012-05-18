@@ -125,6 +125,8 @@ namespace wsgate {
             } MimeType;
 
             typedef map<string, rdp_ptr> SessionMap;
+            typedef boost::tuple<time_t, string> cache_entry;
+            typedef map<path, cache_entry> StaticCache;
 
             MimeType simpleMime(const string & filename)
             {
@@ -179,6 +181,7 @@ namespace wsgate {
                 , m_pVm(NULL)
                 , m_bDaemon(false)
                 , m_bRedirect(false)
+                , m_StaticCache()
                 {
                 }
 
@@ -495,6 +498,11 @@ namespace wsgate {
                         << ": " << uri << " => 404 Not found" << endl;
                     return HTTPRESPONSECODE_404_NOTFOUND;
                 }
+                if (!is_regular_file(p)) {
+                    log::warn << "Request from " << request->RemoteAddress()
+                        << ": " << uri << " => 403 Forbidden" << endl;
+                    return HTTPRESPONSECODE_403_FORBIDDEN;
+                }
 
                 // Handle If-modified-sice request header
                 time_t mtime = last_write_time(p);
@@ -517,15 +525,24 @@ namespace wsgate {
                     }
                 }
                 response->SetLastModified(mtime);
+                response->SetHeader("X-Frame-Options", "sameorigin");
+                response->SetHeader("X-Content-Type-Options", "nosniff");
 
-                fs::ifstream f(p, ios::binary);
-                if (f.fail()) {
-                    log::warn << "Request from " << request->RemoteAddress()
-                        << ": " << uri << " => 404 (file '" << p << "' unreadable)" << endl;
-                    return HTTPRESPONSECODE_404_NOTFOUND;
+                string body;
+                StaticCache::iterator ci = m_StaticCache.find(p);
+                if ((m_StaticCache.end() != ci) && (ci->second.get<0>() == mtime)) {
+                    body.assign(ci->second.get<1>());
+                } else {
+                    fs::ifstream f(p, ios::binary);
+                    if (f.fail()) {
+                        log::warn << "Request from " << request->RemoteAddress()
+                            << ": " << uri << " => 404 (file '" << p << "' unreadable)" << endl;
+                        return HTTPRESPONSECODE_404_NOTFOUND;
+                    }
+                    body.assign((istreambuf_iterator<char>(f)), istreambuf_iterator<char>());
+                    f.close();
+                    m_StaticCache[p] = cache_entry(mtime, body);
                 }
-                string body((istreambuf_iterator<char>(f)), istreambuf_iterator<char>());
-                f.close();
 
 #ifdef BOOST_FILESYSTEM_VERSION
 # if (BOOST_FILESYSTEM_VERSION >= 3)
@@ -619,9 +636,11 @@ namespace wsgate {
                 switch (mt) {
                     case TEXT:
                         response->SetHeader("Content-Type", "text/plain");
+                        response->SetHeader("Cache-Control", "no-cache, private");
                         break;
                     case HTML:
                         response->SetHeader("Content-Type", "text/html");
+                        response->SetHeader("Cache-Control", "no-cache, private");
                         break;
                     case PNG:
                         response->SetHeader("Content-Type", "image/png");
@@ -998,6 +1017,7 @@ namespace wsgate {
             po::variables_map *m_pVm;
             bool m_bDaemon;
             bool m_bRedirect;
+            StaticCache m_StaticCache;
     };
 
 #ifndef _WIN32
