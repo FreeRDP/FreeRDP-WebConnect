@@ -5,7 +5,7 @@
         <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1" />
         <title>FreeRDP WebConnect: offline</title>
         <meta name="description" content="A HTM5 based RDP client">
-        <meta name="viewport" content="width=device-width; height=device-height user-scaleable=no">
+        <meta name="viewport" content="width=device-width height=device-height user-scalable=no">
         <meta name="cursor-event-mode" content="native">
         <meta name="touch-event-mode" content="pure-with-mouse-conversion">
         <link rel="stylesheet" href="css/style%JSDEBUG%.css">
@@ -15,6 +15,7 @@
         <script src="js/wsgate%JSDEBUG%.js"></script>
         <script language="javascript" type="text/javascript">
             var wsBase = "%WSURI%";
+            var RIMtablet = navigator.appVersion && (-1 != navigator.appVersion.indexOf('RIM Tablet'));
             function RDPrun() {
                 var wsUri = wsBase
                     + '?host=' + encodeURIComponent($('rdphost').value.trim())
@@ -70,6 +71,10 @@
                 if (sz == 'auto') {
                     w = window.getCoordinates().width;
                     h = window.getCoordinates().height;
+                    if (RIMtablet) {
+                        // Toplevel bar not removable
+                        h -= 31;
+                    }
                     if (w % 2) {
                         w -= 1;
                     }

@@ -250,13 +250,21 @@ namespace wsgate {
                             cid = boost::lexical_cast<uint32_t>(parts[1]);
                         } catch (const boost::bad_lexical_cast & e) { cid = 0; }
                         if (cid) {
-                            string png = it->second->GetCursorPng(cid);
-                            if (!png.empty()) {
-                                response->SetHeader("Content-Type", "image/png");
-                                response->SetBody(png.data(), png.length());
-                                log::info << "Request from " << request->RemoteAddress()
-                                    << ": " << uri << " => 200 OK" << endl;
-                                return HTTPRESPONSECODE_200_OK;
+                            RDP::cursor c = it->second->GetCursor(cid);
+                            time_t ct = c.get<0>();
+                            if (0 != ct) {
+                                if (notModified(request, response, ct)) {
+                                    return HTTPRESPONSECODE_304_NOT_MODIFIED;
+                                }
+                                string png = c.get<1>();
+                                if (!png.empty()) {
+                                    response->SetHeader("Content-Type", "image/png");
+                                    response->SetLastModified(ct);
+                                    response->SetBody(png.data(), png.length());
+                                    log::info << "Request from " << request->RemoteAddress()
+                                        << ": " << uri << " => 200 OK" << endl;
+                                    return HTTPRESPONSECODE_200_OK;
+                                }
                             }
                         }
                     }
@@ -506,23 +514,8 @@ namespace wsgate {
 
                 // Handle If-modified-sice request header
                 time_t mtime = last_write_time(p);
-                string ifms(request->Headers("if-modified-since"));
-                if (!ifms.empty()) {
-                    pt::ptime file_time(pt::from_time_t(mtime));
-                    pt::ptime req_time;
-                    istringstream iss(ifms);
-                    iss.imbue(locale(locale::classic(),
-                                new pt::time_input_facet("%a, %d %b %Y %H:%M:%S GMT")));
-                    iss >> req_time;
-                    if (file_time <= req_time) {
-                        response->RemoveHeader("Content-Type");
-                        response->RemoveHeader("Content-Length");
-                        response->RemoveHeader("Last-Modified");
-                        response->RemoveHeader("Cache-Control");
-                        log::info << "Request from " << request->RemoteAddress()
-                            << ": " << uri << " => 304 Not modified" << endl;
-                        return HTTPRESPONSECODE_304_NOT_MODIFIED;
-                    }
+                if (notModified(request, response, mtime)) {
+                    return HTTPRESPONSECODE_304_NOT_MODIFIED;
                 }
                 response->SetLastModified(mtime);
                 response->SetHeader("X-Frame-Options", "sameorigin");
@@ -891,6 +884,29 @@ namespace wsgate {
             }
 
         private:
+
+            bool notModified(HttpRequest *request, HttpResponse *response, time_t mtime) {
+                string ifms(request->Headers("if-modified-since"));
+                if (!ifms.empty()) {
+                    pt::ptime file_time(pt::from_time_t(mtime));
+                    pt::ptime req_time;
+                    istringstream iss(ifms);
+                    iss.imbue(locale(locale::classic(),
+                                new pt::time_input_facet("%a, %d %b %Y %H:%M:%S GMT")));
+                    iss >> req_time;
+                    if (file_time <= req_time) {
+                        response->RemoveHeader("Content-Type");
+                        response->RemoveHeader("Content-Length");
+                        response->RemoveHeader("Last-Modified");
+                        response->RemoveHeader("Cache-Control");
+                        log::info << "Request from " << request->RemoteAddress()
+                            << ": " << request->Uri() << " => 304 Not modified" << endl;
+                        return true;
+                    }
+                }
+                return false;
+            }
+
             int str2bint(const string &s) {
                 string v(s);
                 trim(v);
@@ -1148,11 +1164,19 @@ namespace wsgate {
     bool MyRawSocketHandler::Prepare(EHSConnection *conn, const string host,
             const string user, const string pass, const WsRdpParams &params)
     {
-        log::debug << "RDP Host:         '" << host << "'" << endl;
-        log::debug << "RDP Port:         '" << params.port << "'" << endl;
-        log::debug << "RDP User:         '" << user << "'" << endl;
-        log::debug << "RDP Password:     '" << pass << "'" << endl;
-        log::debug << "RDP Desktop size: " << params.width << "x" << params.height << endl;
+        log::debug << "RDP Host:               '" << host << "'" << endl;
+        log::debug << "RDP Port:               '" << params.port << "'" << endl;
+        log::debug << "RDP User:               '" << user << "'" << endl;
+        log::debug << "RDP Password:           '" << pass << "'" << endl;
+        log::debug << "RDP Desktop size:       " << params.width << "x" << params.height << endl;
+        log::debug << "RDP Performance:        " << params.perf << endl;
+        log::debug << "RDP No wallpaper:       " << params.nowallp << endl;
+        log::debug << "RDP No full windowdrag: " << params.nowdrag << endl;
+        log::debug << "RDP No menu animation:  " << params.nomani << endl;
+        log::debug << "RDP No theming:         " << params.nomani << endl;
+        log::debug << "RDP Disable TLS:        " << params.notls << endl;
+        log::debug << "RDP Disable NLA:        " << params.nonla << endl;
+        log::debug << "RDP NTLM auth:          " << params.fntlm << endl;
 
         handler_ptr h(new MyWsHandler(conn, m_parent, this));
         conn_ptr c(new wspp::wsendpoint(h.get()));

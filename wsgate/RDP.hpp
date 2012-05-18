@@ -24,6 +24,7 @@
 #include <map>
 #include <string>
 #include <boost/shared_ptr.hpp>
+#include <boost/tuple/tuple.hpp>
 
 #include "rdpcommon.hpp"
 
@@ -47,7 +48,8 @@ namespace wsgate {
             } State;
 
             /// Map for storing cursor images of this session
-            typedef std::map<uint32_t, std::string> CursorMap;
+            typedef boost::tuple<time_t, std::string> cursor;
+            typedef std::map<uint32_t, cursor> CursorMap;
 
             /**
              * Constructor
@@ -90,11 +92,11 @@ namespace wsgate {
              */
             void OnWsMessage(const std::string & data);
             /**
-             * Retrieves a custom cursor image by ID.
+             * Retrieves a custom cursor tuple by ID.
              * @param cid Unique cursor ID (valid for current session).
-             * @return A PNG-encoded RGBA image or an empty String, if no cursor image is defined for the given Id.
+             * @return A tuple, containing the creation time and PNG-encoded RGBA image or a tuple containing 0 and an empty String, if no cursor image is defined for the given Id.
              */
-            std::string GetCursorPng(uint32_t cid);
+            cursor GetCursor(uint32_t cid);
 
         private:
             /**

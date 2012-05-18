@@ -395,13 +395,13 @@ namespace wsgate {
         freerdp_input_send_extended_mouse_event(m_rdpInput, flags, x, y);
     }
 
-    string RDP::GetCursorPng(uint32_t cid)
+    RDP::cursor RDP::GetCursor(uint32_t cid)
     {
         CursorMap::iterator it = m_cursorMap.find(cid);
         if (it != m_cursorMap.end()) {
             return it->second;
         }
-        return string();
+        return cursor(0, string());
     }
 
     // private
@@ -553,7 +553,8 @@ namespace wsgate {
                     pointer->width, pointer->height, pointer->xorBpp, hclrconv);
         }
         Png png;
-        m_cursorMap[p->id] = png.GenerateFromARGB(pointer->width, pointer->height, pixels);
+        m_cursorMap[p->id] =
+            cursor(time(NULL), png.GenerateFromARGB(pointer->width, pointer->height, pixels));
         delete []pixels;
         struct {
             uint32_t op;
@@ -659,6 +660,9 @@ namespace wsgate {
                     m_lastError = e;
                     switch (m_lastError) {
                         case 1:
+                        case 2:
+                        case 7:
+                        case 9:
                             // No really an error
                             // (Happens when you invoke Disconnect in Start-Menu)
                             m_bThreadLoop = false;
