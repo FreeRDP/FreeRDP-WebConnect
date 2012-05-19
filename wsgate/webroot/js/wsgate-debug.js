@@ -46,7 +46,7 @@ wsgate.WSrunner = new Class( {
 
 wsgate.RDP = new Class( {
     Extends: wsgate.WSrunner,
-    initialize: function(url, canvas) {
+    initialize: function(url, canvas, cssCursor) {
         this.parent(url);
         this.canvas = canvas;
         this.cctx = canvas.getContext('2d');
@@ -62,13 +62,35 @@ wsgate.RDP = new Class( {
         this.cly = 0;
         this.clw = 0;
         this.clh = 0;
+        this.mX = 0;
+        this.mY = 0;
+        this.chx = 10;
+        this.chy = 10;
         this.modkeys = [8, 16, 17, 18, 20, 144, 145];
         this.cursors = new Array();
         this.sid = null;
         this.open = false;
+        this.cssC = cssCursor;
+        if (!cssCursor) {
+            this.cI = new Element('img', {
+                'src': '/c_default.png',
+                'styles': {
+                    'position': 'absolute',
+                    'z-index': 998,
+                    'left': this.mX - this.chx,
+                    'top': this.mY - this.chy
+                }
+            }).inject(document.body);
+        }
     },
     Disconnect: function() {
         this._reset();
+    },
+    /**
+     * Position cursor image
+     */
+    cP: function() {
+        this.cI.setStyles({'left': this.mX - this.chx, 'top': this.mY - this.chy});
     },
     /**
      * Check, if a given point is inside the clipping region.
@@ -240,7 +262,11 @@ wsgate.RDP = new Class( {
                 // PTR_NEW
                 // id, xhot, yhot
                 hdr = new Uint32Array(data, 4, 3);
-                this.cursors[hdr[0]] = 'url(/cur/'+this.sid+'/'+hdr[0]+') '+hdr[1]+' '+hdr[2]+',none';
+                if (this.cssC) {
+                    this.cursors[hdr[0]] = 'url(/cur/'+this.sid+'/'+hdr[0]+') '+hdr[1]+' '+hdr[2]+',none';
+                } else {
+                    this.cursors[hdr[0]] = {u: '/cur/'+this.sid+'/'+hdr[0], x: hdr[1], y: hdr[2]};
+                }
                 break;
             case 9:
                 // PTR_FREE
@@ -251,15 +277,32 @@ wsgate.RDP = new Class( {
                 // PTR_SET
                 // id
                 // wsgate.log.debug('PS:', this.cursors[new Uint32Array(data, 4, 1)[0]]);
-                this.canvas.setStyle('cursor', this.cursors[new Uint32Array(data, 4, 1)[0]]);
+                if (this.cssC) {
+                    this.canvas.setStyle('cursor', this.cursors[new Uint32Array(data, 4, 1)[0]]);
+                } else {
+                    var cobj = this.cursors[new Uint32Array(data, 4, 1)[0]];
+                    this.chx = cobj.x;
+                    this.chy = cobj.y;
+                    this.cI.src = cobj.u;
+                }
                 break;
             case 11:
                 // PTR_SETNULL
-                this.canvas.setStyle('cursor', 'none');
+                if (this.cssC) {
+                    this.canvas.setStyle('cursor', 'none');
+                } else {
+                    this.cI.src = '/c_none.png';
+                }
                 break;
             case 12:
                 // PTR_SETDEFAULT
-                this.canvas.setStyle('cursor', 'default');
+                if (this.cssC) {
+                    this.canvas.setStyle('cursor', 'default');
+                } else {
+                    this.chx = 10;
+                    this.chy = 10;
+                    this.cI.src = '/c_default.png';
+                }
                 break;
             default:
                 wsgate.log.warn('Unknown BINRESP: ', data.byteLength);
@@ -408,7 +451,15 @@ wsgate.RDP = new Class( {
         }
         this.cctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
         document.title = document.title.replace(/:.*/, ': offline');
-        this.canvas.setStyle('cursor','default');
+        if (this.cssC) {
+            this.canvas.setStyle('cursor','default');
+        } else {
+            this.cI.src = '/c_default.png';
+        }
+        if (!this.cssC) {
+            this.cI.removeEvents();
+            this.cI.destroy();
+        }
     },
     /**
      * Event handler for mouse move events
@@ -416,8 +467,13 @@ wsgate.RDP = new Class( {
     onMm: function(evt) {
         var buf, a, x, y;
         evt.preventDefault();
-        x = evt.client.x - evt.target.offsetLeft;
-        y = evt.client.y - evt.target.offsetTop;
+        x = evt.page.x;
+        y = evt.page.y;
+        if (!this.cssC) {
+            this.mX = x;
+            this.mY = y;
+            this.cP();
+        }
         // wsgate.log.debug('mM x: ', x, ' y: ', y);
         if (this.sock.readyState == this.sock.OPEN) {
             buf = new ArrayBuffer(16);
@@ -435,8 +491,8 @@ wsgate.RDP = new Class( {
     onMd: function(evt) {
         var buf, a, x, y, which;
         evt.preventDefault();
-        x = evt.client.x - evt.target.offsetLeft;
-        y = evt.client.y - evt.target.offsetTop;
+        x = evt.page.x;
+        y = evt.page.y;
         which = this._mB(evt);
         // wsgate.log.debug('mD b: ', which, ' x: ', x, ' y: ', y);
         if (this.sock.readyState == this.sock.OPEN) {
@@ -455,8 +511,8 @@ wsgate.RDP = new Class( {
     onMu: function(evt) {
         var buf, a, x, y, which;
         evt.preventDefault();
-        x = evt.client.x - evt.target.offsetLeft;
-        y = evt.client.y - evt.target.offsetTop;
+        x = evt.page.x;
+        y = evt.page.y;
         which = this._mB(evt);
         // wsgate.log.debug('mU b: ', which, ' x: ', x, ' y: ', y);
         if (this.sock.readyState == this.sock.OPEN) {
@@ -475,8 +531,8 @@ wsgate.RDP = new Class( {
     onMw: function(evt) {
         var buf, a, x, y;
         evt.preventDefault();
-        x = evt.client.x - evt.target.offsetLeft;
-        y = evt.client.y - evt.target.offsetTop;
+        x = evt.page.x;
+        y = evt.page.y;
         // wsgate.log.debug('mW d: ', evt.wheel, ' x: ', x, ' y: ', y);
         if (this.sock.readyState == this.sock.OPEN) {
             buf = new ArrayBuffer(16);
@@ -593,12 +649,19 @@ wsgate.RDP = new Class( {
         this.canvas.addEvent('mousewheel', this.onMw.bind(this));
         // Disable the browser's context menu
         this.canvas.addEvent('contextmenu', function(e) {e.stop();});
+        if (!this.cssC) {
+            // Same events on pointer image
+            this.cI.addEvent('mousemove', this.onMm.bind(this));
+            this.cI.addEvent('mousedown', this.onMd.bind(this));
+            this.cI.addEvent('mouseup', this.onMu.bind(this));
+            this.cI.addEvent('mousewheel', this.onMw.bind(this));
+            this.cI.addEvent('contextmenu', function(e) {e.stop();});
+        }
         // The keyboard events need to be attached to the
         // document, because otherwise we seem to loose them.
         document.addEvent('keydown', this.onKd.bind(this));
         document.addEvent('keyup', this.onKu.bind(this));
         document.addEvent('keypress', this.onKp.bind(this));
-        // this.canvas.setStyle('cursor','none');
         this.fireEvent('connected');
     },
     /**

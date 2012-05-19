@@ -31,7 +31,7 @@
                     + '&notls=' + ($('notls').checked ? '1' : '0')
                     + '&dtsize=' + $('screen').width + 'x' + $('screen').height
                     ;
-                var rdp = new wsgate.RDP(wsUri, $('screen'));
+                var rdp = new wsgate.RDP(wsUri, $('screen'), !RIMtablet);
                 rdp.addEvent('alert', function(msg) {
                         alert(msg);
                         });
