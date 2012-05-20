@@ -83,9 +83,7 @@ wsgate.Log = new Class({
             this._p('D:', arguments);
         }
         if (wsgate.hasconsole) {
-            try { console.debug.apply(this, arguments); } catch (error) {
-                this._p('E:', error);
-            }
+            try { console.debug.apply(this, arguments); } catch (error) { }
         }
         /* /DEBUG */},
     info: function() {
