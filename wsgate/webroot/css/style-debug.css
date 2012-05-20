@@ -249,6 +249,7 @@ legend {
     font-weight: bold;
 }
 table td {
+    vertical-align: middle;
     padding: 5px;
 }
 table td.buttons {
@@ -332,6 +333,16 @@ table td.key {
     background-color: #F00;
     font-size: 14pt;
 	font-weight:			bold;
+}
+
+label.big {
+    font-size: 14pt;
+	font-weight: bold;
+}
+
+#mousedialog {
+    margin: 10px !important;
+    padding: 10px !important;
 }
 
 #screen {

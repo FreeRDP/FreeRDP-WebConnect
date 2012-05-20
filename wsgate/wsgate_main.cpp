@@ -1096,7 +1096,28 @@ namespace wsgate {
                   , m_rsh(rsh)
         {}
 
-            virtual void on_message(std::string, std::string data) {
+            virtual void on_message(std::string hdr, std::string data) {
+                if (1 == (hdr[0] & 0x0F)) {
+                    // A text message
+                    if (':' == data[1]) {
+                        switch (data[0]) {
+                            case 'D':
+                                log::debug << "JS: " << data.substr(2) << endl;
+                                break;
+                            case 'I':
+                                log::info << "JS: " << data.substr(2) << endl;
+                                break;
+                            case 'W':
+                                log::warn << "JS: " << data.substr(2) << endl;
+                                break;
+                            case 'E':
+                                log::err << "JS: " << data.substr(2) << endl;
+                                break;
+                        }
+                    }
+                    return;
+                }
+                // binary message;
                 m_rsh->OnMessage(m_econn, data);
             }
             virtual void on_close() {

@@ -16,6 +16,12 @@
         <script language="javascript" type="text/javascript">
             var wsBase = "%WSURI%";
             var RIMtablet = navigator.appVersion && (-1 != navigator.appVersion.indexOf('RIM Tablet'));
+            var mhx = 100;
+            var mhy = 100;
+            var dragX = 0;
+            var dragY = 0;
+            var inDrag = false;
+            var rdp = null;
             function RDPrun() {
                 var wsUri = wsBase
                     + '?host=' + encodeURIComponent($('rdphost').value.trim())
@@ -31,7 +37,7 @@
                     + '&notls=' + ($('notls').checked ? '1' : '0')
                     + '&dtsize=' + $('screen').width + 'x' + $('screen').height
                     ;
-                var rdp = new wsgate.RDP(wsUri, $('screen'), !RIMtablet);
+                rdp = new wsgate.RDP(wsUri, $('screen'), !RIMtablet, RIMtablet);
                 rdp.addEvent('alert', function(msg) {
                         alert(msg);
                         });
@@ -54,8 +60,90 @@
                         OnDesktopSize();
                         window.addEvent('resize', OnDesktopSize);
                         });
+                rdp.addEvent('mouserelease', ResetRdpMouseFlags);
+                rdp.addEvent('touch2', function() {
+                    ShowMouseHelper($('mousehelper').hasClass('invisible'));
+                });
+                rdp.addEvent('touch3', function() {
+                    alert('Touch3');
+                });
+                rdp.addEvent('touch4', function() {
+                    if (confirm('Really disconnect?')) {
+                        rdp.Disconnect();
+                    }
+                });
                 showDialog(false);
                 rdp.Run();
+            }
+            function SetRdpMouseFlags() {
+                var mf = {
+                    'r': $('rclick').checked,
+                    'm': $('mclick').checked,
+                    'a': $('aclick').checked,
+                    's': $('sclick').checked,
+                    'c': $('cclick').checked,
+                };
+                rdp.SetArtificialMouseFlags(mf);
+            }
+            function ResetRdpMouseFlags() {
+                $('rclick').checked = false;
+                $('mclick').checked = false;
+                $('aclick').checked = false;
+                $('sclick').checked = false;
+                $('cclick').checked = false;
+                rdp.SetArtificialMouseFlags(null);
+            }
+            function ShowMouseHelper(show) {
+                var mh = $('mousehelper');
+                inDrag = false;
+                if (show) {
+                    mh.setStyles({'position':'absolute','top':mhy,'left':mhx,'z-index':999});
+                    mh.addEvent('mousedown',DragStart);
+                    $('rclick').addEvent('change', SetRdpMouseFlags);
+                    $('mclick').addEvent('change', SetRdpMouseFlags);
+                    $('aclick').addEvent('change', SetRdpMouseFlags);
+                    $('sclick').addEvent('change', SetRdpMouseFlags);
+                    $('cclick').addEvent('change', SetRdpMouseFlags);
+                    mh.removeClass('invisible');
+                } else {
+                    mh.removeEvents();
+                    mh.addClass('invisible');
+                    $('rclick').removeEvents();
+                    $('mclick').removeEvents();
+                    $('aclick').removeEvents();
+                    $('sclick').removeEvents();
+                    $('cclick').removeEvents();
+                }
+            }
+            function DragStart(evt) {
+                var mh = $('mousehelper');
+                if (!mh.hasClass('invisible')) {
+                    inDrag = true;
+                    dragX = evt.page.x;
+                    dragY = evt.page.y;
+                    window.addEvent('mouseup',DragEnd);
+                    window.addEvent('touchmove',DragMove);
+                }
+            }
+            function DragEnd(evt) {
+                inDrag = false;
+                var mh = $('mousehelper');
+                window.removeEvent('touchmove',DragMove);
+                window.removeEvent('mouseup',DragEnd);
+            }
+            function DragMove(evt) {
+                if (inDrag) {
+                    var dx = evt.page.x - dragX;
+                    var dy = evt.page.y - dragY;
+                    dragX = evt.page.x;
+                    dragY = evt.page.y;
+                    var mh = $('mousehelper');
+                    if (!mh.hasClass('invisible')) {
+                        mhx += dx;
+                        mhy += dy;
+                        mh.setStyles({'top':mhy,'left':mhx});
+                    }
+                }
             }
             function DrawLogo() {
                     var logo = new Element('img', {'src': 'FreeRDP_Logo.png'});
@@ -92,6 +180,7 @@
             }
             function showDialog(show) {
                 if (show) {
+                    ShowMouseHelper(false);
                     var dlg = $('maindialog');
                     var x = Math.round((window.getCoordinates().width - dlg.getCoordinates().width) / 2) + 'px';
                     var y = Math.round((window.getCoordinates().height - dlg.getCoordinates().height) / 2) + 'px';
@@ -111,6 +200,10 @@
                     $('dtsize').addEvent('change', OnDesktopSize);
                     var tabs = new SimpleTabs('rdpdialog',{selector:'h4'});
                     OnDesktopSize();
+                    if (RIMtablet) {
+                        // Set default performance flags to modem
+                        $('perf').value = '2';
+                    }
                     showDialog(true);
                     window.addEvent('resize', OnDesktopSize);
             });
@@ -220,12 +313,48 @@
                                     </table>
                                 </fieldset>
                             </form>
+                            <br />
                         </div>
                         <h4 title="Show version info">About</h4>
                         <div class="about">
                             <h2>FreeRDP WebConnect</h2>
                             Version %VERSION%
                         </div>
+                    </div>
+                </td>
+            </tr>
+        </table>
+        <table width="240px" id="mousehelper" class="invisible">
+            <tr>
+                <td>
+                    <div id="mousedialog" class="dialog">
+                        <form>
+                            <fieldset>
+                                <legend>Click properties</legend>
+                                <table>
+                                    <tr>
+                                        <td class="key"><label class="big" for="rclick">Right</label></td>
+                                        <td><input id="rclick" name="rclick" type="checkbox" /></td>
+                                    </tr>
+                                    <tr>
+                                        <td class="key"><label class="big" for="mclick">Middle</label></td>
+                                        <td><input id="mclick" name="mclick" type="checkbox" /></td>
+                                    </tr>
+                                    <tr>
+                                        <td class="key"><label class="big" for="aclick">Alt</label></td>
+                                        <td><input id="aclick" name="aclick" type="checkbox" /></td>
+                                    </tr>
+                                    <tr>
+                                        <td class="key"><label class="big" for="sclick">Shift</label></td>
+                                        <td><input id="sclick" name="sclick" type="checkbox" /></td>
+                                    </tr>
+                                    <tr>
+                                        <td class="key"><label class="big" for="cclick">Control</label></td>
+                                        <td><input id="cclick" name="cclick" type="checkbox" /></td>
+                                    </tr>
+                                <table>
+                            </fieldset>
+                        </form>
                     </div>
                 </td>
             </tr>

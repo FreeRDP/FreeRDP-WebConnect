@@ -2,30 +2,126 @@ var wsgate = wsgate || {}
 
 wsgate.hasconsole = (typeof console !== 'undefined' && 'debug' in console && 'info' in console && 'warn' in console && 'error' in console);
 
-wsgate.log = {
+wsgate.o2s = function(obj, depth) {
+    depth = depth || [];
+    if (depth.contains(obj)) {
+        return '{SELF}';
+    }
+    switch (typeof(obj)) {
+        case 'undefined':
+            return 'undefined';
+        case 'string':
+            return '"' + obj.replace(/[\x00-\x1f\\"]/g, escape) + '"';
+        case 'array':
+            var string = [];
+            depth.push(obj);
+            for (var i = 0; i < obj.length; ++i) {
+                string.push(wsgate.o2s(obj[i], depth));
+            }
+            depth.pop();
+            return '[' + string + ']';
+        case 'object':
+        case 'hash':
+            var string = [];
+            depth.push(obj);
+            var isE = (obj instanceof UIEvent);
+            Object.each(obj, function(v, k) {
+                if (v instanceof HTMLElement) {
+                    string.push(k + '={HTMLElement}');
+                } else if (isE && (('layerX' == k) || ('layerY' == k) ('view' == k))) {
+                    string.push(k + '=!0');
+                } else {
+                    try {
+                        var vstr = wsgate.o2s(v, depth);
+                        if (vstr) {
+                            string.push(k + '=' + vstr);
+                        }
+                    } catch (error) {
+                        string.push(k + '=??E??');
+                    }
+                }
+            });
+            depth.pop();
+            return '{' + string + '}';
+        case 'number':
+        case 'boolean':
+            return '' + obj;
+        case 'null':
+            return 'null';
+    }
+    return null;
+};
+
+wsgate.Log = new Class({
+    initialize: function() {
+        this.ws = null;
+    },
+    _p: function(pfx, a) {
+        var line = '';
+        var i;
+        for (i = 0; i < a.length; ++i) {
+            switch (typeof(a[i])) {
+                case 'string':
+                case 'number':
+                case 'boolean':
+                case 'null':
+                    line += a[i] + ' ';
+                    break;
+                default:
+                    line += wsgate.o2s(a[i]) + ' ';
+                    break;
+            }
+        }
+        if (0 < line.length) {
+            this.ws.send(pfx + line);
+        }
+    },
     drop: function() {
     },
     debug: function() {/* DEBUG */
+        if (this.ws) {
+            this._p('D:', arguments);
+        }
         if (wsgate.hasconsole) {
-            try { console.debug.apply(this, arguments); } catch (error) { }
+            try { console.debug.apply(this, arguments); } catch (error) {
+                this._p('E:', error);
+            }
         }
         /* /DEBUG */},
-    info: function() {/* DEBUG */
-        if (wsgate.hasconsole) {
+    info: function() {
+        if (this.ws) {
+            var a = Array.prototype.slice.call(arguments);
+            a.unshift('I:');
+            this._p.apply(this, a);
+        }
+        /* DEBUG */if (wsgate.hasconsole) {
             try { console.info.apply(this, arguments); } catch (error) { }
+        }/* /DEBUG */
+    },
+    warn: function() {
+        if (this.ws) {
+            var a = Array.prototype.slice.call(arguments);
+            a.unshift('W:');
+            this._p.apply(this, a);
         }
-        /* /DEBUG */},
-    warn: function() {/* DEBUG */
-        if (wsgate.hasconsole) {
+        /* DEBUG */if (wsgate.hasconsole) {
             try { console.warn.apply(this, arguments); } catch (error) { }
+        }/* /DEBUG */
+    },
+    err: function() {
+        if (this.ws) {
+            var a = Array.prototype.slice.call(arguments);
+            a.unshift('E:');
+            this._p.apply(this, a);
         }
-        /* /DEBUG */},
-    err: function() {/* DEBUG */
-        if (wsgate.hasconsole) {
+        /* DEBUG */if (wsgate.hasconsole) {
             try { console.error.apply(this, arguments); } catch (error) { }
-        }
-        /* /DEBUG */}
-}
+        }/* /DEBUG */
+    },
+    setWS: function(_ws) {
+        this.ws = _ws;
+    }
+});
 
 wsgate.WSrunner = new Class( {
     Implements: Events,
@@ -46,8 +142,8 @@ wsgate.WSrunner = new Class( {
 
 wsgate.RDP = new Class( {
     Extends: wsgate.WSrunner,
-    initialize: function(url, canvas, cssCursor) {
-        this.parent(url);
+    initialize: function(url, canvas, cssCursor, useTouch) {
+        this.log = new wsgate.Log();
         this.canvas = canvas;
         this.cctx = canvas.getContext('2d');
         this.cctx.strokeStyle = 'rgba(255,255,255,0)';
@@ -57,6 +153,9 @@ wsgate.RDP = new Class( {
             'height':this.canvas.height,
         });
         this.bctx = this.bstore.getContext('2d');
+        this.aMF = 0;
+        this.Tcool = true;
+        this.pTe = null;
         this.ccnt = 0;
         this.clx = 0;
         this.cly = 0;
@@ -71,17 +170,19 @@ wsgate.RDP = new Class( {
         this.sid = null;
         this.open = false;
         this.cssC = cssCursor;
+        this.uT = useTouch;
         if (!cssCursor) {
             this.cI = new Element('img', {
                 'src': '/c_default.png',
                 'styles': {
                     'position': 'absolute',
-                    'z-index': 998,
-                    'left': this.mX - this.chx,
-                    'top': this.mY - this.chy
+                'z-index': 998,
+                'left': this.mX - this.chx,
+                'top': this.mY - this.chy
                 }
             }).inject(document.body);
         }
+        this.parent(url);
     },
     Disconnect: function() {
         this._reset();
@@ -116,12 +217,12 @@ wsgate.RDP = new Class( {
         switch (op[0]) {
             case 0:
                 // BeginPaint
-                // wsgate.log.debug('BeginPaint');
+                // this.log.debug('BeginPaint');
                 this._ctxS();
                 break;
             case 1:
                 // EndPaint
-                // wsgate.log.debug('EndPaint');
+                // this.log.debug('EndPaint');
                 this._ctxR();
                 break;
             case 2:
@@ -150,7 +251,7 @@ wsgate.RDP = new Class( {
                 len = hdr[8];
                 if ((bpp == 16) || (bpp == 15)) {
                     if (this._ckclp(x, y) && this._ckclp(x + dw, y + dh)) {
-                        // wsgate.log.debug('BMi:',(compressed ? ' C ' : ' U '),' x=',x,'y=',y,' w=',w,' h=',h,' l=',len);
+                        // this.log.debug('BMi:',(compressed ? ' C ' : ' U '),' x=',x,'y=',y,' w=',w,' h=',h,' l=',len);
                         var outB = this.cctx.createImageData(w, h);
                         if (compressed) {
                             wsgate.dRLE16_RGBA(bmdata, len, w, outB.data);
@@ -160,7 +261,7 @@ wsgate.RDP = new Class( {
                         }
                         this.cctx.putImageData(outB, x, y, 0, 0, dw, dh);
                     } else {
-                        // wsgate.log.debug('BMc:',(compressed ? ' C ' : ' U '),' x=',x,'y=',y,' w=',w,' h=',h,' bpp=',bpp);
+                        // this.log.debug('BMc:',(compressed ? ' C ' : ' U '),' x=',x,'y=',y,' w=',w,' h=',h,' bpp=',bpp);
                         // putImageData ignores the clipping region, so we must
                         // clip ourselves: We first paint into a second canvas,
                         // then use drawImage (which honors clipping).
@@ -176,7 +277,7 @@ wsgate.RDP = new Class( {
                         this.cctx.drawImage(this.bstore, 0, 0, dw, dh, x, y, dw, dh);
                     }
                 } else {
-                    wsgate.log.warn('BPP <> 15/16 not yet implemented');
+                    this.log.warn('BPP <> 15/16 not yet implemented');
                 }
                 break;
             case 3:
@@ -184,7 +285,7 @@ wsgate.RDP = new Class( {
                 // x, y , w, h, color
                 hdr = new Int32Array(data, 4, 4);
                 rgba = new Uint8Array(data, 20, 4);
-                // wsgate.log.debug('Fill:',hdr[0], hdr[1], hdr[2], hdr[3], this._c2s(rgba));
+                // this.log.debug('Fill:',hdr[0], hdr[1], hdr[2], hdr[3], this._c2s(rgba));
                 this.cctx.fillStyle = this._c2s(rgba);
                 this.cctx.fillRect(hdr[0], hdr[1], hdr[2], hdr[3]);
                 break;
@@ -213,7 +314,7 @@ wsgate.RDP = new Class( {
                     }
                     this._ctxR();
                 } else {
-                    wsgate.log.warn('PatBlt: Patterned brush not yet implemented');
+                    this.log.warn('PatBlt: Patterned brush not yet implemented');
                 }
                 break; 
             case 6:
@@ -223,7 +324,7 @@ wsgate.RDP = new Class( {
                 rgba = new Uint8Array(data, 4, 4);
                 count = new Uint32Array(data, 8, 1);
                 rects = new Uint32Array(data, 12, count[0] * 4);
-                // wsgate.log.debug('MultiFill: ', count[0], " ", this._c2s(rgba));
+                // this.log.debug('MultiFill: ', count[0], " ", this._c2s(rgba));
                 this.cctx.fillStyle = this._c2s(rgba);
                 offs = 0;
                 // var c = this._c2s(rgba);
@@ -255,7 +356,7 @@ wsgate.RDP = new Class( {
                         }
                     }
                 } else {
-                    wsgate.log.warn('ScrBlt: width and/or height is zero');
+                    this.log.warn('ScrBlt: width and/or height is zero');
                 }
                 break; 
             case 8:
@@ -276,7 +377,7 @@ wsgate.RDP = new Class( {
             case 10:
                 // PTR_SET
                 // id
-                // wsgate.log.debug('PS:', this.cursors[new Uint32Array(data, 4, 1)[0]]);
+                // this.log.debug('PS:', this.cursors[new Uint32Array(data, 4, 1)[0]]);
                 if (this.cssC) {
                     this.canvas.setStyle('cursor', this.cursors[new Uint32Array(data, 4, 1)[0]]);
                 } else {
@@ -305,7 +406,7 @@ wsgate.RDP = new Class( {
                 }
                 break;
             default:
-                wsgate.log.warn('Unknown BINRESP: ', data.byteLength);
+                this.log.warn('Unknown BINRESP: ', data.byteLength);
         }
     },
     _cR: function(x, y, w, h, save) {
@@ -367,7 +468,7 @@ wsgate.RDP = new Class( {
                 return true;
                 break;
             default:
-                wsgate.log.warn('Unsupported raster op: ', rop.toString(16));
+                this.log.warn('Unsupported raster op: ', rop.toString(16));
                 break;
         }
         return false;
@@ -435,6 +536,7 @@ wsgate.RDP = new Class( {
      * Reset our state to disconnected
      */
     _reset: function() {
+        this.log.setWS(null);
         if (this.sock.readyState == this.sock.OPEN) {
             this.fireEvent('disconnected');
             this.sock.close();
@@ -461,6 +563,90 @@ wsgate.RDP = new Class( {
             this.cI.destroy();
         }
     },
+    fT: function() {
+        delete this.fTid;
+        if (this.pT) {
+            this.fireEvent('touch' + this.pT);
+            this.pT = 0;
+            return;
+        }
+        if (this.pTe) {
+            this.onMd(this.pTe);
+            this.pTe = null;
+        }
+    },
+    cT: function() {
+        this.log.debug('cT');
+        this.Tcool = true;
+    },
+    /**
+     * Event handler for touch start
+     */
+    onTs: function(evt) {
+        var tn = evt.targetTouches.length;
+        this.log.debug('Ts:', tn);
+        switch (tn) {
+            default:
+                break;
+            case 1:
+                this.pTe = evt;
+                evt.preventDefault();
+                if ('number' == typeof(this.fTid)) {
+                    clearTimeout(this.fTid);
+                }
+                this.fTid = this.fT.delay(50, this);
+                break;
+            case 2:
+                this.pT = 2;
+                this.Tcool = false;
+                evt.preventDefault();
+                if ('number' == typeof(this.fTid)) {
+                    clearTimeout(this.fTid);
+                }
+                this.cT.delay(500, this)
+                this.fTid = this.fT.delay(50, this);
+                break;
+            case 3:
+                this.pT = 3;
+                this.Tcool = false;
+                evt.preventDefault();
+                if ('number' == typeof(this.fTid)) {
+                    clearTimeout(this.fTid);
+                }
+                this.cT.delay(500, this)
+                this.fTid = this.fT.delay(50, this);
+                break;
+            case 4:
+                this.pT = 4;
+                this.Tcool = false;
+                evt.preventDefault();
+                if ('number' == typeof(this.fTid)) {
+                    clearTimeout(this.fTid);
+                }
+                this.cT.delay(500, this)
+                this.fTid = this.fT.delay(50, this);
+                break;
+        }
+        return true;
+    },
+    /**
+     * Event handler for touch start
+     */
+    onTe: function(evt) {
+        if ((0 == evt.targetTouches.length) && this.Tcool) {
+            evt.preventDefault();
+            this.onMu(evt, evt.changedTouches[0].pageX, evt.changedTouches[0].pageY);
+        }
+    },
+    /**
+     * Event handler for touch move
+     */
+    onTm: function(evt) {
+        // this.log.debug('Tm:', evt);
+        if (1 == evt.targetTouches.length) {
+            this.onMm(evt);
+        }
+    },
     /**
      * Event handler for mouse move events
      */
@@ -474,7 +660,7 @@ wsgate.RDP = new Class( {
             this.mY = y;
             this.cP();
         }
-        // wsgate.log.debug('mM x: ', x, ' y: ', y);
+        // this.log.debug('mM x: ', x, ' y: ', y);
         if (this.sock.readyState == this.sock.OPEN) {
             buf = new ArrayBuffer(16);
             a = new Uint32Array(buf);
@@ -490,39 +676,46 @@ wsgate.RDP = new Class( {
      */
     onMd: function(evt) {
         var buf, a, x, y, which;
-        evt.preventDefault();
-        x = evt.page.x;
-        y = evt.page.y;
-        which = this._mB(evt);
-        // wsgate.log.debug('mD b: ', which, ' x: ', x, ' y: ', y);
-        if (this.sock.readyState == this.sock.OPEN) {
-            buf = new ArrayBuffer(16);
-            a = new Uint32Array(buf);
-            a[0] = 0; // WSOP_CS_MOUSE
-            a[1] = 0x8000 | which;
-            a[2] = x;
-            a[3] = y;
-            this.sock.send(buf);
+        if (this.Tcool) {
+            evt.preventDefault();
+            x = evt.page.x;
+            y = evt.page.y;
+            which = this._mB(evt);
+            this.log.debug('mD b: ', which, ' x: ', x, ' y: ', y);
+            if (this.sock.readyState == this.sock.OPEN) {
+                buf = new ArrayBuffer(16);
+                a = new Uint32Array(buf);
+                a[0] = 0; // WSOP_CS_MOUSE
+                a[1] = 0x8000 | which;
+                a[2] = x;
+                a[3] = y;
+                this.sock.send(buf);
+            }
         }
     },
     /**
      * Event handler for mouse up events
      */
-    onMu: function(evt) {
+    onMu: function(evt, x, y) {
         var buf, a, x, y, which;
-        evt.preventDefault();
-        x = evt.page.x;
-        y = evt.page.y;
-        which = this._mB(evt);
-        // wsgate.log.debug('mU b: ', which, ' x: ', x, ' y: ', y);
-        if (this.sock.readyState == this.sock.OPEN) {
-            buf = new ArrayBuffer(16);
-            a = new Uint32Array(buf);
-            a[0] = 0; // WSOP_CS_MOUSE
-            a[1] = which;
-            a[2] = x;
-            a[3] = y;
-            this.sock.send(buf);
+        if (this.Tcool) {
+            evt.preventDefault();
+            x = x || evt.page.x;
+            y = y || evt.page.y;
+            which = this._mB(evt);
+            this.log.debug('mU b: ', which, ' x: ', x, ' y: ', y);
+            if (this.aMF) {
+                this.fireEvent('mouserelease');
+            }
+            if (this.sock.readyState == this.sock.OPEN) {
+                buf = new ArrayBuffer(16);
+                a = new Uint32Array(buf);
+                a[0] = 0; // WSOP_CS_MOUSE
+                a[1] = which;
+                a[2] = x;
+                a[3] = y;
+                this.sock.send(buf);
+            }
         }
     },
     /**
@@ -533,7 +726,7 @@ wsgate.RDP = new Class( {
         evt.preventDefault();
         x = evt.page.x;
         y = evt.page.y;
-        // wsgate.log.debug('mW d: ', evt.wheel, ' x: ', x, ' y: ', y);
+        // this.log.debug('mW d: ', evt.wheel, ' x: ', x, ' y: ', y);
         if (this.sock.readyState == this.sock.OPEN) {
             buf = new ArrayBuffer(16);
             a = new Uint32Array(buf);
@@ -551,7 +744,7 @@ wsgate.RDP = new Class( {
         var a, buf;
         if (this.modkeys.contains(evt.code)) {
             evt.preventDefault();
-            // wsgate.log.debug('kD code: ', evt.code, ' ', evt);
+            // this.log.debug('kD code: ', evt.code, ' ', evt);
             if (this.sock.readyState == this.sock.OPEN) {
                 buf = new ArrayBuffer(12);
                 a = new Uint32Array(buf);
@@ -569,7 +762,7 @@ wsgate.RDP = new Class( {
         var a, buf;
         if (this.modkeys.contains(evt.code)) {
             evt.preventDefault();
-            // wsgate.log.debug('kU code: ', evt.code);
+            // this.log.debug('kU code: ', evt.code);
             if (this.sock.readyState == this.sock.OPEN) {
                 buf = new ArrayBuffer(12);
                 a = new Uint32Array(buf);
@@ -590,7 +783,7 @@ wsgate.RDP = new Class( {
             return;
         }
         if (this.sock.readyState == this.sock.OPEN) {
-            // wsgate.log.debug('kP code: ', evt.code);
+            // this.log.debug('kP code: ', evt.code);
             buf = new ArrayBuffer(12);
             a = new Uint32Array(buf);
             a[0] = 2; // WSOP_CS_KPRESS
@@ -606,24 +799,24 @@ wsgate.RDP = new Class( {
         switch (typeof(evt.data)) {
             // We use text messages for alerts and debugging ...
             case 'string':
-                // wsgate.log.debug(evt.data);
+                // this.log.debug(evt.data);
                 switch (evt.data.substr(0,2)) {
                     case "T:":
                             this._reset();
                             break;
                     case "E:":
-                            wsgate.log.err(evt.data.substring(2));
+                            this.log.err(evt.data.substring(2));
                             this.fireEvent('alert', evt.data.substring(2));
                             this._reset();
                             break;
                     case 'I:':
-                            wsgate.log.info(evt.data.substring(2));
+                            this.log.info(evt.data.substring(2));
                             break;
                     case 'W:':
-                            wsgate.log.warn(evt.data.substring(2));
+                            this.log.warn(evt.data.substring(2));
                             break;
                     case 'D:':
-                            wsgate.log.debug(evt.data.substring(2));
+                            this.log.debug(evt.data.substring(2));
                             break;
                     case 'S:':
                             this.sid = evt.data.substring(2);
@@ -642,6 +835,7 @@ wsgate.RDP = new Class( {
      */
     onWSopen: function(evt) {
         this.open = true;
+        this.log.setWS(this.sock);
         // Add listeners for the various input events
         this.canvas.addEvent('mousemove', this.onMm.bind(this));
         this.canvas.addEvent('mousedown', this.onMd.bind(this));
@@ -649,6 +843,12 @@ wsgate.RDP = new Class( {
         this.canvas.addEvent('mousewheel', this.onMw.bind(this));
         // Disable the browser's context menu
         this.canvas.addEvent('contextmenu', function(e) {e.stop();});
+        // For touch devices
+        if (this.uT) {
+            this.canvas.addEvent('touchstart', this.onTs.bind(this));
+            this.canvas.addEvent('touchend', this.onTe.bind(this));
+            this.canvas.addEvent('touchmove', this.onTm.bind(this));
+        }
         if (!this.cssC) {
             // Same events on pointer image
             this.cI.addEvent('mousemove', this.onMm.bind(this));
@@ -656,6 +856,11 @@ wsgate.RDP = new Class( {
             this.cI.addEvent('mouseup', this.onMu.bind(this));
             this.cI.addEvent('mousewheel', this.onMw.bind(this));
             this.cI.addEvent('contextmenu', function(e) {e.stop();});
+            if (this.uT) {
+                this.cI.addEvent('touchstart', this.onTs.bind(this));
+                this.cI.addEvent('touchend', this.onTe.bind(this));
+                this.cI.addEvent('touchmove', this.onTm.bind(this));
+            }
         }
         // The keyboard events need to be attached to the
         // document, because otherwise we seem to loose them.
@@ -718,6 +923,9 @@ wsgate.RDP = new Class( {
      * RDP-like flags.
      */
     _mB: function(evt) {
+        if (this.aMF) {
+            return this.aMF;
+        }
         var bidx;
         if ('event' in evt && 'button' in evt.event) {
             bidx = evt.event.button;
@@ -726,13 +934,26 @@ wsgate.RDP = new Class( {
         }
         switch (bidx) {
             case 0:
-                return 0x1000;
+                return 0x1000; // left button
             case 1:
-                return 0x4000;
+                return 0x4000; // middle button
             case 2:
-                return 0x2000;
+                return 0x2000; // right button
         }
         return 0x1000;
+    },
+    SetArtificialMouseFlags: function(mf) {
+        if (null == mf) {
+            this.aMF = 0;
+            return;
+        }
+        this.aMF = 0x1000; // left button
+        if (mf.r) {
+            this.aMF = 0x2000; // right
+        }
+        if (mf.m) {
+            this.aMF = 0x4000; // middle
+        }
     }
 });
 wsgate.copyRGBA = function(inA, inI, outA, outI) {
