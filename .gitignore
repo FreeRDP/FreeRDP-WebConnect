@@ -43,9 +43,11 @@ wsgate/wsgate.ini.sample
 wsgate/doc/
 wsgate/webroot/index.html
 wsgate/webroot/css/style.css
+wsgate/webroot/css/vkb.css
 wsgate/webroot/js/modernizr.js
 wsgate/webroot/js/mootools.js
 wsgate/webroot/js/simpletabs.js
+wsgate/webroot/js/vkb.js
 wsgate/webroot/js/wsgate.js
 wsgate/setup/.dlldeps
 wsgate/setup/.setupdir
