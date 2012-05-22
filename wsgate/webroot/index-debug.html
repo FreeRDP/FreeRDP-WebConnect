@@ -9,10 +9,12 @@
         <meta name="cursor-event-mode" content="native">
         <meta name="touch-event-mode" content="pure-with-mouse-conversion">
         <link rel="stylesheet" href="css/style%JSDEBUG%.css">
+        <link rel="stylesheet" href="css/vkb%JSDEBUG%.css">
         <script src="js/modernizr%JSDEBUG%.js"></script>
         <script src="js/mootools%JSDEBUG%.js"></script>
         <script src="js/simpletabs%JSDEBUG%.js"></script>
         <script src="js/wsgate%JSDEBUG%.js"></script>
+        <script src="js/vkb%JSDEBUG%.js"></script>
         <script language="javascript" type="text/javascript">
             var wsBase = "%WSURI%";
             var RIMtablet = navigator.appVersion && (-1 != navigator.appVersion.indexOf('RIM Tablet'));
@@ -205,6 +207,8 @@
                         $('perf').value = '2';
                     }
                     showDialog(true);
+                    var k = new wsgate.vkbd();
+                    // k.show();
                     window.addEvent('resize', OnDesktopSize);
             });
         </script>

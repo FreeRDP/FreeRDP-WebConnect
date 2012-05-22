@@ -121,6 +121,7 @@ namespace wsgate {
                 ICO,
                 JAVASCRIPT,
                 CSS,
+                OGG,
                 BINARY
             } MimeType;
 
@@ -142,6 +143,8 @@ namespace wsgate {
                     return JAVASCRIPT;
                 if (ends_with(filename, ".css"))
                     return CSS;
+                if (ends_with(filename, ".ogg"))
+                    return OGG;
                 return BINARY;
             }
 
@@ -654,6 +657,9 @@ namespace wsgate {
                         break;
                     case CSS:
                         response->SetHeader("Content-Type", "text/css");
+                        break;
+                    case OGG:
+                        response->SetHeader("Content-Type", "audio/ogg");
                         break;
                     case BINARY:
                         response->SetHeader("Content-Type", "application/octet-stream");
