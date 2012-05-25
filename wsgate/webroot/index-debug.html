@@ -24,6 +24,7 @@
             var dragY = 0;
             var inDrag = false;
             var rdp = null;
+            var vkbd = null;
             function RDPrun() {
                 var wsUri = wsBase
                     + '?host=' + encodeURIComponent($('rdphost').value.trim())
@@ -39,7 +40,7 @@
                     + '&notls=' + ($('notls').checked ? '1' : '0')
                     + '&dtsize=' + $('screen').width + 'x' + $('screen').height
                     ;
-                rdp = new wsgate.RDP(wsUri, $('screen'), !RIMtablet, RIMtablet);
+                rdp = new wsgate.RDP(wsUri, $('screen'), !RIMtablet, RIMtablet, vkbd);
                 rdp.addEvent('alert', function(msg) {
                         alert(msg);
                         });
@@ -67,7 +68,7 @@
                     ShowMouseHelper($('mousehelper').hasClass('invisible'));
                 });
                 rdp.addEvent('touch3', function() {
-                    alert('Touch3');
+                    vkbd.toggle();
                 });
                 rdp.addEvent('touch4', function() {
                     if (confirm('Really disconnect?')) {
@@ -207,8 +208,11 @@
                         $('perf').value = '2';
                     }
                     showDialog(true);
-                    var k = new wsgate.vkbd();
-                    // k.show();
+                    vkbd = new wsgate.vkbd({
+                        version:false,
+                        sizeswitch:false,
+                        numpadtoggle:false
+                    });
                     window.addEvent('resize', OnDesktopSize);
             });
         </script>

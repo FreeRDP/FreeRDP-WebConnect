@@ -181,11 +181,16 @@
   margin-left:0.2em;
   width:auto;
 }
+#keyboardInputMaster tbody tr td#keyboardInputCursor table {
+  margin-left:0.2em;
+  width:auto;
+}
 #keyboardInputMaster tbody tr td table.keyboardInputCenter {
   width:auto;
   margin:0px auto;
 }
 #keyboardInputMaster tbody tr td table tbody tr td {
+  text-align: center;
   vertical-align:middle;
   padding:0px 0.45em;
   white-space:pre;
@@ -225,7 +230,6 @@
   border-left:1px solid #d5d5d5;
   background-color:#cccccc;
 }
-#keyboardInputMaster thead tr th span:active,
 #keyboardInputMaster thead tr th span.pressed,
 #keyboardInputMaster tbody tr td table tbody tr td:active,
 #keyboardInputMaster tbody tr td table tbody tr td.pressed {
@@ -235,6 +239,13 @@
   border-left:1px solid #555555;
   background-color:#cccccc;
 }
+#keyboardInputMaster tbody tr td table tbody tr td.none,
+#keyboardInputMaster tbody tr td table tbody tr td.none:hover,
+#keyboardInputMaster tbody tr td table tbody tr td.none:active {
+  border: 1px none !important;
+  background-color:#dddddd;
+}
+#keyboardInputMaster thead tr th span:active,
 
 #keyboardInputMaster tbody tr td table tbody tr td small {
   display:block;

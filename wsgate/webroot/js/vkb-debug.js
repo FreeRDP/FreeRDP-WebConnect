@@ -33,6 +33,7 @@ wsgate.vkbd = new Class({
         this.VERSION = '1.49';
         this.posX = 100;
         this.posY = 100;
+        this.dragging = false;
         this.VKI_shift = this.VKI_shiftlock = false;
         this.VKI_altgr = this.VKI_altgrlock = false;
         this.VKI_alt = this.VKI_altlock = false;
@@ -160,6 +161,17 @@ wsgate.vkbd = new Class({
             [['1'], ['2'], ['3'], ['-']],
             [['0'], ['.'], ['='], ['+']]
                 ];
+        this.cblock = [
+            [['Prt'],['Slk'],['\u231b']],
+            [['Ins'],['\u21f1'],['\u21d1']],
+            [['Del'],['\u21f2'],['\u21d3']],
+            [[''],['\u2191'],['']],
+            [['\u2190'],['\u2193'],['\u2192']],
+            ];
+        this.topBlock = [
+            ['Esc'], ['F1'], ['F2'], ['F3'], ['F4'], ['F5'],
+            ['F6'], ['F7'], ['F8'], ['F9'], ['F10'], ['F11'], ['F12']
+            ];
         if (!this.VKI_layout[this.VKI_kt]) {
             throw 'No layout named "' + this.VKI_kt + '"';
         }
@@ -180,9 +192,13 @@ wsgate.vkbd = new Class({
             }
         }).inject(document.body);
         this.VKI_langCode = {};
-        var thead = new Element('thead').inject(this.VKI_keyboard);
+        var thead = new Element('thead', {
+            'events': {
+                'mousedown': this.dragStart.bind(this),
+            }
+        }).inject(this.VKI_keyboard);
         var tr = new Element('tr').inject(thead);
-        var th = new Element('th', {'colspan':2}).inject(tr);
+        var th = new Element('th', {'colspan':3}).inject(tr);
 
         var nlayouts = 0;
         Object.each(this.VKI_layout, function(item) { if ('object' == typeof(item)) { nlayouts++; } });
@@ -225,7 +241,7 @@ wsgate.vkbd = new Class({
                         e.stopPropagation();
                         var el = e.target;
                         el.parentNode.setStyle('display','');
-                        this.VKI_kts = this.VKI_kt = this.kbSelect.getFirst().nodeValue = el.get('text');
+                        this.VKI_kts = this.VKI_kt = this.kbSelect.firstChild.nodeValue = el.get('text');
                         this.VKI_buildKeys();
                     }.bind(this));
                 }
@@ -304,7 +320,7 @@ wsgate.vkbd = new Class({
             }).addEvent('click', function(e) {
                 el = e.target;
                 el.set('title', this.VKI_i18n['03'] + ': ' + ((el.checked) ? this.VKI_i18n['04'] : this.VKI_i18n['05']));
-                this.VKI_modify('');
+                this.modify('');
             }.bind(this)).inject(label);
         } else {
             this.deadCheckbox = new Element('input', {
@@ -322,6 +338,27 @@ wsgate.vkbd = new Class({
             }).inject(div);
         }
 
+        // Build cursor block
+        this.kbCursor = new Element('td', {
+            'id': 'keyboardInputCursor'
+        }).inject(tr);
+        var ctable = new Element('table', {
+            'cellspacing': '0'
+        }).inject(this.kbCursor);
+        var ctbody = new Element('tbody').inject(ctable);
+        this.cblock.each(function(row) {
+            ctr = new Element('tr').inject(ctbody);
+            row.each(function(col) {
+                this.VKI_stdEvents(new Element('td', {
+                    'html': col[0],
+                    'class': (col[0].length ? '' : 'none'),
+                    'events': {
+                        'click': (col[0].length ? this.kclick2.bind(this) : this.dummy)
+                    }
+                }).inject(ctr));
+            }.bind(this));
+        }.bind(this));
+
         // Build NumPad
         this.kbNumpad = new Element('td', {
             'id': 'keyboardInputNumpad',
@@ -337,7 +374,7 @@ wsgate.vkbd = new Class({
                 this.VKI_stdEvents(new Element('td', {
                     'html': this.VKI_numpad[x][y],
                     'events': {
-                        'click': this.VKI_keyClick.bind(this)
+                        'click': this.kclick.bind(this)
                     }
                 }).inject(ntr));
             }
@@ -347,6 +384,8 @@ wsgate.vkbd = new Class({
         this.VKI_buildKeys();
         this.VKI_keyboard.unselectable = 'on';
         this.VKI_kbsize();
+    },
+    dummy: function() {
     },
     VKI_stdEvents: function(elem) {
         if ('td' == elem.get('tag')) {
@@ -377,24 +416,28 @@ wsgate.vkbd = new Class({
             this.VKI_keyboard.addClass('keyboardInputSize' + this.VKI_size);
         }
     },
-    VKI_keyClick: function(evt) {
+    kdown: function(evt) {
+    },
+    kup: function(evt) {
+    },
+    kclick: function(evt) {
         var done = false, character = '\xa0', el = evt.target;
         if (el.firstChild.nodeName.toLowerCase() != 'small') {
             if ((character = el.firstChild.nodeValue) == '\xa0') {
                 return;
             }
         } else {
-            character = el.getFirst().get('char');
+            character = el.firstChild.get('char');
         }
         if (this.deadCheckbox.checked && this.VKI_dead) {
             if (this.VKI_dead != character) {
                 if (character != ' ') {
                     if (this.VKI_deadkey[this.VKI_dead][character]) {
-                        this.VKI_insert(this.VKI_deadkey[this.VKI_dead][character]);
+                        this.kpress(this.VKI_deadkey[this.VKI_dead][character]);
                         done = true;
                     }
                 } else {
-                    this.VKI_insert(this.VKI_dead);
+                    this.kpress(this.VKI_dead);
                     done = true;
                 }
             } else {
@@ -408,16 +451,35 @@ wsgate.vkbd = new Class({
                 this.VKI_dead = character;
                 el.addClass('dead');
                 if (this.VKI_shift) {
-                    this.VKI_modify('Shift');
+                    this.modify('Shift');
+                }
+                if (this.VKI_alt) {
+                    this.modify('Alt');
                 }
                 if (this.VKI_altgr) {
-                    this.VKI_modify('AltGr');
+                    this.modify('AltGr');
+                }
+                if (this.VKI_ctrl) {
+                    this.modify('Ctrl');
                 }
             } else {
-                this.VKI_insert(character);
+                this.kpress(character);
             }
         }
-        this.VKI_modify('');
+        this.modify('');
+    },
+    kclick2: function(evt) {
+        character = '\xa0', el = evt.target;
+        if (el.firstChild.nodeName.toLowerCase() != 'small') {
+            if ((character = el.firstChild.nodeValue) == '\xa0') {
+                return;
+            }
+        } else {
+            character = el.firstChild.get('char');
+        }
+        this.kpress(character, true);
+        this.VKI_dead = false;
+        this.modify('');
     },
     VKI_buildKeys: function() {
         this.VKI_shift = this.VKI_shiftlock = this.VKI_altgr = this.VKI_altgrlock = this.VKI_dead = false;
@@ -466,35 +528,36 @@ wsgate.vkbd = new Class({
 
                 switch (lkey[1]) {
                     case 'Caps':
+                    case 'Ctrl':
                     case 'Shift':
                     case 'Alt':
                     case 'AltGr':
                     case 'AltLk':
                         td.addEvent('click', function(type) {
                             // XXX
-                            this.VKI_modify(type);
+                            this.modify(type);
                         }.bind(this, lkey[1]));
                         break;
                     case 'Tab':
                         td.addEvent('click', function(e) {
                             e.preventDefault();
-                            this.VKI_insert('\t');
+                            this.kpress('\t');
                         }.bind(this));
                         break;
                     case 'Bksp':
                         td.addEvent('click', function(e) {
                             e.preventDefault();
-                            this.VKI_insert('\b');
+                            this.kpress('\b');
                         }.bind(this));
                         break;
                     case 'Enter':
                         td.addEvent('click', function(e) {
                             e.preventDefault();
-                            this.VKI_insert('\n');
+                            this.kpress('\r');
                         }.bind(this));
                         break;
                     default:
-                        td.addEvent('click', this.VKI_keyClick.bind(this));
+                        td.addEvent('click', this.kclick.bind(this));
                         break;
                 }
                 this.VKI_stdEvents(td);
@@ -510,9 +573,11 @@ wsgate.vkbd = new Class({
             this.deadCheckbox.setStyle('display', hasDeadKeys ? 'inline' : 'none');
         }
     },
-    VKI_modify: function(type) {
+    modify: function(type) {
         switch (type) {
             case 'Alt':
+                this.VKI_alt = !this.VKI_alt;
+                break;
             case 'AltGr':
                 this.VKI_altgr = !this.VKI_altgr;
                 break;
@@ -523,6 +588,9 @@ wsgate.vkbd = new Class({
             case 'Caps':
                 this.VKI_shift = 0;
                 this.VKI_shiftlock = !this.VKI_shiftlock;
+                break;
+            case 'Ctrl':
+                this.VKI_ctrl = !this.VKI_ctrl;
                 break;
             case 'Shift':
                 this.VKI_shift = !this.VKI_shift;
@@ -539,9 +607,13 @@ wsgate.vkbd = new Class({
         for (var x = 0; x < tables.length; x++) {
             var tds = tables[x].getElements('td');
             for (var y = 0; y < tds.length; y++) {
-                classes = {}, lkey = this.VKI_layout[this.VKI_kt].keys[x][y];
+                var classes = {}, lkey = this.VKI_layout[this.VKI_kt].keys[x][y];
                 switch (lkey[1]) {
                     case 'Alt':
+                        if (this.VKI_alt) {
+                            classes.pressed = 1;
+                        }
+                        break;
                     case 'AltGr':
                         if (this.VKI_altgr) {
                             classes.pressed = 1;
@@ -559,6 +631,11 @@ wsgate.vkbd = new Class({
                         break;
                     case 'Caps':
                         if (this.VKI_shiftlock) {
+                            classes.pressed = 1;
+                        }
+                        break;
+                    case 'Ctrl':
+                        if (this.VKI_ctrl) {
                             classes.pressed = 1;
                         }
                         break;
@@ -612,13 +689,59 @@ wsgate.vkbd = new Class({
             }
         }
     },
-    VKI_insert: function(text) {
-        console.debug('VK:',text);
+    kpress: function(text, special) {
+        var e = {
+            code: text.charCodeAt(0),
+            shift: this.VKI_shift,
+            control: this.VKI_ctrl,
+            alt: this.VKI_alt,
+            meta: this.VKI_altgr,
+            special: special
+        };
+        this.fireEvent('vkpress', e);
+        if (this.VKI_alt) {
+            this.modify("Alt");
+        }
+        if (this.VKI_altgr) {
+            this.modify("AltGr");
+        }
+        if (this.VKI_ctrl) {
+            this.modify("Ctrl");
+        }
+        if (this.VKI_shift) {
+            this.modify("Shift");
+        }
     },
     show: function() {
         this.VKI_keyboard.removeClass('hidden');
     },
     hide: function() {
         this.VKI_keyboard.addClass('hidden');
+    },
+    toggle: function() {
+        this.VKI_keyboard.toggleClass('hidden');
+    },
+    dragEnd: function(evt) {
+        this.dragging = false;
+        window.removeEvent('mouseup', this.dragEnd.bind(this));
+        window.removeEvent('mousemove', this.dragMove.bind(this));
+        window.removeEvent('touchmove', this.dragMove.bind(this));
+    },
+    dragStart: function(evt) {
+        this.dragX = evt.page.x;
+        this.dragY = evt.page.y;
+        this.dragging = true;
+        window.addEvent('mouseup', this.dragEnd.bind(this));
+        window.addEvent('mousemove', this.dragMove.bind(this));
+        window.addEvent('touchmove', this.dragMove.bind(this));
+    },
+    dragMove: function(evt) {
+        if (this.dragging) {
+            this.posX += evt.page.x - this.dragX;
+            this.posY += evt.page.y - this.dragY;
+            this.dragX = evt.page.x;
+            this.dragY = evt.page.y;
+            this.VKI_keyboard.setStyles({'top':this.posY,'left':this.posX});
+        }
     }
 });
