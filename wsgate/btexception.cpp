@@ -33,6 +33,13 @@
 #ifdef HAVE_EXECINFO_H
 # include <execinfo.h>
 #endif
+#ifdef HAVE_SYS_TYPES_H
+# include <sys/types.h>
+#endif
+#ifdef HAVE_UNISTD_H
+# include <unistd.h>
+#endif
+
 
 extern "C" {
 #define DMGL_PARAMS      (1 << 0)       /* Include function args */
