@@ -157,7 +157,7 @@ static bool init_backtrace ()
         proc_callbacks.debuginfo_path = &debuginfo_path;
         proc_callbacks.find_elf = dwfl_linux_proc_find_elf;
         dwfl = dwfl_begin(&proc_callbacks);
-        sret = (0 == dwfl_linux_proc_report(dwfl, getpid()));
+        sret = (0 == dwfl_linux_proc_report(dwfl, ::getpid()));
         atexit(exit_backtrace);
     }
     return sret;
