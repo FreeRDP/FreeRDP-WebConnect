@@ -25,12 +25,12 @@ logfacility = LOCAL6
 
 # Enable daemon mode.
 # Default: false, Currently ignored on Windows.
-#daemon = true
+daemon = true
 
 # Path of daemon's PID file.
 # Default: none => Don't create a PID-file
 # Currently ignored on Windows
-#pidfile = /var/run/wsgate.pid
+pidfile = /var/run/wsgate/wsgate.pid
 
 [http]
 # Set document root of web service. NO Default!

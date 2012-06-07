@@ -11,7 +11,9 @@ if [ -n "$CERTFILE" -a -f "$CERTFILE" ] ; then
     exit 0
 fi
 if [ -z "$CERTFILE" ] ; then
-    CERTFILE=/etc/pki/tls/certs/wsgate.pem
-    echo "certfile = $CERTFILE" >> $WSGATE_CONFIG
+    export CERTFILE=/etc/pki/tls/certs/wsgate.pem
+    perl -pi -e 'if(/^\[([a-z]+)\]/){if($1 eq "ssl"){$ss=1;}else{print "certfile = ".$ENV{"CERTFILE"}."\n" if($ss);}}' $WSGATE_CONFIG
 fi
 /etc/pki/tls/certs/make-dummy-cert "$CERTFILE"
+chmod 0640 "$CERTFILE"
+chgrp wsgate "$CERTFILE"

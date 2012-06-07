@@ -6,8 +6,14 @@ After=syslog.target network.target
 Type=forking
 User=wsgate
 Group=wsgate
-EnvironmentFile=/etc/sysconfig/wsgate
-ExecStart=/usr/sbin/wsgate -c $WSGATE_CONFIG
+LimitCore=infinity
+PIDFile=/var/run/wsgate/wsgate.pid
+Environment=WSGATE_CONFIG=/etc/wsgate.ini
+EnvironmentFile=-/etc/sysconfig/wsgate
+ExecStart=/usr/sbin/wsgate -c $WSGATE_CONFIG $WSGATE_OPTIONS
+ExecStartPre=/usr/libexec/wsgate/keygen.sh
+ExecReload=/bin/kill -HUP $MAINPID
+PermissionsStartOnly=true
 
 [Install]
 WantedBy=multi-user.target

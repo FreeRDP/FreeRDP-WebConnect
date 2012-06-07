@@ -7,7 +7,7 @@
 #
 # processname: wsgate
 # config: /etc/wsgate.ini
-# pidfile: /var/run/wsgate.pid
+# pidfile: /var/run/wsgate/wsgate.pid
 
 ### BEGIN INIT INFO
 # Provides: wsgate
@@ -32,7 +32,7 @@ WSGATE_OPTIONS=
 test -f /etc/sysconfig/wsgate && . /etc/sysconfig/wsgate
 
 RETVAL=0
-PIDFILE=/var/run/wsgate.pid
+PIDFILE=/var/run/wsgate/wsgate.pid
 
 prog=wsgate
 exec=/usr/sbin/wsgate

@@ -39,7 +39,7 @@ Buildrequires: libdw-devel
 %endif
 %endif
 
-Requires: logrotate
+Requires: logrotate, perl
 
 %description
 A WebSockets gateway for FreeRDP-WebConnect
@@ -68,6 +68,7 @@ cat > %{buildroot}%{_sysconfdir}/logrotate.d/wsgate <<EOF
     endscript
 }
 EOF
+mkdir -p  %{buildroot}/var/run/%{name}
 %if %{is_el}%{is_sles}
 mkdir -p %{buildroot}%{_initrddir}
 %{__install} -m 0755 conf/initrc.redhat %{buildroot}%{_initrddir}/wsgate
@@ -78,7 +79,6 @@ ln -s %{_initrddir}/wsgate  %{buildroot}%{_sbindir}/rcwsgate
 %if %{is_fc}
 mkdir -p %{buildroot}%{systemddir}
 %{__install} -m 0755 conf/wsgate.service %{buildroot}%{systemddir}
-%{__install} -m 0755 conf/wsgate-keygen.service %{buildroot}%{systemddir}
 %endif
 
 %clean
@@ -93,7 +93,6 @@ getent passwd wsgate >/dev/null || \
 %if %{is_fc}
 %post
 if [ $1 -eq 1 ] ; then
-    /bin/systemctl enable wsgate-keygen.service >/dev/null 2>&1 || :
     /bin/systemctl enable wsgate.service >/dev/null 2>&1 || :
 fi
 
@@ -101,9 +100,7 @@ fi
 if [ $1 -eq 0 ] ; then
     # Package removal, not upgrade
     /bin/systemctl --no-reload disable wsgate.service > /dev/null 2>&1 || :
-    /bin/systemctl --no-reload disable wsgate-keygen.service > /dev/null 2>&1 || :
     /bin/systemctl stop wsgate.service > /dev/null 2>&1 || :
-    /bin/systemctl stop wsgate-keygen.service > /dev/null 2>&1 || :
 fi
 
 %postun
@@ -111,7 +108,6 @@ fi
 if [ $1 -ge 1 ] ; then
     # Package upgrade, not uninstall
     /bin/systemctl try-restart wsgate.service >/dev/null 2>&1 || :
-    /bin/systemctl try-restart wsgate-keygen.service >/dev/null 2>&1 || :
 fi
 %endif
 
@@ -153,5 +149,7 @@ fi
 %{_libexecdir}/%{name}/keygen.sh
 %defattr(4755,root,root,-)
 %{_libexecdir}/%{name}/bindhelper
+%defattr(-,wsgate,wsgate,-)
+%dir /var/run/%{name}
 
 %changelog
