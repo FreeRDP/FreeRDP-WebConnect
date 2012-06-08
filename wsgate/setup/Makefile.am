@@ -6,7 +6,7 @@
 		install
 	cp -av $(top_builddir)/doc/html setupdir/doc
 	cp openssl.cnf setupdir/etc
-	find "$(DLLPATH)" -name openssl.exe|xargs --no-run-if-empty cp -t setupdir/bin
+	find "$(subst :," ",$(DLLPATH))" -name openssl.exe|xargs --no-run-if-empty cp -t setupdir/bin
 	touch $@
 
 .dlldeps: .setupdir findrequires.pl
