@@ -69,10 +69,10 @@ cat > %{buildroot}%{_sysconfdir}/logrotate.d/wsgate <<EOF
 }
 EOF
 mkdir -p  %{buildroot}/var/run/%{name}
-%if %{is_el}%{is_sles}
+%if %{is_el}%{is_sles}%{is_suse}
 mkdir -p %{buildroot}%{_initrddir}
 %{__install} -m 0755 conf/initrc.redhat %{buildroot}%{_initrddir}/wsgate
-%if %{is_sles}
+%if %{is_sles}%{is_suse}
 ln -s %{_initrddir}/wsgate  %{buildroot}%{_sbindir}/rcwsgate
 %endif
 %endif
