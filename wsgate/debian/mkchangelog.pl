@@ -10,7 +10,7 @@ my $name = '';
 my $msg = '';
 my $rev = 1;
 
-open(P, 'git log --date-order|') || die "Can't run git: $!\n";
+open(P, 'git log --date-order --date=iso|') || die "Can't run git: $!\n";
 my @lines = <P>;
 close P;
 foreach (@lines) {
@@ -39,6 +39,8 @@ foreach (@lines) {
     }
     if (/^Author:\s+(.*)$/) {
         $name = $1;
+        $name =~ s/felfert\@fritz.fe.think/wsgate\@fritz-elfert.de/g;
+        $name =~ s/fritz\@fritz-elfert.de/wsgate\@fritz-elfert.de/g;
         next;
     }
     if (/^Date:\s+(.*)$/) {
