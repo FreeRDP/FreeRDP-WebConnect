@@ -208,9 +208,10 @@ begin
         LoadStringFromFile(ExpandConstant('{app}\etc\tmp.crt'), tmp);
         SaveStringToFile(ExpandConstant('{app}\etc\server.pem'), tmp, true);
         DeleteFile(ExpandConstant('{app}\etc\tmp.crt'))
-        cfg := '[global]' + CR + 'debug = true' + CR;
+        cfg := '[global]' + CR + 'debug = true' + CR + 'port = 80' + CR + 'redirect = true' + CR;
         cfg := cfg + '[http]' + CR + 'documentroot = webroot' + CR;
         cfg := cfg + '[ssl]' + CR + 'port = 443' + CR + 'certfile = etc/server.pem' + CR;
+        cfg := cfg + '[rdpoverride]' + CR + 'nofullwindowdrag = true' + CR;
         SaveStringToFile(ExpandConstant('{app}\etc\wsgate.ini'), cfg, false);
         logexec(ExpandConstant('{app}\bin\wsgate.exe'), '--install', '', SW_HIDE, ewWaitUntilTerminated, res);
         logexec(ExpandConstant('{app}\bin\wsgate.exe'), '--start', '', SW_HIDE, ewWaitUntilTerminated, res);

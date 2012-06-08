@@ -1443,6 +1443,8 @@ int main (int argc, char **argv)
                 oSP["bindaddress"] = (*pvm)["global.bindaddr"].as<string>();
             }
             psrv->SetSourceEHS(srv);
+            wsgate::MyRawSocketHandler *psh = new wsgate::MyRawSocketHandler(psrv);
+            psrv->SetRawSocketHandler(psh);
             psrv->StartServer(oSP);
 #ifndef _WIN32
             g_psrv = psrv;
