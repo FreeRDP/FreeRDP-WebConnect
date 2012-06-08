@@ -1,5 +1,6 @@
 [global]
-# Enable debug logging. Possible values: true, false; Default: false
+# Enable debug logging and use uncompressed javascript.
+# Possible values: true, false; Default: false
 debug = true
 
 # Set non-SSL listener port. If omitted, no listener will be started.
@@ -26,6 +27,14 @@ logfacility = LOCAL6
 # Enable daemon mode.
 # Default: false, Currently ignored on Windows.
 daemon = true
+
+# Redirect permanently to https
+# If listeners for both SSL and non-SSL are configured, enabling this,
+# will answer all requests on the non-SSL port with a HTTP redirect response
+# pointing to the SSL port.
+#
+# Default: false
+# redirect = false
 
 # Path of daemon's PID file.
 # Default: none => Don't create a PID-file

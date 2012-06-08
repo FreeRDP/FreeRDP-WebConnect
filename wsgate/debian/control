@@ -1,0 +1,15 @@
+Source: wsgate
+Section: net
+Priority: extra
+Maintainer: Fritz Elfert <wsgate@fritz-elfert.de>
+Build-Depends: debhelper (>= 8.0.0), autotools-dev, g++, libehs-dev, libfreerdp-dev, libpng-dev, libtool, doxygen, graphviz, openjdk-6-jre-headless
+Standards-Version: 3.9.2
+Homepage: https://github.com/FreeRDP/FreeRDP-WebConnect
+#Vcs-Git: git://git.debian.org/collab-maint/wsgate.git
+#Vcs-Browser: http://git.debian.org/?p=collab-maint/wsgate.git;a=summary
+
+Package: wsgate
+Architecture: any
+Depends: ${shlibs:Depends}, ${misc:Depends}
+Description: FreeRDP-WebConnect gateway
+ A WebSockets gateway for FreeRDP-WebConnect

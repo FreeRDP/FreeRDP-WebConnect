@@ -2,12 +2,13 @@ JS_SOURCES = \
 	js/modernizr-debug.js  js/mootools-debug.js  js/wsgate-debug.js \
 	js/simpletabs-debug.js js/vkb-debug.js
 JS_GENERATED = $(JS_SOURCES:%-debug.js=%.js)
+VKB_LAYOUTS = $(wildcard js/vkbl-*.js)
 
 nobase_pkgdata_DATA = \
 	index-debug.html index.html favicon.ico FreeRDP_Logo.png \
 	css/style-debug.css css/style.css \
 	css/vkb-debug.css css/vkb.css \
-	$(JS_SOURCES) $(JS_GENERATED)
+	$(JS_SOURCES) $(JS_GENERATED) $(VKB_LAYOUTS)
 
 %.html: %-debug.html
 	$(AM_V_GEN)$(STRIP_DEBUG) $< > $@
