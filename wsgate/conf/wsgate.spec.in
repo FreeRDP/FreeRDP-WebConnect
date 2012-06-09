@@ -21,9 +21,9 @@ Version: @VERSION@
 Release: %{rel}
 License: LGPL
 %if %{is_sles}%{is_suse}
-Group: Network Servers
-%else
 Group: Productivity/Networking/Other
+%else
+Group: Network Servers
 %endif
 URL: https://github.com/FreeRDP/FreeRDP-WebConnect
 Source0: %{name}-%{version}.tar.gz
@@ -38,7 +38,7 @@ Buildrequires: doxygen, graphviz, automake, libtool, make, gcc-c++, java, perl
 Buildrequires: elfutils-devel
 %endif
 %if %{is_suse}%{is_sles}
-%if %{suse_version} > 1999
+%if %{suse_version} > 1130
 Buildrequires: libdw-devel
 %endif
 %endif
@@ -117,7 +117,7 @@ if [ $1 -ge 1 ] ; then
 fi
 %endif
 
-%if %{is_el}
+%if %{is_el}%{is_sles}
 %post
 if [ $1 -eq 1 ] ; then
     /sbin/chkconfig --add wsgate
@@ -136,7 +136,7 @@ if [ $1 -ge 1 ] ; then
 fi
 %endif
 
-%if %{is_sles}%{is_suse}
+%if %{suse_version} > 1140
 %post
 if [ $1 -eq 1 ] ; then
     /sbin/chkconfig --add wsgate
