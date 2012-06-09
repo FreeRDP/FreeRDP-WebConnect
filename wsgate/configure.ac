@@ -217,6 +217,14 @@ FE_RCVERSION
 dnl Use modern -pthread gcc option if available.
 fe_CHECK_FLAG([C++],[CXXFLAGS],[-pthread])
 
+dnl Use -fPIE and -pie for suid bindhelper
+fe_CHECK_FLAG([C],[SUID_CFLAGS],[-fPIC])
+fe_CHECK_FLAG([C],[SUID_LDFLAGS],[-fpic])
+SUID_CFLAGS=$ac_checked_SUID_CFLGAGS
+SUID_LDFLAGS=$ac_checked_SUID_LDFLAGS
+AC_SUBST(SUID_CFLAGS)
+AC_SUBST(SUID_LDFLAGS)
+
 AC_ARG_ENABLE([warn],
 	AS_HELP_STRING([--enable-warn],
 		[Enable additional warnings (Default: NO)]),

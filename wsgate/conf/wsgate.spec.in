@@ -44,6 +44,9 @@ Buildrequires: libdw-devel
 %endif
 
 Requires: logrotate, perl
+%if %{is_suse}
+PreReq: pwdutils, permissions, %{insserv_prereq}
+%endif
 
 %description
 A WebSockets gateway for FreeRDP-WebConnect
@@ -52,7 +55,7 @@ A WebSockets gateway for FreeRDP-WebConnect
 %setup -q
 
 %build
-%configure --enable-warn --with-pic
+%configure --enable-warn
 %{__make} %{?_smp_mflags} V=1
 
 %install
@@ -117,7 +120,7 @@ if [ $1 -ge 1 ] ; then
 fi
 %endif
 
-%if %{is_el}%{is_sles}
+%if %{is_el}
 %post
 if [ $1 -eq 1 ] ; then
     /sbin/chkconfig --add wsgate
@@ -137,10 +140,9 @@ fi
 %endif
 
 %if %{is_suse}
-%if %{suse_version} > 1140
 %post
 if [ $1 -eq 1 ] ; then
-    /sbin/chkconfig --add wsgate
+    /sbin/chkconfig --add wsgate || :
 fi
 
 %preun
@@ -149,7 +151,6 @@ fi
 %postun
 %restart_on_update
 %insserv_cleanup
-%endif
 %endif
 
 %files

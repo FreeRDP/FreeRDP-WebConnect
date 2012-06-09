@@ -8,6 +8,8 @@ pkglibexec_PROGRAMS = $(BINDHELPER)
 EXTRA_PROGRAMS = bindhelper
 
 bindhelper_SOURCES = bindhelper.c
+bindhelper_CFLAGS = $(SUID_CFLAGS)
+bindhelper_LDFLAGS = $(SUID_LDFLAGS)
 
 wsgate_SOURCES = \
 	base64.cpp \

@@ -7,7 +7,8 @@ AC_DEFUN([fe_CHECK_FLAG],[
   AC_REQUIRE([AC_LANG_PUSH])dnl
   AC_REQUIRE([AC_LANG_POP])dnl
 
-  AC_MSG_CHECKING(whether $CXX accepts $3)
+  compiler=m4_if($1,[C],[$CC],[$CXX])
+  AC_MSG_CHECKING(whether $compiler accepts $3)
   AC_LANG_PUSH($1)
   ac_save_$2="$$2"
   dnl Some flags are dependant, so we set all previously checked
