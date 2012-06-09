@@ -53,7 +53,7 @@ sysconf_DATA = wsgate.ini.sample
 EXTRA_DIST = $(DX_CONFIG) conf/wsgate.spec \
 	tools/yuicompressor.jar tools/strip-debug.pl \
 	wsgate.ini.sample.in logging.mc \
-	conf/initrc.redhat conf/keygen.sh conf/wsgate.service \
+	conf/initrc.redhat conf/initrc.suse conf/keygen.sh conf/wsgate.service \
 	LICENSE NOTICE debian
 
 # We want the maintainer-clean to REALLY remove anything that can be

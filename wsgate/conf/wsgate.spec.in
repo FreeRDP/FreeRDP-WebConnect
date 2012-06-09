@@ -20,7 +20,11 @@ Name:    wsgate
 Version: @VERSION@
 Release: %{rel}
 License: LGPL
+%if %{is_sles}%{is_suse}
 Group: Network Servers
+%else
+Group: Productivity/Networking/Other
+%endif
 URL: https://github.com/FreeRDP/FreeRDP-WebConnect
 Source0: %{name}-%{version}.tar.gz
 %if 0%{?opensuse_bs}
@@ -48,7 +52,7 @@ A WebSockets gateway for FreeRDP-WebConnect
 %setup -q
 
 %build
-%configure --enable-warn
+%configure --enable-warn --with-pic
 %{__make} %{?_smp_mflags} V=1
 
 %install
@@ -69,12 +73,14 @@ cat > %{buildroot}%{_sysconfdir}/logrotate.d/wsgate <<EOF
 }
 EOF
 mkdir -p  %{buildroot}/var/run/%{name}
-%if %{is_el}%{is_sles}%{is_suse}
+%if %{is_el}
 mkdir -p %{buildroot}%{_initrddir}
 %{__install} -m 0755 conf/initrc.redhat %{buildroot}%{_initrddir}/wsgate
-%if %{is_sles}%{is_suse}
-ln -s %{_initrddir}/wsgate  %{buildroot}%{_sbindir}/rcwsgate
 %endif
+%if %{is_sles}%{is_suse}
+mkdir -p %{buildroot}%{_initrddir}
+%{__install} -m 0755 conf/initrc.suse %{buildroot}%{_initrddir}/wsgate
+ln -s %{_initrddir}/wsgate  %{buildroot}%{_sbindir}/rcwsgate
 %endif
 %if %{is_fc}
 mkdir -p %{buildroot}%{systemddir}
@@ -128,6 +134,20 @@ if [ $1 -ge 1 ] ; then
     # Package upgrade, not uninstall
     /sbin/service wsgate condrestart
 fi
+%endif
+
+%if %{is_sles}%{is_suse}
+%post
+if [ $1 -eq 1 ] ; then
+    /sbin/chkconfig --add wsgate
+fi
+
+%preun
+%stop_on_removal
+
+%postun
+%restart_on_update
+%insserv_cleanup
 %endif
 
 %files
