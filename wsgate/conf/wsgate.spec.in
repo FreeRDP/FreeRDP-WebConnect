@@ -136,6 +136,7 @@ if [ $1 -ge 1 ] ; then
 fi
 %endif
 
+%if %{is_suse}
 %if %{suse_version} > 1140
 %post
 if [ $1 -eq 1 ] ; then
@@ -148,6 +149,7 @@ fi
 %postun
 %restart_on_update
 %insserv_cleanup
+%endif
 %endif
 
 %files
