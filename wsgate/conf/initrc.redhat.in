@@ -11,11 +11,11 @@
 
 ### BEGIN INIT INFO
 # Provides: wsgate
-# Required-Start: $local_fs $remote_fs $network $syslog
+# Required-Start: $local_fs $network $syslog
 # Required-Stop: $local_fs $syslog
 # Should-Start: $syslog
 # Should-Stop: $network $syslog
-# Default-Start:  3 5
+# Default-Start:  3 4 5
 # Default-Stop: 0 1 2 6
 # Short-Description: wsgate provides a WebSocket gateway for FreeRDP-WebConnect
 # Description: The WebSockets gateway for FreeRDP-WebConnect allws you
@@ -36,6 +36,7 @@ PIDFILE=/var/run/wsgate/wsgate.pid
 
 prog=wsgate
 exec=/usr/sbin/wsgate
+lockfile=/var/lock/subsys/$prog
 
 
 # Bail out, if our config does not exist
@@ -46,12 +47,13 @@ start() {
 
 	umask 077
 
-        /usr/libexec/wsgate/keygen.sh
+        _pkglibexecdir_/keygen.sh
         echo -n $"Starting $prog: "
         touch "$PIDFILE" && chown wsgate "$PIDFILE" && chmod 0644 "$PIDFILE"
         daemon --pidfile="$PIDFILE" --user=wsgate $exec -c $WSGATE_CONFIG $WSGATE_OPTIONS
         RETVAL=$?
         echo
+        [ $RETVAL -eq 0 ] && touch $lockfile
         return $RETVAL
 }
 stop() {
@@ -59,6 +61,7 @@ stop() {
         killproc -p "$PIDFILE" $exec
         RETVAL=$?
         echo
+        [ $RETVAL -eq 0 ] && rm -f $lockfile
         return $RETVAL
 }
 reload()  {

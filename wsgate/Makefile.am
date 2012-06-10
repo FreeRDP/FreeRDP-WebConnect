@@ -55,7 +55,8 @@ sysconf_DATA = wsgate.ini.sample
 EXTRA_DIST = $(DX_CONFIG) conf/wsgate.spec \
 	tools/yuicompressor.jar tools/strip-debug.pl \
 	wsgate.ini.sample.in logging.mc \
-	conf/initrc.redhat conf/initrc.suse conf/keygen.sh conf/wsgate.service \
+	conf/initrc.redhat.in conf/initrc.suse.in conf/keygen.sh \
+	conf/wsgate.service.in conf/initrc.debian \
 	LICENSE NOTICE debian
 
 # We want the maintainer-clean to REALLY remove anything that can be
@@ -69,7 +70,8 @@ MAINTAINERCLEANFILES = -r aclocal.m4 config.h.in* configure Makefile.in \
 MOSTLYCLEANFILES = $(DX_CLEANFILES)
 
 CLEANFILES = -r wsgate.ini.sample logging.rc MSG00001.bin doxygen.log \
-	$(PACKAGE)-$(VERSION) $(PACKAGE)_*.tar.gz $(PACKAGE)_*.dsc
+	$(PACKAGE)-$(VERSION) $(PACKAGE)_*.tar.gz $(PACKAGE)_*.dsc debian/init.d \
+	conf/initrc.redhat conf/initrc.suse conf/wsgate.service
 
 am_v_rc = $(am_v_rc_$(V))
 am_v_rc_ = $(am_v_rc_$(AM_DEFAULT_VERBOSITY))
@@ -95,6 +97,17 @@ alldoc: conf/doxygen.cfg
 
 dist-hook: alldoc
 	cp -a doc $(distdir)/doc
+
+all-local: conf/initrc.redhat conf/initrc.suse conf/wsgate.service debian/init.d
+
+conf/initrc.%: conf/initrc.%.in
+	$(AM_V_GEN)$(PERL) -p -e 's!_pkglibexecdir_!$(pkglibexecdir)!g' $< > $@
+
+conf/wsgate.service: conf/wsgate.service.in
+	$(AM_V_GEN)$(PERL) -p -e 's!_pkglibexecdir_!$(pkglibexecdir)!g' $< > $@
+
+debian/init.d: conf/initrc.debian
+	$(AM_V_GEN)$(PERL) -p -e 's!_pkglibexecdir_!$(pkglibexecdir)!g' $< > $@
 
 debprep: dist
 	tar xfz $(PACKAGE)-$(VERSION).tar.gz
