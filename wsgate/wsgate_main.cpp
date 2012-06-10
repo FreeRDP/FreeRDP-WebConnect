@@ -441,7 +441,7 @@ namespace wsgate {
                         response->SetCookie(delcookie);
                     } else {
                         setcookie["name"] = "lasthost";
-                        setcookie["value"] = (m_bOverrideRdpHost ? "%3cpredefined%3e" : rdphost);
+                        setcookie["value"] = (m_bOverrideRdpHost ? "<predefined>" : rdphost);
                         response->SetCookie(setcookie);
                     }
                     if (rdpuser.empty()) {
@@ -450,7 +450,7 @@ namespace wsgate {
                         response->SetCookie(delcookie);
                     } else {
                         setcookie["name"] = "lastuser";
-                        setcookie["value"] = (m_bOverrideRdpUser ? "%3cpredefined%3e" : rdpuser);
+                        setcookie["value"] = (m_bOverrideRdpUser ? "<predefined>" : rdpuser);
                         response->SetCookie(setcookie);
                     }
                     if (m_bOverrideRdpPass) {
