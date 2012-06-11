@@ -85,7 +85,7 @@ A WebSockets gateway for FreeRDP-WebConnect
 %{__make} %{?_smp_mflags} V=1
 
 %install
-%{__make} DESTDIR=%{buildroot} install inst-logrotate
+%{__make} DESTDIR=%{buildroot} install inst-logrotate inst-varrun
 %if %{is_el}%{is_fc}
 %{__make} DESTDIR=%{buildroot} inst-rsyslog
 %endif
