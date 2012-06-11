@@ -85,7 +85,7 @@ A WebSockets gateway for FreeRDP-WebConnect
 %{__make} %{?_smp_mflags} V=1
 
 %install
-%{__make} DESTDIR=%{buildroot} install inst-logrotate inst-varrun
+%{__make} DESTDIR=%{buildroot} install inst-logrotate
 %if %{is_el}%{is_fc}
 %{__make} DESTDIR=%{buildroot} inst-rsyslog
 %endif
@@ -102,7 +102,6 @@ A WebSockets gateway for FreeRDP-WebConnect
 %if %{is_suse}
 %verifyscript
 %verify_permissions -e %{_libexecdir}/%{name}/bindhelper
-%verify_permissions -e /var/run/%{name}/
 %endif
 
 %clean
@@ -157,7 +156,7 @@ fi
 %if %{is_suse}
 %post
 %if 0%{?set_permissions:1} > 0
-    %set_permissions %{name}
+    %set_permissions %{_libexecdir}/%{name}/bindhelper
 %else
     %run_permissions
 %endif
@@ -193,13 +192,10 @@ fi
 %dir %{_libexecdir}/%{name}
 %{_libexecdir}/%{name}/keygen.sh
 %if %{is_suse}
-%verify(not user group mode) %attr(04754,root,wsgate) %{_libexecdir}/%{name}/bindhelper
-%verify(not user group mode) %attr(0775,root,wsgate) %dir /var/run/%{name}
+%verify(not user group mode) %attr(4754,root,wsgate) %{_libexecdir}/%{name}/bindhelper
 %else
 %defattr(4754,root,wsgate,-)
 %{_libexecdir}/%{name}/bindhelper
-%defattr(-,wsgate,wsgate,-)
-%dir /var/run/%{name}
 %endif
 
 %changelog

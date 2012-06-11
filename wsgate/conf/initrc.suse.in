@@ -42,60 +42,61 @@ exec=/usr/sbin/wsgate
 test -f $WSGATE_CONFIG || exit 0
 
 start() {
-	[ -x $exec ] || exit 5
+    [ -x $exec ] || exit 5
 
-	umask 077
+    # Create /var/run/wsgate
+    mkdir -p /var/run/wsgate
+    chown wsgate.wsgate /var/run/wsgate
 
-        _pkglibexecdir_/keygen.sh
-        echo -n $"Starting $prog: "
-        touch "$PIDFILE" && chown wsgate "$PIDFILE" && chmod 0644 "$PIDFILE"
-        daemon --pidfile="$PIDFILE" --user=wsgate $exec -c $WSGATE_CONFIG $WSGATE_OPTIONS
-        RETVAL=$?
-        echo
-        return $RETVAL
+    _pkglibexecdir_/keygen.sh
+    echo -n $"Starting $prog: "
+    daemon --pidfile="$PIDFILE" --user=wsgate $exec -c $WSGATE_CONFIG $WSGATE_OPTIONS
+    RETVAL=$?
+    echo
+    return $RETVAL
 }
 stop() {
-        echo -n $"Shutting down $prog: "
-        killproc -p "$PIDFILE" $exec
-        RETVAL=$?
-        echo
-        return $RETVAL
+    echo -n $"Shutting down $prog: "
+    killproc -p "$PIDFILE" $exec
+    RETVAL=$?
+    echo
+    return $RETVAL
 }
 reload()  {
-        # Force LSB behaviour from killproc
-        LSB=1 killproc -p "$PIDFILE" $exec -HUP
-        RETVAL=$?
-        return $RETVAL
+    # Force LSB behaviour from killproc
+    LSB=1 killproc -p "$PIDFILE" $exec -HUP
+    RETVAL=$?
+    return $RETVAL
 }
 rhstatus() {
-        status -p "$PIDFILE" -l $prog $exec
+    status -p "$PIDFILE" -l $prog $exec
 }
 restart() {
-        stop
-        start
+    stop
+    start
 }
 
 case "$1" in
-  start)
+    start)
         start
         ;;
-  stop)
+    stop)
         stop
         ;;
-  restart)
+    restart)
         restart
         ;;
-  reload|force-reload)
-	reload
-	;;
-  status)
+    reload|force-reload)
+        reload
+        ;;
+    status)
         rhstatus
         ;;
-  condrestart|try-restart)
+    condrestart|try-restart)
         rhstatus >/dev/null 2>&1 || exit 0
         restart
         ;;
-  *)
+    *)
         echo $"Usage: $0 {start|stop|restart|condrestart|try-restart|reload|force-reload|status}"
         exit 2
 esac

@@ -42,6 +42,9 @@ do_start()
     # Make shure, that bindhelper has correct permissions
     chown root.wsgate _pkglibexecdir_/bindhelper
     chmod 04754 _pkglibexecdir_/bindhelper
+    # Create /var/run/wsgate
+    mkdir -p /var/run/wsgate
+    chown wsgate.wsgate /var/run/wsgate
     # Generate cert if necessary
     _pkglibexecdir_/keygen.sh
 

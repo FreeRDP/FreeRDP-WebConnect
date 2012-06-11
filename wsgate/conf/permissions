@@ -1,2 +1,1 @@
 /usr/lib/wsgate/bindhelper  root:wsgate     04754
-/var/run/wsgate/            wsgate:wsgate   0755
