@@ -383,6 +383,7 @@ DLLPATH=
 PLATFORMDIST=
 INSTALL_SAMPLES=
 BINDHELPER='bindhelper$(EXEEXT)'
+KEYGEN='conf/keygen.sh'
 
 case $target_os in
     linux*)
@@ -400,6 +401,7 @@ case $target_os in
         AC_DEFINE_UNQUOTED([_WIN32_WINNT],0x0501,[Minimum Windows version (XP)])
         AC_DEFINE_UNQUOTED([_UNICODE],1,[Select wide string variants])
         BINDHELPER=
+        KEYGEN=
         PLATFORMDIST=setup
         INSTALL_SAMPLES='$(noinst_PROGRAMS)'
         if test "$build_os" = "$target_os" ; then
@@ -440,6 +442,7 @@ case $target_os in
         ;;
 esac
 
+AC_SUBST(KEYGEN)
 AC_SUBST(BINDHELPER)
 AC_SUBST(SETUP)
 AC_SUBST(DLLPATH)

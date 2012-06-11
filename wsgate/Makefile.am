@@ -5,7 +5,9 @@ DIST_SUBDIRS = . webroot setup
 
 sbin_PROGRAMS = wsgate
 pkglibexec_PROGRAMS = $(BINDHELPER)
+pkglibexec_SCRIPTS = $(KEYGEN)
 EXTRA_PROGRAMS = bindhelper
+EXTRA_SCRIPTS = conf/keygen.sh
 
 bindhelper_SOURCES = bindhelper.c
 bindhelper_CFLAGS = $(SUID_CFLAGS)
