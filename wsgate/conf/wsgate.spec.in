@@ -39,7 +39,7 @@ Summary: FreeRDP-WebConnct gateway
 Name:    wsgate
 Version: @VERSION@
 Release: %{rel}
-License: Apache
+License: Apache-2.0
 %if %{is_suse}
 Group: Productivity/Networking/Other
 %else
