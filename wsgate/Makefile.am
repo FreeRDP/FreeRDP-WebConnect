@@ -101,7 +101,7 @@ inst-logrotate: conf/logrotate
 	$(MKDIR_P) $(DESTDIR)$(sysconfdir)/logrotate.d
 	$(INSTALL_DATA) $< $(DESTDIR)$(sysconfdir)/logrotate.d/wsgate
 
-inst-rhinit: conf/initrc.redhate
+inst-rhinit: conf/initrc.redhat
 	$(MKDIR_P) $(DESTDIR)$(sysconfdir)/init.d
 	$(INSTALL_SCRIPT) -m 0755 $< $(DESTDIR)$(sysconfdir)/init.d/wsgate
 
