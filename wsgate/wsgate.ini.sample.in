@@ -7,7 +7,7 @@ debug = true
 port = 80
 
 # Set bind address of non-SSL listener.
-bindaddr = 127.0.0.1
+#bindaddr = 127.0.0.1
 
 # Set hostname (optional, for HTTP 1.1 host header comparison if running behind NAT)
 # hostname = localhost
@@ -34,7 +34,7 @@ daemon = true
 # pointing to the SSL port.
 #
 # Default: false
-# redirect = false
+redirect = true
 
 # Path of daemon's PID file.
 # Default: none => Don't create a PID-file
@@ -47,7 +47,7 @@ documentroot = %pkgdatadir%
 
 [ssl]
 # Set SSL listener port. If omitted, no SSL listener will be started.
-#port = 443
+port = 443
 
 # Set bind address of non-SSL listener.
 #bindaddr = 127.0.0.1
@@ -123,7 +123,7 @@ documentroot = %pkgdatadir%
 #nowallpaper = true
 
 # Disable full window dragging
-#nofullwindowdrag = true
+nofullwindowdrag = true
 
 # Disable menu animation
 #nomenuanimation = true 

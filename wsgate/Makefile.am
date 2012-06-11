@@ -51,14 +51,14 @@ noinst_HEADERS = \
 	NTService.hpp \
 	Png.hpp
 
-sysconf_DATA = wsgate.ini.sample
+sysconf_DATA = wsgate.ini wsgate.ini.sample
 
 # Extra stuff to distribute in tarball 
 EXTRA_DIST = $(DX_CONFIG) conf/wsgate.spec \
 	tools/yuicompressor.jar tools/strip-debug.pl \
-	wsgate.ini.sample.in logging.mc \
+	wsgate.ini.sample.in logging.mc conf/logrotate conf/rsyslog \
 	conf/initrc.redhat.in conf/initrc.suse.in conf/keygen.sh \
-	conf/wsgate.service.in conf/initrc.debian \
+	conf/wsgate.service.in conf/initrc.debian conf/permissions \
 	LICENSE NOTICE debian
 
 # We want the maintainer-clean to REALLY remove anything that can be
@@ -73,7 +73,7 @@ MOSTLYCLEANFILES = $(DX_CLEANFILES)
 
 CLEANFILES = -r wsgate.ini.sample logging.rc MSG00001.bin doxygen.log \
 	$(PACKAGE)-$(VERSION) $(PACKAGE)_*.tar.gz $(PACKAGE)_*.dsc debian/init.d \
-	conf/initrc.redhat conf/initrc.suse conf/wsgate.service
+	conf/initrc.redhat conf/initrc.suse conf/wsgate.service wsgate.ini
 
 am_v_rc = $(am_v_rc_$(V))
 am_v_rc_ = $(am_v_rc_$(AM_DEFAULT_VERBOSITY))
@@ -89,6 +89,38 @@ wsgate.lo: wsgate.rc logging.rc MSG00001.bin
 
 wsgate.o: wsgate.rc logging.rc MSG00001.bin
 	$(am_v_rc)$(RC) -I$(top_builddir) -o $@ $<
+
+wsgate.ini: wsgate.ini.sample
+	cp $< $@
+
+inst-rsyslog: conf/rsyslog
+	$(MKDIR_P) $(DESTDIR)$(sysconfdir)/rsyslog.d
+	$(INSTALL_DATA) $< $(DESTDIR)$(sysconfdir)/rsyslog.d/wsgate.conf
+
+inst-logrotate: conf/logrotate
+	$(MKDIR_P) $(DESTDIR)$(sysconfdir)/logrotate.d
+	$(INSTALL_DATA) $< $(DESTDIR)$(sysconfdir)/logrotate.d/wsgate
+
+inst-rhinit: conf/initrc.redhate
+	$(MKDIR_P) $(DESTDIR)$(sysconfdir)/init.d
+	$(INSTALL_SCRIPT) -m 0755 $< $(DESTDIR)$(sysconfdir)/init.d/wsgate
+
+inst-suseinit: conf/initrc.suse
+	$(MKDIR_P) $(DESTDIR)$(sysconfdir)/init.d
+	$(INSTALL_SCRIPT) -m 0755 $< $(DESTDIR)$(sysconfdir)/init.d/wsgate
+	$(MKDIR_P) $(DESTDIR)$(sbindir)
+	$(LN_S) -f -n $(sysconfdir)/init.d/wsgate $(DESTDIR)$(sbindir)/rcwsgate
+
+inst-varrun:
+	$(MKDIR_P) $(DESTDIR)/var/run/$(PACKAGE)
+
+inst-suseperm: conf/permissions
+	$(MKDIR_P) $(DESTDIR)$(sysconfdir)/permissions.d
+	$(INSTALL_DATA) $< $(DESTDIR)$(sysconfdir)/permissions.d/wsgate
+
+inst-systemd: conf/wsgate.service
+	$(MKDIR_P) $(DESTDIR)$(SYSTEMDDIR)
+	$(INSTALL_SCRIPT) -m 0755 $< $(DESTDIR)$(SYSTEMDDIR)/wsgate.service
 
 MSG00001.bin logging.rc: logging.mc
 	$(AM_V_GEN)$(MC) -e xx $<
@@ -110,6 +142,8 @@ conf/wsgate.service: conf/wsgate.service.in
 
 debian/init.d: conf/initrc.debian
 	$(AM_V_GEN)$(PERL) -p -e 's!_pkglibexecdir_!$(pkglibexecdir)!g' $< > $@
+
+debinst: install inst-logrotate inst-rsyslog inst-varrun
 
 debprep: dist
 	tar xfz $(PACKAGE)-$(VERSION).tar.gz

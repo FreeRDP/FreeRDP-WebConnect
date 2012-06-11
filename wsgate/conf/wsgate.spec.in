@@ -1,5 +1,18 @@
+#
+# Spec file for package wsgate
+#
+# Copyright (c) 2012 Fritz Elfert <wsgate@fritz-elfert.de>
+#
+# All modifications and additions to the file contributed by third parties
+# remain the property of their copyright owners, unless otherwise agreed
+# upon. The license for this file, and modifications and additions to the
+# file, is the same license as for the pristine package itself (unless the
+# license for the pristine package is not an Open Source License, in which
+# case the license is the MIT License). An "Open Source License" is a
+# license that conforms to the Open Source Definition (Version 1.9)
+# published by the Open Source Initiative.
+ 
 %define rel @GITREV@%{?dist}
-%define systemddir /lib/systemd/system
 
 ##
 ## OS detection
@@ -15,12 +28,19 @@
 %define is_sles 0%{?sles_version}
 %define is_mdv 0%{?mdkversion}
 
+%if %{is_fc}
+%define systemddir /lib/systemd/system
+%endif
+%if %{is_suse} >= 1210
+%define systemddir /lib/systemd/system
+%endif
+
 Summary: FreeRDP-WebConnct gateway
 Name:    wsgate
 Version: @VERSION@
 Release: %{rel}
-License: LGPL
-%if %{is_sles}%{is_suse}
+License: Apache
+%if %{is_suse}
 Group: Productivity/Networking/Other
 %else
 Group: Network Servers
@@ -36,16 +56,22 @@ Buildrequires: doxygen, graphviz, automake, libtool, make, gcc-c++, java, perl
 
 %if %{is_fc}
 Buildrequires: elfutils-devel
+Buildrequires: systemd
 %endif
-%if %{is_suse}%{is_sles}
-%if %{suse_version} > 1130
+%if %{is_suse}
+%if %{is_suse} > 1130
 Buildrequires: libdw-devel
+%endif
+%if %{is_suse} >= 1210
+BuildRequires: systemd
 %endif
 %endif
 
 Requires: logrotate, perl
 %if %{is_suse}
-PreReq: pwdutils, permissions, %{insserv_prereq}
+PreReq: pwdutils, permissions
+PreReq: %{insserv_prereq}
+PreReq: %{fillup_prereq}
 %endif
 
 %description
@@ -59,34 +85,23 @@ A WebSockets gateway for FreeRDP-WebConnect
 %{__make} %{?_smp_mflags} V=1
 
 %install
-%{__make} DESTDIR=%{buildroot} install
+%{__make} DESTDIR=%{buildroot} install inst-logrotate inst-varrun
 %if %{is_el}%{is_fc}
-mkdir -p %{buildroot}%{_sysconfdir}/rsyslog.d
-echo "local6.*  /var/log/wsgate" > %{buildroot}%{_sysconfdir}/rsyslog.d/wsgate.conf
+%{__make} DESTDIR=%{buildroot} inst-rsyslog
 %endif
-mkdir -p %{buildroot}%{_sysconfdir}/logrotate.d
-cat > %{buildroot}%{_sysconfdir}/logrotate.d/wsgate <<EOF
-/var/log/wsgate
-{
-    sharedscripts
-    postrotate
-        /bin/kill -HUP \`cat /var/run/syslogd.pid 2> /dev/null\` 2> /dev/null || true
-    endscript
-}
-EOF
-mkdir -p  %{buildroot}/var/run/%{name}
 %if %{is_el}
-mkdir -p %{buildroot}%{_initrddir}
-%{__install} -m 0755 conf/initrc.redhat %{buildroot}%{_initrddir}/wsgate
-%endif
-%if %{is_sles}%{is_suse}
-mkdir -p %{buildroot}%{_initrddir}
-%{__install} -m 0755 conf/initrc.suse %{buildroot}%{_initrddir}/wsgate
-ln -s %{_initrddir}/wsgate  %{buildroot}%{_sbindir}/rcwsgate
+%{__make} DESTDIR=%{buildroot} inst-rhinit
 %endif
 %if %{is_fc}
-mkdir -p %{buildroot}%{systemddir}
-%{__install} -m 0755 conf/wsgate.service %{buildroot}%{systemddir}
+%{__make} DESTDIR=%{buildroot} SYSTEMDDIR=%{systemddir} inst-systemd
+%endif
+%if %{is_suse}
+%{__make} DESTDIR=%{buildroot} inst-suseinit inst-suseperm
+%endif
+
+%if %{is_suse} >= 1120
+%verifyscript
+%verify_permissions -e %{_libexecdir}/%{name}/bindhelper
 %endif
 
 %clean
@@ -140,15 +155,18 @@ fi
 
 %if %{is_suse}
 %post
-if [ $1 -eq 1 ] ; then
-    /sbin/chkconfig --add wsgate || :
-fi
+%if 0%{?set_permissions:1} > 0
+    %set_permissions %{name}
+%else
+    %run_permissions
+%endif
+%{fillup_and_insserv -f -y wsgate}
 
 %preun
-%stop_on_removal
+%stop_on_removal wsgate
 
 %postun
-%restart_on_update
+%restart_on_update wsgate
 %insserv_cleanup
 %endif
 
@@ -157,9 +175,13 @@ fi
 %{_sbindir}/*
 %{_datadir}/*
 %config(noreplace) %{_sysconfdir}/logrotate.d/wsgate
-%config(noreplace) %{_sysconfdir}/wsgate.ini.sample
+%config(noreplace) %{_sysconfdir}/wsgate.ini
+%{_sysconfdir}/wsgate.ini.sample
 %if %{is_el}%{is_fc}
 %config(noreplace) %{_sysconfdir}/rsyslog.d/wsgate.conf
+%endif
+%if %{is_suse}
+%config(noreplace) %{_sysconfdir}/permissions.d/wsgate
 %endif
 %if %{is_fc}
 %{systemddir}/*
@@ -169,9 +191,14 @@ fi
 %defattr(0755,root,root,-)
 %dir %{_libexecdir}/%{name}
 %{_libexecdir}/%{name}/keygen.sh
+%if %{is_suse}
+%verify(not user group mode) %attr(0711,root,root) %{_libexecdir}/%{name}/bindhelper
+%verify(not user group mode) %attr(-,root,root,0755) %dir /var/run/%{name}
+%else
 %defattr(4754,root,wsgate,-)
 %{_libexecdir}/%{name}/bindhelper
 %defattr(-,wsgate,wsgate,-)
 %dir /var/run/%{name}
+%endif
 
 %changelog
