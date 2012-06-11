@@ -193,7 +193,7 @@ fi
 %{_libexecdir}/%{name}/keygen.sh
 %if %{is_suse}
 %verify(not user group mode) %attr(0711,root,root) %{_libexecdir}/%{name}/bindhelper
-%verify(not user group mode) %attr(-,root,root,0755) %dir /var/run/%{name}
+%verify(not user group mode) %attr(755,root,root) %dir /var/run/%{name}
 %else
 %defattr(4754,root,wsgate,-)
 %{_libexecdir}/%{name}/bindhelper
