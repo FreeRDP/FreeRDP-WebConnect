@@ -36,6 +36,10 @@ Makefile
 Makefile.in
 rpmbuild.log
 stamp-h1
+debian/init.d
+wsgate/conf/initrc.redhat
+wsgate/conf/initrc.suse
+wsgate/conf/wsgate.service
 wsgate/wsgate
 wsgate/bindhelper
 wsgate/*.bin
