@@ -102,7 +102,11 @@ A WebSockets gateway for FreeRDP-WebConnect
 
 %if %{is_suse}
 %verifyscript
+%if %{is_suse} > 1140
+%verify_permissions %{_libexecdir}/%{name}/bindhelper
+%else
 %verify_permissions -e %{_libexecdir}/%{name}/bindhelper
+%endif
 %endif
 
 %clean
