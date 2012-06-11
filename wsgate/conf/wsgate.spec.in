@@ -169,7 +169,7 @@ fi
 %defattr(0755,root,root,-)
 %dir %{_libexecdir}/%{name}
 %{_libexecdir}/%{name}/keygen.sh
-%defattr(4755,root,root,-)
+%defattr(4754,root,wsgate,-)
 %{_libexecdir}/%{name}/bindhelper
 %defattr(-,wsgate,wsgate,-)
 %dir /var/run/%{name}
