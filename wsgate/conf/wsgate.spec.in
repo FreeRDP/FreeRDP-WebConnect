@@ -69,7 +69,8 @@ BuildRequires: systemd
 
 Requires: logrotate, perl
 %if %{is_suse}
-PreReq: pwdutils, permissions
+PreReq: pwdutils
+PreReq: permissions
 PreReq: %{insserv_prereq}
 PreReq: %{fillup_prereq}
 %endif
@@ -156,7 +157,7 @@ fi
 %if %{is_suse}
 %post
 %if 0%{?set_permissions:1} > 0
-    %set_permissions %{_libexecdir}/%{name}/bindhelper
+    %set_permissions %{name}
 %else
     %run_permissions
 %endif
