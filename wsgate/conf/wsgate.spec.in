@@ -188,6 +188,7 @@ fi
 %else
 %{_initrddir}/wsgate
 %endif
+%ghost /var/run/%{name}
 %defattr(0755,root,root,-)
 %dir %{_libexecdir}/%{name}
 %{_libexecdir}/%{name}/keygen.sh
