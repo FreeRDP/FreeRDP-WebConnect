@@ -90,13 +90,13 @@ A WebSockets gateway for FreeRDP-WebConnect
 %{__make} DESTDIR=%{buildroot} inst-rsyslog
 %endif
 %if %{is_el}
-%{__make} DESTDIR=%{buildroot} inst-rhinit
+%{__make} DESTDIR=%{buildroot} INITRDDIR=%{_initrddir} inst-rhinit
 %endif
 %if %{is_fc}
 %{__make} DESTDIR=%{buildroot} SYSTEMDDIR=%{systemddir} inst-systemd
 %endif
 %if %{is_suse}
-%{__make} DESTDIR=%{buildroot} inst-suseinit inst-suseperm
+%{__make} DESTDIR=%{buildroot} INITRDDIR=%{_initrddir} inst-suseinit inst-suseperm
 %endif
 
 %if %{is_suse}

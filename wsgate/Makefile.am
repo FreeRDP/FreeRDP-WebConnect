@@ -102,12 +102,12 @@ inst-logrotate: conf/logrotate
 	$(INSTALL_DATA) $< $(DESTDIR)$(sysconfdir)/logrotate.d/wsgate
 
 inst-rhinit: conf/initrc.redhat
-	$(MKDIR_P) $(DESTDIR)$(sysconfdir)/init.d
-	$(INSTALL_SCRIPT) -m 0755 $< $(DESTDIR)$(sysconfdir)/init.d/wsgate
+	$(MKDIR_P) $(DESTDIR)$(INITRDDIR)
+	$(INSTALL_SCRIPT) -m 0755 $< $(DESTDIR)$(INITRDDIR)/wsgate
 
 inst-suseinit: conf/initrc.suse
-	$(MKDIR_P) $(DESTDIR)$(sysconfdir)/init.d
-	$(INSTALL_SCRIPT) -m 0755 $< $(DESTDIR)$(sysconfdir)/init.d/wsgate
+	$(MKDIR_P) $(DESTDIR)$(INITRDDIR)
+	$(INSTALL_SCRIPT) -m 0755 $< $(DESTDIR)$(INITRDDIR)/wsgate
 	$(MKDIR_P) $(DESTDIR)$(sbindir)
 	$(LN_S) -f -n $(sysconfdir)/init.d/wsgate $(DESTDIR)$(sbindir)/rcwsgate
 
