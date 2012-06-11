@@ -99,9 +99,10 @@ A WebSockets gateway for FreeRDP-WebConnect
 %{__make} DESTDIR=%{buildroot} inst-suseinit inst-suseperm
 %endif
 
-%if %{is_suse} >= 1120
+%if %{is_suse}
 %verifyscript
 %verify_permissions -e %{_libexecdir}/%{name}/bindhelper
+%verify_permissions -e /var/run/%{name}/
 %endif
 
 %clean
@@ -192,8 +193,8 @@ fi
 %dir %{_libexecdir}/%{name}
 %{_libexecdir}/%{name}/keygen.sh
 %if %{is_suse}
-%verify(not user group mode) %attr(0711,root,root) %{_libexecdir}/%{name}/bindhelper
-%verify(not user group mode) %attr(755,root,root) %dir /var/run/%{name}
+%verify(not user group mode) %attr(04754,root,wsgate) %{_libexecdir}/%{name}/bindhelper
+%verify(not user group mode) %attr(0775,root,wsgate) %dir /var/run/%{name}
 %else
 %defattr(4754,root,wsgate,-)
 %{_libexecdir}/%{name}/bindhelper
