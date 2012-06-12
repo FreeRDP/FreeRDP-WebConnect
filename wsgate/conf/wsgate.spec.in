@@ -70,7 +70,6 @@ BuildRequires: systemd
 Requires: logrotate, perl
 %if %{is_suse}
 PreReq: pwdutils
-PreReq: permissions
 PreReq: %{insserv_prereq}
 PreReq: %{fillup_prereq}
 %endif
@@ -97,16 +96,7 @@ A WebSockets gateway for FreeRDP-WebConnect
 %{__make} DESTDIR=%{buildroot} SYSTEMDDIR=%{systemddir} inst-systemd
 %endif
 %if %{is_suse}
-%{__make} DESTDIR=%{buildroot} INITRDDIR=%{_initrddir} inst-suseinit inst-suseperm
-%endif
-
-%if %{is_suse}
-%verifyscript
-%if %{is_suse} > 1140
-%verify_permissions %{_libexecdir}/%{name}/bindhelper
-%else
-%verify_permissions -e %{_libexecdir}/%{name}/bindhelper
-%endif
+%{__make} DESTDIR=%{buildroot} INITRDDIR=%{_initrddir} inst-suseinit
 %endif
 
 %clean
@@ -160,11 +150,6 @@ fi
 
 %if %{is_suse}
 %post
-%if 0%{?set_permissions:1} > 0
-    %set_permissions %{name}
-%else
-    %run_permissions
-%endif
 %{fillup_and_insserv -f -y wsgate}
 
 %preun
@@ -185,9 +170,6 @@ fi
 %if %{is_el}%{is_fc}
 %config(noreplace) %{_sysconfdir}/rsyslog.d/wsgate.conf
 %endif
-%if %{is_suse}
-%config(noreplace) %{_sysconfdir}/permissions.d/wsgate
-%endif
 %if %{is_fc}
 %{systemddir}/*
 %else
@@ -197,11 +179,7 @@ fi
 %defattr(0755,root,root,-)
 %dir %{_libexecdir}/%{name}
 %{_libexecdir}/%{name}/keygen.sh
-%if %{is_suse}
-%verify(not user group mode) %attr(4754,root,wsgate) %{_libexecdir}/%{name}/bindhelper
-%else
 %defattr(4754,root,wsgate,-)
 %{_libexecdir}/%{name}/bindhelper
-%endif
 
 %changelog
