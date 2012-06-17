@@ -12,7 +12,7 @@ Environment=WSGATE_CONFIG=/etc/wsgate.ini
 EnvironmentFile=-/etc/sysconfig/wsgate
 ExecStart=/usr/sbin/wsgate -c $WSGATE_CONFIG $WSGATE_OPTIONS
 ExecStartPre=_pkglibexecdir_/keygen.sh
-ExecStartPre=/bin/mkdir /var/run/wsgate
+ExecStartPre=/bin/mkdir -p /var/run/wsgate
 ExecStartPre=/bin/chown wsgate.wsgate /var/run/wsgate
 ExecReload=/bin/kill -HUP $MAINPID
 PermissionsStartOnly=true
