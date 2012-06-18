@@ -53,4 +53,6 @@ END
 
 #endif    // !_MAC
 
+IDI_ICO ICON DISCARDABLE "FreeRDP.ico"
+
 #endif    // Neutral resources
