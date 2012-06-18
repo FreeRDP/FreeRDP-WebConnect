@@ -124,6 +124,7 @@ namespace wsgate {
                 PNG,
                 ICO,
                 JAVASCRIPT,
+                JSON,
                 CSS,
                 OGG,
                 BINARY
@@ -145,6 +146,8 @@ namespace wsgate {
                     return ICO;
                 if (ends_with(filename, ".js"))
                     return JAVASCRIPT;
+                if (ends_with(filename, ".json"))
+                    return JSON;
                 if (ends_with(filename, ".css"))
                     return CSS;
                 if (ends_with(filename, ".ogg"))
@@ -658,6 +661,9 @@ namespace wsgate {
                         break;
                     case JAVASCRIPT:
                         response->SetHeader("Content-Type", "text/javascript");
+                        break;
+                    case JSON:
+                        response->SetHeader("Content-Type", "application/json");
                         break;
                     case CSS:
                         response->SetHeader("Content-Type", "text/css");

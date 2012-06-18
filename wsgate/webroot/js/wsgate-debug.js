@@ -783,16 +783,23 @@ wsgate.RDP = new Class( {
      */
     onKv: function(evt) {
         var a, buf;
-        if (this.modkeys.contains(evt.code)) {
-            return;
-        }
         if (this.sock.readyState == this.sock.OPEN) {
             // this.log.debug('kP code: ', evt.code);
             buf = new ArrayBuffer(12);
             a = new Uint32Array(buf);
-            a[0] = 2; // WSOP_CS_KPRESS
-            a[1] = (evt.shift ? 1 : 0)|(evt.control ? 2 : 0)|(evt.alt ? 4 : 0)|(evt.meta ? 8 : 0);
-            a[2] = evt.code;
+            if (evt.special) {
+                a[0] = 1; // WSOP_CS_KUPDOWN
+                a[1] = 1; // down
+                a[2] = evt.code;
+                this.sock.send(buf);
+                a[0] = 1; // WSOP_CS_KUPDOWN
+                a[1] = 0; // up
+                a[2] = evt.code;
+            } else {
+                a[0] = 2; // WSOP_CS_KPRESS
+                a[1] = (evt.shift ? 1 : 0)|(evt.control ? 2 : 0)|(evt.alt ? 4 : 0)|(evt.meta ? 8 : 0);
+                a[2] = evt.code;
+            }
             this.sock.send(buf);
         }
     },

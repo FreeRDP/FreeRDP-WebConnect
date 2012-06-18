@@ -22,10 +22,10 @@ wsgate.vkbd = new Class({
         numpadtoggle: true,         // Show numpad toggle
         numpad: true,               // Show number pad by default
         layouts: ['en_US','de_DE'], // Keyboard layouts to load
-        deflayout: 'Deutsch',       // Default keyboard layout
+        deflayout: 'de_DE',         // Default keyboard layout
         size: 5,                    // Initial size
         sizeswitch: true,           // Show size-adjust controls
-        hoverclick: 0,               // Click a key after n ms (0 = off)
+        hoverclick: 0,              // Click a key after n ms (0 = off)
         clicksound: '/vkbclick.ogg'
     },
     initialize: function(options) {
@@ -39,7 +39,7 @@ wsgate.vkbd = new Class({
         this.VKI_alt = this.VKI_altlock = false;
         this.VKI_ctrl = this.VKI_ctrllock = false;
         this.VKI_dead = false; // Flag: dead key active
-        this.VKI_kts = this.VKI_kt = this.options.deflayout;
+        this.VKI_kt = 'US International';
         this.VKI_size = this.options.size;
         this.VKI_keyCenter = 3;
         /* ***** i18n text strings ************************************* */
@@ -61,13 +61,19 @@ wsgate.vkbd = new Class({
         // Load layouts
         this.VKI_layout = {};
         this.options.layouts.each(function(n) {
-            new Request({
-                'url': '/js/vkbl-' + n + '.js',
+            new Request.JSON({
+                'url': '/js/vkbl-' + n + '.json',
                 'method': 'get',
                 'async': false,
-                'onSuccess': function(code) {
-                    eval(code);
+                'onSuccess': function(obj) {
+                    this.VKI_layout[obj.displayname] = obj;
+                    if (n == this.options.deflayout) {
+                        this.VKI_kt = obj.displayname;
+                    }
                 }.bind(this)
+            }).addEvent('error', function(txt, err) {
+                console.debug('err:', err);
+                console.debug('txt:', txt);
             }).send();
         }, this);
         /*
@@ -162,15 +168,16 @@ wsgate.vkbd = new Class({
             [['0'], ['.'], ['='], ['+']]
                 ];
         this.cblock = [
-            [['Prt'],['Slk'],['\u231b']],
-            [['Ins'],['\u21f1'],['\u21d1']],
-            [['Del'],['\u21f2'],['\u21d3']],
-            [[''],['\u2191'],['']],
-            [['\u2190'],['\u2193'],['\u2192']],
+            [['Prt', 0x2c],['Slk', 0],['\u231b', 0x13]],
+            [['Ins', 0x2d],['\u21f1', 0x24],['\u21d1', 0x21]],
+            [['Del', 0x2e],['\u21f2', 0x23],['\u21d3', 0x23]],
+            [[''],['\u2191', 0x26],['']],
+            [['\u2190', 0x25],['\u2193', 0x28],['\u2192', 0x27]],
             ];
-        this.topBlock = [
-            ['Esc'], ['F1'], ['F2'], ['F3'], ['F4'], ['F5'],
-            ['F6'], ['F7'], ['F8'], ['F9'], ['F10'], ['F11'], ['F12']
+        this.fnblock = [
+            ['Esc', 0x1b], ['F1', 0x70], ['F2', 0x71], ['F3', 0x72], ['F4', 0x73], ['F5', 0x74],
+            ['F6', 0x75], ['F7', 0x76], ['F8', 0x77], ['F9', 0x78], ['F10', 0x79], ['F11', 0x7a],
+            ['F12', 0x7b]
             ];
         if (!this.VKI_layout[this.VKI_kt]) {
             throw 'No layout named "' + this.VKI_kt + '"';
@@ -241,7 +248,7 @@ wsgate.vkbd = new Class({
                         e.stopPropagation();
                         var el = e.target;
                         el.parentNode.setStyle('display','');
-                        this.VKI_kts = this.VKI_kt = this.kbSelect.firstChild.nodeValue = el.get('text');
+                        this.VKI_kt = this.kbSelect.firstChild.nodeValue = el.get('text');
                         this.VKI_buildKeys();
                     }.bind(this));
                 }
@@ -352,8 +359,9 @@ wsgate.vkbd = new Class({
                 this.VKI_stdEvents(new Element('td', {
                     'html': col[0],
                     'class': (col[0].length ? '' : 'none'),
+                    'char': col[1],
                     'events': {
-                        'click': (col[0].length ? this.kclick2.bind(this) : this.dummy)
+                        'click': (col[1] ? this.kclick2.bind(this) : this.dummy)
                     }
                 }).inject(ctr));
             }.bind(this));
@@ -469,17 +477,12 @@ wsgate.vkbd = new Class({
         this.modify('');
     },
     kclick2: function(evt) {
-        character = '\xa0', el = evt.target;
-        if (el.firstChild.nodeName.toLowerCase() != 'small') {
-            if ((character = el.firstChild.nodeValue) == '\xa0') {
-                return;
-            }
-        } else {
-            character = el.firstChild.get('char');
+        var c = evt.target.get('char');
+        if (c) {
+            this.kpress(c, true);
+            this.VKI_dead = false;
+            this.modify('');
         }
-        this.kpress(character, true);
-        this.VKI_dead = false;
-        this.modify('');
     },
     VKI_buildKeys: function() {
         this.VKI_shift = this.VKI_shiftlock = this.VKI_altgr = this.VKI_altgrlock = this.VKI_dead = false;
