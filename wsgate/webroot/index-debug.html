@@ -199,7 +199,6 @@
                 }
             }
             window.addEvent('domready', function() {
-                    $('rdpconnect').addEvent('click', RDPrun);
                     $('dtsize').addEvent('change', OnDesktopSize);
                     var tabs = new SimpleTabs('rdpdialog',{selector:'h4'});
                     OnDesktopSize();
@@ -207,13 +206,24 @@
                         // Set default performance flags to modem
                         $('perf').value = '2';
                     }
-                    showDialog(true);
-                    vkbd = new wsgate.vkbd({
-                        version:false,
-                        sizeswitch:false,
-                        numpadtoggle:false
-                    });
                     window.addEvent('resize', OnDesktopSize);
+                    var wsOK = RIMtablet ||
+                        (Browser.firefox && (Browser.version >= 11.0)) ||
+                        (Browser.chrome && (Browser.version >= 17)) ||
+                        (Browser.ie && (Browser.version >= 10.0));
+                    if (wsOK) {
+                        $('rdpconnect').addEvent('click', RDPrun);
+                        showDialog(true);
+                        vkbd = new wsgate.vkbd({
+                            version:false,
+                            sizeswitch:false,
+                            numpadtoggle:false
+                        });
+                    } else {
+                        alert('Sorry!\nYour Browser (' + Browser.name + ' ' + Browser.version
+                                + ') does not yet\nprovide the required HTML5 features '
+                                + 'for this application.\n');
+                    }
             });
         </script>
     </head>
