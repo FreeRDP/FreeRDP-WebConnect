@@ -211,7 +211,7 @@
                     // Special handling of webkit nightly builds
                     var webkitOK = false;
                     var wkVA = RegExp("( AppleWebKit/)([^ ]+)").exec(navigator.userAgent);
-                    if (wkVA.length > 2) {
+                    if (wkVA && (wkVA.length > 2)) {
                         if (wkVA[2].indexOf('+') != -1) {
                             webkitOK = true;
                         }
