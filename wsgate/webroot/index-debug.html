@@ -4,6 +4,7 @@
         <meta charset="utf-8" />
         <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1" />
         <title>FreeRDP WebConnect: offline</title>
+        <meta name="robots" content="nofollow" />
         <meta name="description" content="A HTM5 based RDP client">
         <meta name="viewport" content="width=device-width height=device-height user-scalable=no">
         <meta name="cursor-event-mode" content="native">
@@ -207,7 +208,15 @@
                         $('perf').value = '2';
                     }
                     window.addEvent('resize', OnDesktopSize);
-                    var wsOK = RIMtablet ||
+                    // Special handling of webkit nightly builds
+                    var webkitOK = false;
+                    var wkVA = RegExp("( AppleWebKit/)([^ ]+)").exec(navigator.userAgent);
+                    if (wkVA.length > 2) {
+                        if (wkVA[2].indexOf('+') != -1) {
+                            webkitOK = true;
+                        }
+                    }
+                    var wsOK = RIMtablet || webkitOK ||
                         (Browser.firefox && (Browser.version >= 11.0)) ||
                         (Browser.chrome && (Browser.version >= 17)) ||
                         (Browser.ie && (Browser.version >= 10.0));

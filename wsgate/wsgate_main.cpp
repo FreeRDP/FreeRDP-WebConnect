@@ -239,6 +239,12 @@ namespace wsgate {
                 string uri(request->Uri());
                 string thisHost(m_sHostname.empty() ? request->Headers("Host") : m_sHostname);
 
+                if (boost::starts_with(uri, "/robots.txt")) {
+                    response->SetHeader("Content-Type", "text/plain");
+                    response->SetBody("User-agent: *\nDisallow: /\n", 26);
+                    return HTTPRESPONSECODE_200_OK;
+                }
+
                 if (m_bRedirect && (!request->Secure())) {
                     string dest(boost::starts_with(uri, "/wsgate?") ? "wss" : "https");
                     dest.append("://").append(thisHost).append(uri);
