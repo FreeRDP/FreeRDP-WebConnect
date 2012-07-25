@@ -219,6 +219,7 @@
                     var wsOK = RIMtablet || webkitOK ||
                         (Browser.firefox && (Browser.version >= 11.0)) ||
                         (Browser.chrome && (Browser.version >= 17)) ||
+                        (Browser.safari && (Browser.version >= 6)) ||
                         (Browser.ie && (Browser.version >= 10.0));
                     if (wsOK) {
                         $('rdpconnect').addEvent('click', RDPrun);
