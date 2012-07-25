@@ -6,7 +6,7 @@ VKB_LAYOUTS = $(wildcard js/vkbl-*.json)
 
 nobase_pkgdata_DATA = \
 	index-debug.html index.html favicon.ico FreeRDP_Logo.png \
-	css/style-debug.css css/style.css \
+	c_default.png c_none.png css/style-debug.css css/style.css \
 	css/vkb-debug.css css/vkb.css \
 	$(JS_SOURCES) $(JS_GENERATED) $(VKB_LAYOUTS)
 
@@ -23,5 +23,5 @@ CLEANFILES = index.html css/style.css css/vkb.css $(JS_GENERATED)
 
 MAINTAINERCLEANFILES = Makefile.in
 
-EXTRA_DIST = index-debug.html favicon.ico FreeRDP_Logo.png \
-	css/style-debug.css css/vkb-debug.css $(JS_SOURCES) $(VKB_LAYOUTS)
+EXTRA_DIST = index-debug.html favicon.ico FreeRDP_Logo.png c_default.png \
+	c_none.png css/style-debug.css css/vkb-debug.css $(JS_SOURCES) $(VKB_LAYOUTS)
