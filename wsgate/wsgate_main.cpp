@@ -61,6 +61,9 @@
 #ifdef HAVE_SYS_WAIT_H
 # include <sys/wait.h>
 #endif
+#ifdef HAVE_SYS_RESOURCE_H
+# include <sys/resource.h>
+#endif
 #ifdef HAVE_NETINET_IN_H
 # include <netinet/in.h>
 #endif
@@ -167,6 +170,7 @@ namespace wsgate {
                 , m_sDocumentRoot()
                 , m_sPidFile()
                 , m_bDebug(false)
+                , m_bEnableCore(false)
                 , m_SessionMap()
                 , m_allowedHosts()
                 , m_deniedHosts()
@@ -695,6 +699,10 @@ namespace wsgate {
                 return m_sConfigFile;
             }
 
+            bool GetEnableCore() {
+                return m_bEnableCore;
+            }
+
             bool SetConfigFile(const string &name) {
                 if (name.empty()) {
 #ifdef _WIN32
@@ -714,6 +722,7 @@ namespace wsgate {
                     ("global.daemon", po::value<string>(), "enable/disable daemon mode")
                     ("global.pidfile", po::value<string>(), "path of PID file in daemon mode")
                     ("global.debug", po::value<string>(), "enable/disable debugging")
+                    ("global.enablecore", po::value<string>(), "enable/disable coredumps")
                     ("global.hostname", po::value<string>(), "specify host name")
                     ("global.port", po::value<uint16_t>(), "specify listening port")
                     ("global.bindaddr", po::value<string>(), "specify bind address")
@@ -769,7 +778,10 @@ namespace wsgate {
                         if (m_pVm->count("global.debug")) {
                             m_bDebug = str2bool((*m_pVm)["global.debug"].as<string>());
                         }
-
+                        m_bEnableCore = false;
+                        if (m_pVm->count("global.enablecore")) {
+                            m_bDebug = str2bool((*m_pVm)["global.enablecore"].as<string>());
+                        }
                         if (m_pVm->count("global.logmask")) {
                             if (NULL != logger) {
                                 logger->setmaskByName(to_upper_copy((*m_pVm)["global.logmask"].as<string>()));
@@ -1039,6 +1051,7 @@ namespace wsgate {
             string m_sDocumentRoot;
             string m_sPidFile;
             bool m_bDebug;
+            bool m_bEnableCore;
             SessionMap m_SessionMap;
             vector<boost::regex> m_allowedHosts;
             vector<boost::regex> m_deniedHosts;
@@ -1435,6 +1448,13 @@ int main (int argc, char **argv)
     g_srv = &srv;
     signal(SIGPIPE, SIG_IGN);
     signal(SIGHUP, reload);
+    if (srv.GetEnableCore()) {
+        struct rlimit rlim;
+        rlim.rlim_cur = rlim.rlim_max = RLIM_INFINITY;
+        if (-1 == setrlimit(RLIMIT_CORE, &rlim)) {
+            cerr << "Could not raise core dump limit: " << strerror(errno) << endl;
+        }
+    }
 #endif
     signal(SIGINT, terminate);
     signal(SIGTERM, terminate);
