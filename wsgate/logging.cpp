@@ -225,7 +225,7 @@ namespace wsgate {
     bitset<8> logger::namesToBitset(string names)
     {
         static vector<string> masks;
-        if (0 == masks.size()) {
+        if (masks.empty()) {
             masks.push_back("DEBUG");
             masks.push_back("INFO");
             masks.push_back("NOTICE");
@@ -272,7 +272,7 @@ namespace wsgate {
     void logger::setfacilityByName(const std::string & facility)
     {
         static map<string, Facility> facmap;
-        if (0 == facmap.size()) {
+        if (facmap.empty()) {
             facmap["AUTH"] = AUTH;
             facmap["AUTPRIV"] = AUTHPRIV;
             facmap["CRON"] = CRON;
@@ -329,6 +329,7 @@ namespace wsgate {
                 free(ident);
             }
             ident = strdup(other.ident);
+            mask = other.mask;
         }
         return *this;
     }

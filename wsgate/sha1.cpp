@@ -58,6 +58,7 @@
 SHA1::SHA1()
     : Length_Low(0)
     , Length_High(0)
+    , Message_Block()
     , Message_Block_Index(0)
     , Computed(false)
     , Corrupted(false)

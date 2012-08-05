@@ -1147,14 +1147,14 @@ namespace wsgate {
                 ehs_autoptr<GenericResponse> r(new GenericResponse(0, m_econn));
                 m_ehs->AddResponse(ehs_move(r));
             }
-            virtual bool on_ping(const std::string data) {
+            virtual bool on_ping(const std::string & data) {
                 log::debug << "GOT Ping: '" << data << "'" << endl;
                 return true;
             }
-            virtual void on_pong(const std::string data) {
+            virtual void on_pong(const std::string & data) {
                 log::debug << "GOT Pong: '" << data << "'" << endl;
             }
-            virtual void do_response(const std::string data) {
+            virtual void do_response(const std::string & data) {
                 // log::debug << "Send WS response, size: " << data.length() << endl;
                 ehs_autoptr<GenericResponse> r(new GenericResponse(0, m_econn));
                 r->SetBody(data.data(), data.length());
