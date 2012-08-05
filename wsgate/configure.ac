@@ -161,7 +161,7 @@ esac
 
 dnl Checks for header files.
 AC_HEADER_STDC
-AC_CHECK_HEADERS([arpa/inet.h demangle.h dwarf.h fcntl.h netinet/in.h signal.h stdlib.h string.h syslog.h sys/ioctl.h sys/socket.h sys/stat.h sys/time.h sys/types.h sys/wait.h termios.h time.h unistd.h execinfo.h conio.h winsock2.h windows.h])
+AC_CHECK_HEADERS([arpa/inet.h demangle.h dwarf.h fcntl.h netinet/in.h signal.h stdlib.h string.h syslog.h sys/ioctl.h sys/resource.h sys/socket.h sys/stat.h sys/time.h sys/types.h sys/wait.h termios.h time.h unistd.h execinfo.h conio.h winsock2.h windows.h])
 
 dnl DWARF vs. BFD
 DW_CPPFLAGS=
