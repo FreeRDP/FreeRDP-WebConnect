@@ -122,7 +122,7 @@ namespace wsgate {
                 bmd->destRight - bmd->destLeft + 1,
                 bmd->destBottom - bmd->destTop + 1,
                 bmd->bitsPerPixel,
-                bmd->compressed, bmd->bitmapLength
+                static_cast<uint32_t>(bmd->compressed), bmd->bitmapLength
             };
             if (!bmd->compressed) {
                 freerdp_image_flip(bmd->bitmapDataStream, bmd->bitmapDataStream,
