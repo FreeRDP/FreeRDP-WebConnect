@@ -2,8 +2,8 @@ Minimalistic build instructions (from GIT checkout)
 
 Prerequisites:
 
-autotools, g++, boost-devel, pcre-devel, openssl-devel, libpng-devel,
-ehs-devel >= 1.5.0-114, FreeRDP GIT-HEAD,
+autotools, g++, boost-devel, openssl-devel, libpng-devel,
+ehs-devel >= 1.5.0-160, FreeRDP GIT-HEAD,
 
 (For tracing exceptions additionally elfutils-devel or bfd-devel)
 

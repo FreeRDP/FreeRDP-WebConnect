@@ -72,12 +72,6 @@ esac
 ])
 
 dnl Checks for libraries.
-
-AC_ARG_WITH([pcre],AS_HELP_STRING([--with-pcre=DIR],[Specifies the location of the PCRE library]),
-    [CPPFLAGS="$CPPFLAGS -I${withval}/include"
-     CXXFLAGS="$CXXFLAGS -I${withval}/include"
-     LDFLAGS="$LDFLAGS -L${withval}/lib"],[])
-
 ac_cv_dllpath=
 AC_ARG_WITH([dllpath],
             AS_HELP_STRING([--with-dllpath=PATH],
@@ -90,18 +84,14 @@ BFDLIB2=
 DWLIB=
 
 dnl The following headers have to be checked *before* invoking
-dnl AC_CHECK_LIB for pcrecpp, ssl and crypto in order for those
+dnl AC_CHECK_LIB for ssl and crypto in order for those
 dnl checks to work correctly in mingw
-AC_CHECK_HEADERS([openssl/ssl.h openssl/err.h pcre.h pcrecpp.h])
+AC_CHECK_HEADERS([openssl/ssl.h openssl/err.h])
 
 WSGATE_LDADD=
-AC_LANG_PUSH([C++])
-AC_CHECK_LIB(pcrecpp, main,[WSGATE_LDADD="$WSGATE_LDADD -lpcrecpp"])
-AC_LANG_POP
 AC_CHECK_LIB(pthread, pthread_create,[WSGATE_LDADD="$WSGATE_LDADD -lpthread"])
 AC_CHECK_LIB(sokt, socket,[WSGATE_LDADD="$WSGATE_LDADD -lsokt"])
 AC_CHECK_LIB(z, inflate,[WSGATE_LDADD="$WSGATE_LDADD -lz"])
-dnl AC_CHECK_LIB(dl, dlopen)
 AC_CHECK_LIB(crypto, ERR_free_strings,[WSGATE_LDADD="$WSGATE_LDADD -lcrypto"])
 AC_CHECK_LIB(ssl, SSL_library_init,[WSGATE_LDADD="$WSGATE_LDADD -lssl"])
 AC_CHECK_LIB(ws2_32, main,[WSGATE_LDADD="$WSGATE_LDADD -lws2_32"])
