@@ -780,7 +780,7 @@ namespace wsgate {
                         }
                         m_bEnableCore = false;
                         if (m_pVm->count("global.enablecore")) {
-                            m_bDebug = str2bool((*m_pVm)["global.enablecore"].as<string>());
+                            m_bEnableCore = str2bool((*m_pVm)["global.enablecore"].as<string>());
                         }
                         if (m_pVm->count("global.logmask")) {
                             if (NULL != logger) {

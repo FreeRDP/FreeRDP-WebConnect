@@ -3,6 +3,10 @@
 # Possible values: true, false; Default: false
 debug = true
 
+# Enable core dumps
+# Possible values: true, false; Default: false
+enablecore = true
+
 # Set non-SSL listener port. If omitted, no listener will be started.
 port = 80
 
