@@ -1,4 +1,4 @@
-dnl $Id: vamacros.m4 6544 2003-12-26 03:23:31Z rra $
+dnl $Id$
 dnl
 dnl vamacros.m4 -- Check for support for variadic macros.
 dnl Original author: Posted on openldap-devel by Russ Allbery

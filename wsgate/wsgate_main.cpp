@@ -509,6 +509,13 @@ namespace wsgate {
                 }
 
                 // Regular (non WebSockets) request
+                bool bDynDebug = m_bDebug;
+                if (!bDynDebug) {
+                    // Enable debugging by using a custom UserAgent header
+                    if (string::npos != request->Headers("UserAgent").find("wsgdebug")) {
+                        bDynDebug = true;
+                    }
+                }
                 if (0 != thisHost.compare(request->Headers("Host"))) {
                     log::warn << "Request from " << request->RemoteAddress()
                         << ": " << uri << " => 404 Not found" << endl;
@@ -517,7 +524,7 @@ namespace wsgate {
                 path p(m_sDocumentRoot);
                 p /= uri;
                 if (ends_with(uri, "/")) {
-                    p /= (m_bDebug ? "/index-debug.html" : "/index.html");
+                    p /= (bDynDebug ? "/index-debug.html" : "/index.html");
                 }
                 p.normalize();
 
@@ -575,7 +582,7 @@ namespace wsgate {
                         << thisHost << ":"
                         << request->LocalPort() << "/wsgate";
                     replace_all(body, "%WSURI%", oss.str());
-                    replace_all(body, "%JSDEBUG%", (m_bDebug ? "-debug" : ""));
+                    replace_all(body, "%JSDEBUG%", (bDynDebug ? "-debug" : ""));
                     string tmp;
                     tmp.assign(m_bOverrideRdpUser ? "<predefined>" : request->Cookies("lastuser"));
                     replace_all(body, "%COOKIE_LASTUSER%", tmp);

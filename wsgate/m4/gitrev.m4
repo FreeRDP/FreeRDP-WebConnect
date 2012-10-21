@@ -3,7 +3,7 @@ dnl run at autoconf time is, that ordinary users usually do
 dnl *not* have an GIT working-directory and therefore this
 dnl can *not* be done at configure time.
 dnl
-# $Id: svnrev.m4 30 2008-11-18 02:12:59Z Fritz Elfert $
+# $Id$
 #
 # FE_GITREV([VAR])
 # Assign the GIT revision of the current working directory
