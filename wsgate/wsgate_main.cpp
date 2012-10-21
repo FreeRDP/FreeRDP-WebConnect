@@ -512,7 +512,7 @@ namespace wsgate {
                 bool bDynDebug = m_bDebug;
                 if (!bDynDebug) {
                     // Enable debugging by using a custom UserAgent header
-                    if (string::npos != request->Headers("User-Agent").find("wsgdebug")) {
+                    if (iequals(request->Headers("X-WSGate-Debug"), "true")) {
                         bDynDebug = true;
                     }
                 }
