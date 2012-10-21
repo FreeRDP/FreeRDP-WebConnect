@@ -654,8 +654,8 @@ wsgate.RDP = new Class( {
     onMm: function(evt) {
         var buf, a, x, y;
         evt.preventDefault();
-        x = evt.page.x;
-        y = evt.page.y;
+        x = evt.event.layerX;
+        y = evt.event.layerY;
         if (!this.cssC) {
             this.mX = x;
             this.mY = y;
@@ -683,8 +683,8 @@ wsgate.RDP = new Class( {
                 this.fireEvent('touch3');
                 return;
             }
-            x = evt.page.x;
-            y = evt.page.y;
+            x = evt.event.layerX;
+            y = evt.event.layerY;
             which = this._mB(evt);
             this.log.debug('mD b: ', which, ' x: ', x, ' y: ', y);
             if (this.sock.readyState == this.sock.OPEN) {
@@ -705,8 +705,8 @@ wsgate.RDP = new Class( {
         var buf, a, x, y, which;
         if (this.Tcool) {
             evt.preventDefault();
-            x = x || evt.page.x;
-            y = y || evt.page.y;
+            x = x || evt.event.layerX;
+            y = y || evt.event.layerY;
             which = this._mB(evt);
             this.log.debug('mU b: ', which, ' x: ', x, ' y: ', y);
             if (this.aMF) {
@@ -729,8 +729,8 @@ wsgate.RDP = new Class( {
     onMw: function(evt) {
         var buf, a, x, y;
         evt.preventDefault();
-        x = evt.page.x;
-        y = evt.page.y;
+        x = evt.event.layerX;
+        y = evt.event.layerY;
         // this.log.debug('mW d: ', evt.wheel, ' x: ', x, ' y: ', y);
         if (this.sock.readyState == this.sock.OPEN) {
             buf = new ArrayBuffer(16);
