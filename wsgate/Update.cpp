@@ -148,11 +148,11 @@ namespace wsgate {
         log::debug << __PRETTY_FUNCTION__ << endl;
     }
 
-    void Update::RefreshRect(rdpContext*, uint8, RECTANGLE_16*) {
+    void Update::RefreshRect(rdpContext*, UINT8, RECTANGLE_16*) {
         log::debug << __PRETTY_FUNCTION__ << endl;
     }
 
-    void Update::SuppressOutput(rdpContext*, uint8, RECTANGLE_16*) {
+    void Update::SuppressOutput(rdpContext*, UINT8, RECTANGLE_16*) {
         log::debug << __PRETTY_FUNCTION__ << endl;
     }
 
@@ -225,14 +225,14 @@ namespace wsgate {
         }
     }
 
-    void Update::cbRefreshRect(rdpContext* context, uint8 count, RECTANGLE_16* areas) {
+    void Update::cbRefreshRect(rdpContext* context, UINT8 count, RECTANGLE_16* areas) {
         Update *self = reinterpret_cast<wsgContext *>(context)->pUpdate;
         if (self) {
             self->RefreshRect(context, count, areas);
         }
     }
 
-    void Update::cbSuppressOutput(rdpContext* context, uint8 allow, RECTANGLE_16* area) {
+    void Update::cbSuppressOutput(rdpContext* context, UINT8 allow, RECTANGLE_16* area) {
         Update *self = reinterpret_cast<wsgContext *>(context)->pUpdate;
         if (self) {
             self->SuppressOutput(context, allow, area);

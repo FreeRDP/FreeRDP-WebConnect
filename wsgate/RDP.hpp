@@ -138,10 +138,10 @@ namespace wsgate {
 
             void ContextNew(freerdp *inst, rdpContext *ctx);
             void ContextFree(freerdp *inst, rdpContext *ctx);
-            boolean PreConnect(freerdp *inst);
-            boolean PostConnect(freerdp *inst);
-            boolean Authenticate(freerdp *inst, char** user, char** pass, char** domain);
-            boolean VerifyCertificate(freerdp *inst, char* subject, char* issuer, char* fprint);
+            BOOL PreConnect(freerdp *inst);
+            BOOL PostConnect(freerdp *inst);
+            BOOL Authenticate(freerdp *inst, char** user, char** pass, char** domain);
+            BOOL VerifyCertificate(freerdp *inst, char* subject, char* issuer, char* fprint);
             int SendChannelData(freerdp *inst, int chId, uint8_t* data, int size);
             int ReceiveChannelData(freerdp* inst, int chId, uint8_t* data, int size,
                     int flags, int total_size);
@@ -173,10 +173,10 @@ namespace wsgate {
             // Callbacks from C - Must be static in order t be assigned to C fnPtrs.
             static void cbContextNew(freerdp *inst, rdpContext *ctx);
             static void cbContextFree(freerdp *inst, rdpContext *ctx);
-            static boolean cbPreConnect(freerdp *inst);
-            static boolean cbPostConnect(freerdp *inst);
-            static boolean cbAuthenticate(freerdp *inst, char** user, char** pass, char** domain);
-            static boolean cbVerifyCertificate(freerdp *inst, char* subject, char* issuer,
+            static BOOL cbPreConnect(freerdp *inst);
+            static BOOL cbPostConnect(freerdp *inst);
+            static BOOL cbAuthenticate(freerdp *inst, char** user, char** pass, char** domain);
+            static BOOL cbVerifyCertificate(freerdp *inst, char* subject, char* issuer,
                     char* fprint);
             static int cbSendChannelData(freerdp *inst, int chId, uint8_t* data, int size);
             static int cbReceiveChannelData(freerdp* inst, int chId, uint8_t* data, int size,

@@ -36,6 +36,7 @@ extern "C" {
 #include <freerdp/locale/keyboard.h>
 }
 
+
 #ifdef HAVE_UNISTD_H
 # include <unistd.h>
 #endif
@@ -105,75 +106,78 @@ namespace wsgate {
     bool RDP::Connect(string host, string user, string domain, string pass,
             const WsRdpParams &params)
     {
+        //log::info << "attempting connect ... " << endl;
+
         if (!m_rdpSettings) {
             throw tracing::runtime_error("m_rdpSettings is NULL");
         }
         if (!m_bThreadLoop) {
             throw tracing::runtime_error("worker thread has terminated");
         }
-        m_rdpSettings->width = params.width;
-        m_rdpSettings->height = params.height;
-        m_rdpSettings->port = params.port;
-        m_rdpSettings->ignore_certificate = 1;
-        m_rdpSettings->hostname = strdup(host.c_str());
-        m_rdpSettings->username = strdup(user.c_str());
+
+        //TO DO
+        string pcb = "D63E75FC-2F61-43EA-BB58-16311126FFF1";
+        m_rdpSettings->SendPreconnectionPdu = TRUE;
+        m_rdpSettings->PreconnectionBlob = strdup(pcb.c_str());
+
+
+        m_rdpSettings->DesktopWidth = params.width;
+        m_rdpSettings->DesktopHeight = params.height;
+        //m_rdpSettings->ServerPort = params.port;
+        m_rdpSettings->ServerPort = 2179;
+        m_rdpSettings->IgnoreCertificate = TRUE;
+        m_rdpSettings->NegotiateSecurityLayer = FALSE;
+        m_rdpSettings->ServerHostname = strdup(host.c_str());
+        m_rdpSettings->Username = strdup(user.c_str());
         if (!domain.empty()) {
-            m_rdpSettings->domain = strdup(domain.c_str());
+            m_rdpSettings->Domain = strdup(domain.c_str());
         }
         if (!pass.empty()) {
-            m_rdpSettings->password = strdup(pass.c_str());
+            m_rdpSettings->Password = strdup(pass.c_str());
         } else {
-            m_rdpSettings->authentication = 0;
+            m_rdpSettings->Authentication = 0;
         }
         switch (params.perf) {
             case 0:
                 // LAN
-                m_rdpSettings->performance_flags = PERF_FLAG_NONE;
-                m_rdpSettings->connection_type = CONNECTION_TYPE_LAN;
+                m_rdpSettings->PerformanceFlags = PERF_FLAG_NONE;
+                m_rdpSettings->ConnectionType = CONNECTION_TYPE_LAN;
                 break;
             case 1:
                 // Broadband
-                m_rdpSettings->performance_flags = PERF_DISABLE_WALLPAPER;
-                m_rdpSettings->connection_type = CONNECTION_TYPE_BROADBAND_HIGH;
+                m_rdpSettings->PerformanceFlags = PERF_DISABLE_WALLPAPER;
+                m_rdpSettings->ConnectionType = CONNECTION_TYPE_BROADBAND_HIGH;
                 break;
             case 2:
                 // Modem
-                m_rdpSettings->performance_flags =
+                m_rdpSettings->PerformanceFlags =
                     PERF_DISABLE_WALLPAPER | PERF_DISABLE_FULLWINDOWDRAG |
                     PERF_DISABLE_MENUANIMATIONS | PERF_DISABLE_THEMING;
-                m_rdpSettings->connection_type = CONNECTION_TYPE_MODEM;
+                m_rdpSettings->ConnectionType = CONNECTION_TYPE_MODEM;
                 break;
         }
         if (params.nowallp) {
-            m_rdpSettings->disable_wallpaper = 1;
-            m_rdpSettings->performance_flags |= PERF_DISABLE_WALLPAPER;
+            m_rdpSettings->DisableWallpaper = 1;
+            m_rdpSettings->PerformanceFlags |= PERF_DISABLE_WALLPAPER;
         }
         if (params.nowdrag) {
-            m_rdpSettings->disable_full_window_drag = 1;
-            m_rdpSettings->performance_flags |= PERF_DISABLE_FULLWINDOWDRAG;
+            m_rdpSettings->DisableFullWindowDrag = 1;
+            m_rdpSettings->PerformanceFlags |= PERF_DISABLE_FULLWINDOWDRAG;
         }
         if (params.nomani) {
-            m_rdpSettings->disable_menu_animations = 1;
-            m_rdpSettings->performance_flags |= PERF_DISABLE_MENUANIMATIONS;
+            m_rdpSettings->DisableMenuAnims = 1;
+            m_rdpSettings->PerformanceFlags |= PERF_DISABLE_MENUANIMATIONS;
         }
         if (params.notheme) {
-            m_rdpSettings->disable_theming = 1;
-            m_rdpSettings->performance_flags |= PERF_DISABLE_THEMING;
+            m_rdpSettings->DisableThemes = 1;
+            m_rdpSettings->PerformanceFlags |= PERF_DISABLE_THEMING;
         }
         if (params.notls) {
-            m_rdpSettings->tls_security = 0;
-        }
-        if (params.nonla) {
-            m_rdpSettings->nla_security = 0;
-        }
-        switch (params.fntlm) {
-            case 1:
-            case 2:
-                m_rdpSettings->ntlm_version = params.fntlm;
-                break;
+            m_rdpSettings->TlsSecurity = 0;
         }
 
         m_State = STATE_CONNECT;
+
         return true;
     }
 
@@ -249,8 +253,8 @@ namespace wsgate {
                                 break;
                         }
                         if (0 < tcode) {
-                            uint32_t tflag = rdp_scancode_extended(tcode) ? KBD_FLAGS_EXTENDED : 0;
-                            tcode = rdp_scancode_code(tcode);
+                            uint32_t tflag = RDP_SCANCODE_EXTENDED(tcode) ? KBD_FLAGS_EXTENDED : 0;
+                            tcode = RDP_SCANCODE_CODE(tcode);
                             SendInputKeyboardEvent((m->down ? KBD_FLAGS_DOWN : KBD_FLAGS_RELEASE)|tflag, tcode);
                         }
                     }
@@ -264,7 +268,7 @@ namespace wsgate {
                         } wsmsg;
                         const wsmsg *m = reinterpret_cast<const wsmsg *>(data.data());
                         uint32_t tcode = m->code;
-                        log::debug << "Kpress c=0x" << hex << m->code << ", ss=0x" << m->shiftstate << dec << endl;
+                        log::info << "Kpress c=0x" << hex << m->code << ", ss=0x" << m->shiftstate << dec << endl;
                         if (0x20 < m->code) {
                             log::debug << "Kp1" << endl;
                             if (m->shiftstate & 6) {
@@ -272,7 +276,7 @@ namespace wsgate {
                                 if (((64 < tcode) && (91 > tcode)) || ((96 < tcode) && (123 > tcode))) {
                                     tcode -= (m->shiftstate & 1) ? 0 : 32;
                                     tcode = freerdp_keyboard_get_rdp_scancode_from_virtual_key_code(tcode);
-                                    log::debug << "Kpress oc=" << tcode << endl;
+                                    log::info << "Kpress oc=" << tcode << endl;
                                     if (0 < tcode) {
                                         SendInputKeyboardEvent(KBD_FLAGS_DOWN, tcode);
                                         SendInputKeyboardEvent(KBD_FLAGS_RELEASE, tcode);
@@ -338,8 +342,8 @@ namespace wsgate {
                                     break;
                             }
                             if (0 < tcode) {
-                                uint32_t tflag = rdp_scancode_extended(tcode) ? KBD_FLAGS_EXTENDED : 0;
-                                tcode = rdp_scancode_code(tcode);
+                                uint32_t tflag = RDP_SCANCODE_EXTENDED(tcode) ? KBD_FLAGS_EXTENDED : 0;
+                                tcode = RDP_SCANCODE_CODE(tcode);
                                 SendInputKeyboardEvent(KBD_FLAGS_DOWN|tflag, tcode);
                                 SendInputKeyboardEvent(KBD_FLAGS_RELEASE|tflag, tcode);
                             }
@@ -369,6 +373,7 @@ namespace wsgate {
             throw tracing::runtime_error("m_rdpInput is NULL");
         }
         freerdp_input_send_keyboard_event(m_rdpInput, flags, code);
+        //freerdp_input_send_keyboard_event_ex(m_rdpInput, TRUE, code);
     }
 
     void RDP::SendInputUnicodeKeyboardEvent(uint16_t flags, uint16_t code)
@@ -431,75 +436,76 @@ namespace wsgate {
     }
 
     // private
-    boolean RDP::PreConnect(freerdp *rdp)
+    BOOL RDP::PreConnect(freerdp *rdp)
     {
-        log::debug << "RDP::PreConnect" << endl;
+        //log::info << "RDP::PreConnect" << endl;
         m_pUpdate->Register(rdp);
         m_pPrimary->Register(rdp);
 
         // Settings for RFX:
 #if 0
-        m_rdpSettings->rfx_codec = 1;
-        m_rdpSettings->fastpath_output = 1;
-        m_rdpSettings->color_depth = 32;
-        m_rdpSettings->frame_acknowledge = 0;
-        m_rdpSettings->large_pointer = true;
+        m_rdpSettings->RemoteFxCodec = 1;
+        m_rdpSettings->FastPathOutput = 1;
+        m_rdpSettings->ColorDepth = 32;
+        m_rdpSettings->FrameAcknowledge = 0;
+        m_rdpSettings->LargePointerFlag = true;
 #endif
 
-        // ? settings->dektop_composition = 0;
+        // ? settings->AllowDesktopComposition = 0;
 
-        m_rdpSettings->rfx_codec = 0;
-        m_rdpSettings->fastpath_output = 1;
-        m_rdpSettings->color_depth = 16;
-        m_rdpSettings->frame_acknowledge = 1;
-        m_rdpSettings->large_pointer = 1;
-        m_rdpSettings->glyph_cache = 0;
-        m_rdpSettings->bitmap_cache = 0;
-        m_rdpSettings->offscreen_bitmap_cache = 0;
+        m_rdpSettings->RemoteFxCodec = 0;
+        m_rdpSettings->FastPathOutput = 1;
+        m_rdpSettings->ColorDepth = 16;
+        m_rdpSettings->FrameAcknowledge = 1;
+        m_rdpSettings->LargePointerFlag = 1;
+        m_rdpSettings->BitmapCacheV3Enabled = 0;
+        m_rdpSettings->BitmapCachePersistEnabled = 0;
 
-        m_rdpSettings->order_support[NEG_DSTBLT_INDEX] = 0;
-        m_rdpSettings->order_support[NEG_PATBLT_INDEX] = 1;
-        m_rdpSettings->order_support[NEG_SCRBLT_INDEX] = 1;
-        m_rdpSettings->order_support[NEG_MEMBLT_INDEX] = 0;
-        m_rdpSettings->order_support[NEG_MEM3BLT_INDEX] = 0;
-        m_rdpSettings->order_support[NEG_ATEXTOUT_INDEX] = 0;
-        m_rdpSettings->order_support[NEG_AEXTTEXTOUT_INDEX] = 0;
-        m_rdpSettings->order_support[NEG_DRAWNINEGRID_INDEX] = 0;
-        m_rdpSettings->order_support[NEG_LINETO_INDEX] = 0;
-        m_rdpSettings->order_support[NEG_MULTI_DRAWNINEGRID_INDEX] = 0;
-        m_rdpSettings->order_support[NEG_OPAQUE_RECT_INDEX] = 1;
-        m_rdpSettings->order_support[NEG_SAVEBITMAP_INDEX] = 0;
-        m_rdpSettings->order_support[NEG_WTEXTOUT_INDEX] = 0;
-        m_rdpSettings->order_support[NEG_MEMBLT_V2_INDEX] = 0;
-        m_rdpSettings->order_support[NEG_MEM3BLT_V2_INDEX] = 0;
-        m_rdpSettings->order_support[NEG_MULTIDSTBLT_INDEX] = 0;
-        m_rdpSettings->order_support[NEG_MULTIPATBLT_INDEX] = 0;
-        m_rdpSettings->order_support[NEG_MULTISCRBLT_INDEX] = 0;
-        m_rdpSettings->order_support[NEG_MULTIOPAQUERECT_INDEX] = 1;
-        m_rdpSettings->order_support[NEG_FAST_INDEX_INDEX] = 0;
-        m_rdpSettings->order_support[NEG_POLYGON_SC_INDEX] = 0;
-        m_rdpSettings->order_support[NEG_POLYGON_CB_INDEX] = 0;
-        m_rdpSettings->order_support[NEG_POLYLINE_INDEX] = 0;
-        m_rdpSettings->order_support[NEG_FAST_GLYPH_INDEX] = 0;
-        m_rdpSettings->order_support[NEG_ELLIPSE_SC_INDEX] = 0;
-        m_rdpSettings->order_support[NEG_ELLIPSE_CB_INDEX] = 0;
-        m_rdpSettings->order_support[NEG_GLYPH_INDEX_INDEX] = 0;
-        m_rdpSettings->order_support[NEG_GLYPH_WEXTTEXTOUT_INDEX] = 0;
-        m_rdpSettings->order_support[NEG_GLYPH_WLONGTEXTOUT_INDEX] = 0;
-        m_rdpSettings->order_support[NEG_GLYPH_WLONGEXTTEXTOUT_INDEX] = 0;
+        m_rdpSettings->OrderSupport[NEG_DSTBLT_INDEX] = TRUE;
+        m_rdpSettings->OrderSupport[NEG_PATBLT_INDEX] = TRUE;
+        m_rdpSettings->OrderSupport[NEG_SCRBLT_INDEX] = TRUE;
+        m_rdpSettings->OrderSupport[NEG_OPAQUE_RECT_INDEX] = TRUE;
+        m_rdpSettings->OrderSupport[NEG_DRAWNINEGRID_INDEX] = FALSE;
+        m_rdpSettings->OrderSupport[NEG_MULTIDSTBLT_INDEX] = FALSE;
+        m_rdpSettings->OrderSupport[NEG_MULTIPATBLT_INDEX] = FALSE;
+        m_rdpSettings->OrderSupport[NEG_MULTISCRBLT_INDEX] = FALSE;
+        m_rdpSettings->OrderSupport[NEG_MULTIOPAQUERECT_INDEX] = TRUE;
+        m_rdpSettings->OrderSupport[NEG_MULTI_DRAWNINEGRID_INDEX] = FALSE;
+        m_rdpSettings->OrderSupport[NEG_LINETO_INDEX] = TRUE;
+        m_rdpSettings->OrderSupport[NEG_POLYLINE_INDEX] = TRUE;
+        m_rdpSettings->OrderSupport[NEG_MEMBLT_INDEX] = FALSE;
 
-        reinterpret_cast<wsgContext *>(m_freerdp->context)->clrconv =
+        m_rdpSettings->OrderSupport[NEG_MEM3BLT_INDEX] = FALSE;
+
+        m_rdpSettings->OrderSupport[NEG_MEMBLT_V2_INDEX] = FALSE;
+        m_rdpSettings->OrderSupport[NEG_MEM3BLT_V2_INDEX] = FALSE;
+        m_rdpSettings->OrderSupport[NEG_SAVEBITMAP_INDEX] = FALSE;
+        m_rdpSettings->OrderSupport[NEG_GLYPH_INDEX_INDEX] = TRUE;
+        m_rdpSettings->OrderSupport[NEG_FAST_INDEX_INDEX] = TRUE;
+        m_rdpSettings->OrderSupport[NEG_FAST_GLYPH_INDEX] = TRUE;
+
+        m_rdpSettings->OrderSupport[NEG_POLYGON_SC_INDEX] = FALSE;
+        m_rdpSettings->OrderSupport[NEG_POLYGON_CB_INDEX] = FALSE;
+
+        m_rdpSettings->OrderSupport[NEG_ELLIPSE_SC_INDEX] = FALSE;
+        m_rdpSettings->OrderSupport[NEG_ELLIPSE_CB_INDEX] = FALSE;
+
+        m_rdpSettings->GlyphSupportLevel = GLYPH_SUPPORT_NONE;
+
+        reinterpret_cast<wsgContext*>(m_freerdp->context)->clrconv =
             freerdp_clrconv_new(CLRCONV_ALPHA|CLRCONV_INVERT);
+
         m_freerdp->context->cache = cache_new(m_freerdp->settings);
 
-        return 1;
+        return TRUE;
+
     }
 
     // private
-    boolean RDP::PostConnect(freerdp *rdp)
+    BOOL RDP::PostConnect(freerdp *rdp)
     {
-        log::debug << "RDP::PostConnect 0x" << hex << rdp << dec << endl;
-        // gdi_init(rdp, CLRCONV_ALPHA | CLRCONV_INVERT | CLRBUF_16BPP | CLRBUF_32BPP, NULL);
+        //log::info << "RDP::PostConnect 0x" << hex << rdp << dec << endl;
+        //gdi_init(rdp, CLRCONV_ALPHA | CLRCONV_INVERT | CLRBUF_16BPP | CLRBUF_32BPP, NULL);
 
         ostringstream oss;
         oss << "S:" << hex << this;
@@ -514,21 +520,24 @@ namespace wsgate {
         p.SetDefault = cbPointer_SetDefault;
         graphics_register_pointer(rdp->context->graphics, &p);
         pointer_cache_register_callbacks(rdp->update);
-        return 1;
+
+        //log::info << "Now returning from postconnect;" << endl;
+
+        return true;
     }
 
     // private
-    boolean RDP::Authenticate(freerdp *, char**, char**, char**)
+    BOOL RDP::Authenticate(freerdp *, char**, char**, char**)
     {
         log::debug << "RDP::Authenticate" << endl;
-        return 1;
+        return true;
     }
 
     // private
-    boolean RDP::VerifyCertificate(freerdp *, char*, char*, char*)
+    BOOL RDP::VerifyCertificate(freerdp *, char*, char*, char*)
     {
         log::debug << "RDP::VerifyCertificate" << endl;
-        return 1;
+        return true;
     }
 
     // private
@@ -693,11 +702,13 @@ namespace wsgate {
                     CheckFileDescriptor();
                     break;
                 case STATE_CONNECT:
-                    if (freerdp_connect(m_freerdp)) {
+                    //if (freerdp_connect(m_freerdp)) {
+                	if(freerdp_connect(m_freerdp)) {
                         m_State = STATE_CONNECTED;
                         continue;
                     }
                     m_State = STATE_INITIAL;
+                    //log::info << "line 720" << endl;
                     addError("Could not connect to RDP backend.");
                     break;
                 case STATE_INITIAL:
@@ -740,43 +751,43 @@ namespace wsgate {
     }
 
     // private C callback
-    boolean RDP::cbPreConnect(freerdp *inst)
+    BOOL RDP::cbPreConnect(freerdp *inst)
     {
         RDP *self = reinterpret_cast<wsgContext *>(inst->context)->pRDP;
         if (self) {
             return self->PreConnect(inst);
         }
-        return 0;
+        return false;
     }
 
     // private C callback
-    boolean RDP::cbPostConnect(freerdp *inst)
+    BOOL RDP::cbPostConnect(freerdp *inst)
     {
         RDP *self = reinterpret_cast<wsgContext *>(inst->context)->pRDP;
         if (self) {
             return self->PostConnect(inst);
         }
-        return 0;
+        return false;
     }
 
     // private C callback
-    boolean RDP::cbAuthenticate(freerdp *inst, char** user, char** pass, char** domain)
+    BOOL RDP::cbAuthenticate(freerdp *inst, char** user, char** pass, char** domain)
     {
         RDP *self = reinterpret_cast<wsgContext *>(inst->context)->pRDP;
         if (self) {
             return self->Authenticate(inst, user, pass, domain);
         }
-        return 0;
+        return false;
     }
 
     // private C callback
-    boolean RDP::cbVerifyCertificate(freerdp *inst, char* subject, char* issuer, char* fprint)
+    BOOL RDP::cbVerifyCertificate(freerdp *inst, char* subject, char* issuer, char* fprint)
     {
         RDP *self = reinterpret_cast<wsgContext *>(inst->context)->pRDP;
         if (self) {
             return self->VerifyCertificate(inst, subject, issuer, fprint);
         }
-        return 0;
+        return false;
     }
 
     // private C callback

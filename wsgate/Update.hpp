@@ -66,8 +66,8 @@ namespace wsgate {
             void BitmapUpdate(rdpContext* context, BITMAP_UPDATE* bitmap);
             void Palette(rdpContext* context, PALETTE_UPDATE* palette);
             void PlaySound(rdpContext* context, PLAY_SOUND_UPDATE* play_sound);
-            void RefreshRect(rdpContext* context, uint8 count, RECTANGLE_16* areas);
-            void SuppressOutput(rdpContext* context, uint8 allow, RECTANGLE_16* area);
+            void RefreshRect(rdpContext* context, UINT8 count, RECTANGLE_16* areas);
+            void SuppressOutput(rdpContext* context, UINT8 allow, RECTANGLE_16* area);
             void SurfaceCommand(rdpContext* context, STREAM* s);
             void SurfaceBits(rdpContext* context, SURFACE_BITS_COMMAND* surface_bits_command);
             void SurfaceFrameMarker(rdpContext* context, SURFACE_FRAME_MARKER* surface_frame_marker);
@@ -81,8 +81,8 @@ namespace wsgate {
             static void cbBitmapUpdate(rdpContext* context, BITMAP_UPDATE* bitmap);
             static void cbPalette(rdpContext* context, PALETTE_UPDATE* palette);
             static void cbPlaySound(rdpContext* context, PLAY_SOUND_UPDATE* play_sound);
-            static void cbRefreshRect(rdpContext* context, uint8 count, RECTANGLE_16* areas);
-            static void cbSuppressOutput(rdpContext* context, uint8 allow, RECTANGLE_16* area);
+            static void cbRefreshRect(rdpContext* context, UINT8 count, RECTANGLE_16* areas);
+            static void cbSuppressOutput(rdpContext* context, UINT8 allow, RECTANGLE_16* area);
             static void cbSurfaceCommand(rdpContext* context, STREAM* s);
             static void cbSurfaceBits(rdpContext* context, SURFACE_BITS_COMMAND* surface_bits_command);
             static void cbSurfaceFrameMarker(rdpContext* context, SURFACE_FRAME_MARKER* surface_frame_marker);

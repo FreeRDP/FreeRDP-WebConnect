@@ -104,6 +104,8 @@ using boost::filesystem::path;
 
 namespace wsgate {
 
+
+    string pcb = "D63E75FC-2F61-43EA-BB58-16311126FFF1";
     static const char * const ws_magic = "258EAFA5-E914-47DA-95CA-C5AB0DC85B11";
 
     int nFormValue(HttpRequest *request, const string & name, int defval) {
@@ -292,6 +294,7 @@ namespace wsgate {
                         << ": " << uri << " => 404 Not found" << endl;
                     return HTTPRESPONSECODE_404_NOTFOUND;
                 }
+
                 if (boost::starts_with(uri, "/wsgate?")) {
                     string dtsize(request->FormValues("dtsize").m_sBody);
                     string rdphost(request->FormValues("host").m_sBody);
@@ -431,7 +434,7 @@ namespace wsgate {
                     response->EnableIdleTimeout(false);
                     response->EnableKeepAlive(true);
                     if (!sh->Prepare(request->Connection(), rdphost, rdpuser, rdppass, params)) {
-                        log::warn << "Request from " << request->RemoteAddress()
+                        log::info << "Request from " << request->RemoteAddress()
                             << ": " << uri << " => 503 (RDP backend not available)" << endl;
                         response->EnableIdleTimeout(true);
                         return HTTPRESPONSECODE_503_SERVICEUNAVAILABLE;
@@ -1228,6 +1231,7 @@ namespace wsgate {
             const string user, const string pass, const WsRdpParams &params)
     {
         log::debug << "RDP Host:               '" << host << "'" << endl;
+        log::debug << "RDP vmID:               '" << pcb << "'" << endl;
         log::debug << "RDP Port:               '" << params.port << "'" << endl;
         log::debug << "RDP User:               '" << user << "'" << endl;
         log::debug << "RDP Password:           '" << pass << "'" << endl;
@@ -1245,8 +1249,13 @@ namespace wsgate {
         conn_ptr c(new wspp::wsendpoint(h.get()));
         rdp_ptr r(new RDP(h.get()));
         m_cmap[conn] = conn_tuple(c, h, r);
+        
+        //log::info << "Reached the connection point >> wsgate_main:1249" << endl;
+
         r->Connect(host, user, string() /*domain*/, pass, params);
+
         m_parent->RegisterRdpSession(r);
+
         return true;
     }
 
@@ -1296,8 +1305,7 @@ int main (int argc, char **argv)
 #ifndef _WIN32
         ("foreground,f", "Run in foreground.")
 #endif
-        ("config,c", po::value<string>()->default_value(DEFAULTCFG), "Specify config file")
-        ;
+        ("config,c", po::value<string>()->default_value(DEFAULTCFG), "Specify config file");
 
     po::variables_map vm;
     try {
@@ -1509,15 +1517,20 @@ int main (int argc, char **argv)
         } else {
             wsgate::kbdio kbd;
             cout << "Press q to terminate ..." << endl;
-            while (!(srv.ShouldTerminate()  || (psrv && psrv->ShouldTerminate()) || g_signaled || kbd.qpressed())) {
-                if (sleepInLoop) {
-                    usleep(1000);
-                } else {
-                    srv.HandleData(1000);
-                    if (NULL != psrv) {
-                        psrv->HandleData(1000);
-                    }
-                }
+            while (!(srv.ShouldTerminate()  || (psrv && psrv->ShouldTerminate()) || g_signaled || kbd.qpressed()))
+            	{
+                if (sleepInLoop)
+					{
+						usleep(1000);
+					}
+                else
+					{
+						srv.HandleData(1000);
+						if (NULL != psrv)
+							{
+								psrv->HandleData(1000);
+							}
+					}
             }
         }
         wsgate::log::info << "terminating" << endl;
