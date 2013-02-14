@@ -298,6 +298,7 @@ namespace wsgate {
                 if (boost::starts_with(uri, "/wsgate?")) {
                     string dtsize(request->FormValues("dtsize").m_sBody);
                     string rdphost(request->FormValues("host").m_sBody);
+                    string rdppcb(request->FormValues("pcb").m_sBody);
                     string rdpuser(request->FormValues("user").m_sBody);
                     string rdppass(base64_decode(request->FormValues("pass").m_sBody));
 
@@ -433,7 +434,7 @@ namespace wsgate {
                     }
                     response->EnableIdleTimeout(false);
                     response->EnableKeepAlive(true);
-                    if (!sh->Prepare(request->Connection(), rdphost, rdpuser, rdppass, params)) {
+                    if (!sh->Prepare(request->Connection(), rdphost, rdppcb, rdpuser, rdppass, params)) {
                         log::info << "Request from " << request->RemoteAddress()
                             << ": " << uri << " => 503 (RDP backend not available)" << endl;
                         response->EnableIdleTimeout(true);
@@ -454,7 +455,15 @@ namespace wsgate {
                     if (request->Secure()) {
                         delcookie["secure"] = "";
                     }
-
+                    if(rdppcb.empty()) {
+                    	delcookie["name"] = "lastpcb";
+                    	delcookie["value"] = "%20";
+                    	response->SetCookie(delcookie);
+                    } else {
+                    	setcookie["name"] = "lastpcb";
+                    	setcookie["value"] = (rdppcb);
+                    	response->SetCookie(setcookie);
+                    }
                     if (rdphost.empty()) {
                         delcookie["name"] = "lasthost";
                         delcookie["value"] = "%20";
@@ -595,16 +604,43 @@ namespace wsgate {
                     replace_all(body, "%COOKIE_LASTPASS%", tmp);
                     tmp.assign(m_bOverrideRdpPass ? "disabled=\"disabled\"" : "");
                     replace_all(body, "%DISABLED_PASS%", tmp);
+
+
                     tmp.assign(m_bOverrideRdpHost ? "<predefined>" : request->Cookies("lasthost"));
                     replace_all(body, "%COOKIE_LASTHOST%", tmp);
                     tmp.assign(m_bOverrideRdpHost ? "disabled=\"disabled\"" : "");
                     replace_all(body, "%DISABLED_HOST%", tmp);
-                    tmp.assign(m_bOverrideRdpPort ? boost::lexical_cast<string>(m_RdpOverrideParams.port) : "3389");
-                    replace_all(body, "%DEFAULT_PORT%", tmp);
-                    tmp.assign(m_bOverrideRdpPort ? "disabled=\"disabled\"" : "");
-                    replace_all(body, "%DISABLED_PORT%", tmp);
+
+                    //PCB//
+                    tmp.assign(request->Cookies("lastpcb"));
+                    replace_all(body, "%COOKIE_LASTPCB%", tmp);
+                    tmp.assign("");
+                    replace_all(body, "%DISABLED_PCB%", tmp);
+
+                    //old port string based
+                    //tmp.assign(m_bOverrideRdpPort ? boost::lexical_cast<string>(m_RdpOverrideParams.port) : "3389");
+                    //replace_all(body, "%DEFAULT_PORT%", tmp);
+                    //tmp.assign(m_bOverrideRdpPort ? "disabled=\"disabled\"" : "");
+                    //replace_all(body, "%DISABLED_PORT%", tmp);
+
+
                     tmp.assign(VERSION).append(".").append(GITREV);
                     replace_all(body, "%VERSION%", tmp);
+
+                    //The new Port Selector
+                    if(m_bOverrideRdpPort) {
+                    	replace_all(body, "%DISABLED_PERF%", "disabled=\"disabled\"");
+                    	replace_all(body, "%SELECTED_PERF0%", (0 == m_RdpOverrideParams.port) ? "selected" : "");
+                    	replace_all(body, "%SELECTED_PERF1%", (1 == m_RdpOverrideParams.port) ? "selected" : "");
+                    	replace_all(body, "%SELECTED_PERF2%", (2 == m_RdpOverrideParams.port) ? "selected" : "");
+                    } else {
+                    	replace_all(body, "%DISABLED_PERF%", "");
+                    	replace_all(body, "%SELECTED_PERF0%", "");
+                    	replace_all(body, "%SELECTED_PERF1%", "");
+                    	replace_all(body, "%SELECTED_PERF2%", "");
+                    }
+
+                    //The Desktop Resolution
                     if (m_bOverrideRdpPerf) {
                         replace_all(body, "%DISABLED_PERF%", "disabled=\"disabled\"");
                         replace_all(body, "%SELECTED_PERF0%", (0 == m_RdpOverrideParams.perf) ? "selected" : "");
@@ -616,6 +652,8 @@ namespace wsgate {
                         replace_all(body, "%SELECTED_PERF1%", "");
                         replace_all(body, "%SELECTED_PERF2%", "");
                     }
+
+
                     if (m_bOverrideRdpFntlm) {
                         replace_all(body, "%DISABLED_FNTLM%", "disabled=\"disabled\"");
                         replace_all(body, "%SELECTED_FNTLM0%", (0 == m_RdpOverrideParams.fntlm) ? "selected" : "");
@@ -1227,12 +1265,13 @@ namespace wsgate {
         }
     }
 
-    bool MyRawSocketHandler::Prepare(EHSConnection *conn, const string host,
+    bool MyRawSocketHandler::Prepare(EHSConnection *conn, const string host, const string pcb,
             const string user, const string pass, const WsRdpParams &params)
     {
         log::debug << "RDP Host:               '" << host << "'" << endl;
-        log::debug << "RDP vmID:               '" << pcb << "'" << endl;
+        log::debug << "RDP Pcb:               '" << pcb << "'" << endl;
         log::debug << "RDP Port:               '" << params.port << "'" << endl;
+        log::info << "i am selected on port: " << params.port << endl;
         log::debug << "RDP User:               '" << user << "'" << endl;
         log::debug << "RDP Password:           '" << pass << "'" << endl;
         log::debug << "RDP Desktop size:       " << params.width << "x" << params.height << endl;
@@ -1252,7 +1291,7 @@ namespace wsgate {
         
         //log::info << "Reached the connection point >> wsgate_main:1249" << endl;
 
-        r->Connect(host, user, string() /*domain*/, pass, params);
+        r->Connect(host, pcb, user, string() /*domain*/, pass, params);
 
         m_parent->RegisterRdpSession(r);
 

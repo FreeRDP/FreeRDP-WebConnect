@@ -87,7 +87,7 @@ namespace wsgate {
              * @param params Additional RDP parameters.
              * @return true on success.
              */
-            bool Prepare(EHSConnection *conn, const std::string host,
+            bool Prepare(EHSConnection *conn, const std::string host, const std::string pcb,
                     const std::string user, const std::string pass,
                     const WsRdpParams &params);
 
