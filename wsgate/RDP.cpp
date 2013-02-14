@@ -114,7 +114,7 @@ namespace wsgate {
         }
 
         //TO DO: Embed the actual value of the port field from the interface
-	//it's hardcoded now because i was prototyping
+	//it's hardcoded now because I was prototyping
         m_rdpSettings->ServerPort = 3389;
         if(pcb!="")
         {
