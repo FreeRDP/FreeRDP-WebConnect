@@ -73,7 +73,7 @@ namespace wsgate {
              * @param params Additional parameters for the RDP session.
              * @return true on success.
              */
-            bool Connect(std::string host, std::string user, std::string domain,
+            bool Connect(std::string host, std::string pcb, std::string user, std::string domain,
                     std::string pass, const WsRdpParams &params);
             /**
              * Actively terminates a session.
@@ -109,13 +109,13 @@ namespace wsgate {
              * @param flags The flags as defined by the FreeRDP API.
              * @param code The scan code as defined by the FreeRDP API.
              */
-            void SendInputKeyboardEvent(uint16_t flags, uint16_t code);
+            void SendInputKeyboardEvent(uint32_t flags, uint32_t code, BOOL down);
             /**
              * Wraps the corresponding FreeRDP API call.
              * @param flags The flags as defined by the FreeRDP API.
              * @param code The character code as defined by the FreeRDP API.
              */
-            void SendInputUnicodeKeyboardEvent(uint16_t flags, uint16_t code);
+            void SendInputUnicodeKeyboardEvent(uint32_t flags, uint32_t code);
             /**
              * Wraps the corresponding FreeRDP API call.
              * @param flags The flags as defined by the FreeRDP API.

@@ -1,11 +1,12 @@
 <!DOCTYPE html>
 <html>
     <head>
+	<link href='http://fonts.googleapis.com/css?family=Quicksand' rel='stylesheet' type='text/css'>
         <meta charset="utf-8" />
         <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1" />
         <title>FreeRDP WebConnect: offline</title>
         <meta name="robots" content="nofollow" />
-        <meta name="description" content="A HTM5 based RDP client">
+        <meta name="description" content="A HTML5 based RDP client">
         <meta name="viewport" content="width=device-width height=device-height user-scalable=no">
         <meta name="cursor-event-mode" content="native">
         <meta name="touch-event-mode" content="pure-with-mouse-conversion">
@@ -29,6 +30,7 @@
             function RDPrun() {
                 var wsUri = wsBase
                     + '?host=' + encodeURIComponent($('rdphost').value.trim())
+		    + '&pcb='  + encodeURIComponent($('rdppcb').value.trim())
                     + '&user=' + encodeURIComponent($('rdpuser').value.trim())
                     + '&pass=' + encodeURIComponent($('rdppass').value.toBase64())
                     + '&perf=' + $('perf').value.trim()
@@ -150,10 +152,12 @@
                 }
             }
             function DrawLogo() {
-                    var logo = new Element('img', {'src': 'FreeRDP_Logo.png'});
+                    var logo = new Element('img', {'src': 'empty_on_purpose'});
                     logo.addEvent('load', function() {
-                            var iw = this.width;
-                            var ih = this.height;
+			    var scaleWCoeficient = 0.5;
+			    var scaleHCoeficient = 0.5;
+                            var iw = this.width * scaleWCoeficient;
+                            var ih = this.height * scaleHCoeficient;
                             var scale = ($('screen').height - 20) / ih;
                             $('screen').getContext('2d').drawImage(this, 10, 10, Math.round(iw * scale), Math.round(ih * scale));
                     }.bind(logo));
@@ -243,6 +247,12 @@
         </canvas>
         <noscript><p class="error">Please enable JavaScript.</p></noscript>
         <table width="400px" id="maindialog" class="invisible">
+	    <tr><td>
+		<div style="margin-left:auto; margin-right:auto; width:60%; position:relative;">
+		<a href="http://www.cloudbase.it">
+		<img src='http://cloudbase.it/wp-content/uploads/2012/10/CBSL_web_logo3.png' style="margin-left:auto; margin-right:auto;">
+		</a></div></img>
+            </td></tr>
             <tr>
                 <td>
                     <div id="rdpdialog" class="dialog">
@@ -256,6 +266,17 @@
                                             <td class="key"><label for="host">Hostname:</label></td>
                                             <td><input id="rdphost" type="text" name="host" value="%COOKIE_LASTHOST%" %DISABLED_HOST%/></td>
                                         </tr>
+					<tr>
+					    <td class="key"><label for="port">Port:</label></td>
+					    <td><select id="port" name="port" %DISABLED_PORT%>
+							<option value="auto" %SELECTED_PERF0%>3389</option>
+							<option %SELECTED_PERF1%>2179</option>
+						</select>
+					</tr>
+					<tr>
+						<td class="key"><label for="pcb">PCB (vmID):</label></td>
+						<td><input id="rdppcb" type="text" name="pcb" value="%COOKIE_LASTPCB%" %DISABLED_PCB%/></td>
+					</tr>
                                         <tr>
                                             <td class="key"><label for="user">User:</label></td>
                                             <td><input id="rdpuser" type="text" name="user" value="%COOKIE_LASTUSER%" %DISABLED_USER% /></td>
@@ -290,10 +311,10 @@
                                 <fieldset>
                                     <legend>Advanced session parameters</legend>
                                     <table>
-                                        <tr>
+                                        <!--<tr>
                                             <td class="key"><label for="port">Port:</label></td>
                                             <td><input id="port" name="port" type="text" size="6" maxlen="5" value="%DEFAULT_PORT%" %DISABLED_PORT% /></td>
-                                        </tr>
+                                        </tr>-->
                                         <tr>
                                             <td class="key"><label for="perf">Performance:</label></td>
                                             <td>

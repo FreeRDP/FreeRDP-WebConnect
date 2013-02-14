@@ -103,11 +103,9 @@ namespace wsgate {
         delete m_pPrimary;
     }
 
-    bool RDP::Connect(string host, string user, string domain, string pass,
+    bool RDP::Connect(string host, string pcb, string user, string domain, string pass,
             const WsRdpParams &params)
     {
-        //log::info << "attempting connect ... " << endl;
-
         if (!m_rdpSettings) {
             throw tracing::runtime_error("m_rdpSettings is NULL");
         }
@@ -116,15 +114,25 @@ namespace wsgate {
         }
 
         //TO DO
-        string pcb = "D63E75FC-2F61-43EA-BB58-16311126FFF1";
-        m_rdpSettings->SendPreconnectionPdu = TRUE;
-        m_rdpSettings->PreconnectionBlob = strdup(pcb.c_str());
-
+        //opensuse: string pcb = "D63E75FC-2F61-43EA-BB58-16311126FFF1";
+        //win8: string pcb = "DA1CCCAF-3617-4613-8C8E-D207D68B67F9";
+        m_rdpSettings->ServerPort = 3389;
+        if(pcb!="")
+        {
+        	m_rdpSettings->SendPreconnectionPdu = TRUE;
+        	m_rdpSettings->PreconnectionBlob = strdup(pcb.c_str());
+        	m_rdpSettings->ServerPort = 2179;
+        }
+        //m_rdpSettings->KeyboardLayout = KBD_US;
 
         m_rdpSettings->DesktopWidth = params.width;
         m_rdpSettings->DesktopHeight = params.height;
-        //m_rdpSettings->ServerPort = params.port;
-        m_rdpSettings->ServerPort = 2179;
+
+
+        //THIS DOES NOT WORK!!!     ---- >>>    m_rdpSettings->ServerPort = params.port;
+
+        //log::info << "ServerPort = " << m_rdpSettings->ServerPort << " & params.port = " << params.port << endl;
+
         m_rdpSettings->IgnoreCertificate = TRUE;
         m_rdpSettings->NegotiateSecurityLayer = FALSE;
         m_rdpSettings->ServerHostname = strdup(host.c_str());
@@ -221,7 +229,7 @@ namespace wsgate {
                             uint32_t code;
                         } wsmsg;
                         const wsmsg *m = reinterpret_cast<const wsmsg *>(data.data());
-                        log::debug << "K" << ((m->down) ? "down" : "up") << ": c=" << m->code << endl;
+                        log::info << "K" << ((m->down) ? "down" : "up") << ": c=" << m->code << endl;
                         uint32_t tcode = 0;
                         switch (m->code) {
                             case 8:
@@ -238,35 +246,46 @@ namespace wsgate {
                                 break;
                             case 20:
                                 // capslock
-                                // tcode = RDP_SCANCODE_;
+                                tcode = RDP_SCANCODE_CAPSLOCK;
                                 break;
                             case 93:
                                 tcode = RDP_SCANCODE_LWIN; // Win-Key
                                 break;
                             case 144:
                                 // numlock
-                                // tcode = RDP_SCANCODE_;
+                                 tcode = RDP_SCANCODE_NUMLOCK;
                                 break;
                             case 145:
                                 // scrolllock
-                                // tcode = RDP_SCANCODE_;
+                                tcode = RDP_SCANCODE_SCROLLLOCK;
                                 break;
                         }
                         if (0 < tcode) {
+
+                        	log::info << "257 >> tcode: " << tcode << "\n";
+
+
                             uint32_t tflag = RDP_SCANCODE_EXTENDED(tcode) ? KBD_FLAGS_EXTENDED : 0;
                             tcode = RDP_SCANCODE_CODE(tcode);
-                            SendInputKeyboardEvent((m->down ? KBD_FLAGS_DOWN : KBD_FLAGS_RELEASE)|tflag, tcode);
+                            //SendInputKeyboardEvent((m->down ? KBD_FLAGS_DOWN : KBD_FLAGS_RELEASE)|tflag, tcode, TRUE);
+                            //SendInputKeyboardEvent((m->down ? KBD_FLAGS_DOWN : KBD_FLAGS_RELEASE)|tflag, tcode, FALSE);
+
+                            //SendInputKeyboardEvent(KBD_FLAGS_DOWN|tflag, tcode, TRUE);
+                            //SendInputKeyboardEvent(KBD_FLAGS_RELEASE|tflag, tcode, FALSE);
+
+                            freerdp_input_send_keyboard_event(m_rdpInput, (m->down ? KBD_FLAGS_DOWN : KBD_FLAGS_RELEASE)|tflag, tcode);
                         }
                     }
                     break;
                 case WSOP_CS_KPRESS:
                     {
                         typedef struct {
-                            uint32_t op;
+                        	uint32_t op;
                             uint32_t shiftstate;
                             uint32_t code;
                         } wsmsg;
                         const wsmsg *m = reinterpret_cast<const wsmsg *>(data.data());
+
                         uint32_t tcode = m->code;
                         log::info << "Kpress c=0x" << hex << m->code << ", ss=0x" << m->shiftstate << dec << endl;
                         if (0x20 < m->code) {
@@ -276,20 +295,44 @@ namespace wsgate {
                                 if (((64 < tcode) && (91 > tcode)) || ((96 < tcode) && (123 > tcode))) {
                                     tcode -= (m->shiftstate & 1) ? 0 : 32;
                                     tcode = freerdp_keyboard_get_rdp_scancode_from_virtual_key_code(tcode);
+                                    //tcode = freerdp_keyboard_get_rdp_scancode_from_x11_keycode(tcode);
+
                                     log::info << "Kpress oc=" << tcode << endl;
                                     if (0 < tcode) {
-                                        SendInputKeyboardEvent(KBD_FLAGS_DOWN, tcode);
-                                        SendInputKeyboardEvent(KBD_FLAGS_RELEASE, tcode);
+                                    	log::info << "282\n";
+                                        //SendInputKeyboardEvent(KBD_FLAGS_DOWN, tcode, true);
+                                    	SendInputUnicodeKeyboardEvent(KBD_FLAGS_DOWN, tcode);
+                                        //SendInputKeyboardEvent(KBD_FLAGS_RELEASE, tcode, false);
+                                    	SendInputUnicodeKeyboardEvent(KBD_FLAGS_RELEASE, tcode);
                                     }
                                 }
                             } else {
                                 if (0 < tcode) {
-                                    SendInputUnicodeKeyboardEvent(KBD_FLAGS_DOWN, tcode);
-                                    SendInputUnicodeKeyboardEvent(KBD_FLAGS_RELEASE, tcode);
+                                	uint32_t tflag = RDP_SCANCODE_EXTENDED(tcode) ? KBD_FLAGS_EXTENDED : 0;
+                                	//tcode = freerdp_keyboard_get_rdp_scancode_from_x11_keycode(tcode);
+                                	tcode = RDP_SCANCODE_CODE(tcode);
+
+
+                                	//SendInputKeyboardEvent(KBD_FLAGS_DOWN|tflag, tcode, true);
+                                	//SendInputKeyboardEvent(KBD_FLAGS_RELEASE|tflag, tcode, false);
+                                    //SendInputUnicodeKeyboardEvent(KBD_FLAGS_DOWN, tcode);
+                                    //SendInputUnicodeKeyboardEvent(KBD_FLAGS_RELEASE, tcode);
+
+                                	log::info << "308 :" << " " << KBD_FLAGS_DOWN << " " << KBD_FLAGS_RELEASE << "\n";
+                                	log::info << "tcode: " << tcode << " m->code: " << m->code << endl;
+                                	//freerdp_input_send_unicode_keyboard_event(m_rdpInput, KBD_FLAGS_DOWN|tflag, tcode);
+                                	//working on w8:
+                                	//freerdp_input_send_unicode_keyboard_event(m_rdpInput, KBD_FLAGS_DOWN, tcode);
+                                	//working on w8:
+                                	//freerdp_input_send_unicode_keyboard_event(m_rdpInput, KBD_FLAGS_RELEASE, tcode);
+
+                                	freerdp_input_send_keyboard_event(m_rdpInput, KBD_FLAGS_DOWN, tcode);
+                                	freerdp_input_send_keyboard_event(m_rdpInput, KBD_FLAGS_RELEASE, m->code);
+
                                 }
                             }
                         } else {
-                            log::debug << "Kp2" << endl;
+                            log::info << "Kp2" << endl;
                             tcode = 0;
                             switch (m->code) {
                                 case 0x09:
@@ -342,10 +385,26 @@ namespace wsgate {
                                     break;
                             }
                             if (0 < tcode) {
-                                uint32_t tflag = RDP_SCANCODE_EXTENDED(tcode) ? KBD_FLAGS_EXTENDED : 0;
+                            	//tflag initially uint32_t
+                            	uint32_t tflag = RDP_SCANCODE_EXTENDED(tcode) ? KBD_FLAGS_EXTENDED : 0;
                                 tcode = RDP_SCANCODE_CODE(tcode);
-                                SendInputKeyboardEvent(KBD_FLAGS_DOWN|tflag, tcode);
-                                SendInputKeyboardEvent(KBD_FLAGS_RELEASE|tflag, tcode);
+
+                                log::info << "353 tcode: " << tcode <<" & tflag: " << tflag << "\n";
+
+                                //tcode = freerdp_keyboard_get_rdp_scancode_from_x11_keycode(tcode);
+
+                                log::info << "357 tcode: " << tcode <<" & tflag: " << tflag << "\n";
+
+                                //SendInputUnicodeKeyboardEvent(KBD_FLAGS_DOWN, tcode);
+                                //SendInputUnicodeKeyboardEvent(KBD_FLAGS_RELEASE, tcode);
+
+                                //SendInputKeyboardEvent(KBD_FLAGS_DOWN|tflag, tcode, true);
+
+                                //gasit cu fara unicode
+                                freerdp_input_send_keyboard_event(m_rdpInput, KBD_FLAGS_DOWN, tcode);
+                                freerdp_input_send_keyboard_event(m_rdpInput, KBD_FLAGS_RELEASE, tcode);
+
+                                //SendInputKeyboardEvent(KBD_FLAGS_RELEASE|tflag, tcode, false);
                             }
                         }
                     }
@@ -367,20 +426,41 @@ namespace wsgate {
         freerdp_input_send_synchronize_event(m_rdpInput, flags);
     }
 
-    void RDP::SendInputKeyboardEvent(uint16_t flags, uint16_t code)
+    void RDP::SendInputKeyboardEvent(uint32_t flags, uint32_t code, BOOL down)
     {
         if (!m_rdpInput) {
             throw tracing::runtime_error("m_rdpInput is NULL");
         }
-        freerdp_input_send_keyboard_event(m_rdpInput, flags, code);
-        //freerdp_input_send_keyboard_event_ex(m_rdpInput, TRUE, code);
+        //freerdp_input_send_keyboard_event(m_rdpInput, flags, code);
+        log::info << "377\n";
+        //freerdp_input_send_keyboard_event_ex(m_rdpInput, down, code);
+        //freerdp_input_send_keyboard_event_ex(m_rdpInput, down, code);
+
+        if(code == RDP_SCANCODE_UNKNOWN)
+        {
+        	log::info << "Unknown key with keycode: " << code << "\n";
+        	//freerdp_input_send_keyboard_event_ex(m_rdpInput, down, code);
+        }
+
+        else
+        {
+        	freerdp_input_send_keyboard_event_ex(m_rdpInput, down, code);
+        	//freerdp_input_send_unicode_keyboard_event(m_rdpInput, flags, code);
+        	//freerdp_input_send_keyboard_event_ex(m_rdpInput, down, code);
+        }
+
+
+
     }
 
-    void RDP::SendInputUnicodeKeyboardEvent(uint16_t flags, uint16_t code)
+    void RDP::SendInputUnicodeKeyboardEvent(uint32_t flags, uint32_t code)
     {
         if (!m_rdpInput) {
             throw tracing::runtime_error("m_rdpInput is NULL");
         }
+        log::info << "387\n";
+        //freerdp_input_send_keyboard_event(m_rdpInput, flags, code);
+        //removed the send_unicode_keyboard function
         freerdp_input_send_unicode_keyboard_event(m_rdpInput, flags, code);
     }
 
