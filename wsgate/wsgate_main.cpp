@@ -629,15 +629,15 @@ namespace wsgate {
 
                     //The new Port Selector
                     if(m_bOverrideRdpPort) {
-                    	replace_all(body, "%DISABLED_PERF%", "disabled=\"disabled\"");
-                    	replace_all(body, "%SELECTED_PERF0%", (0 == m_RdpOverrideParams.port) ? "selected" : "");
-                    	replace_all(body, "%SELECTED_PERF1%", (1 == m_RdpOverrideParams.port) ? "selected" : "");
-                    	replace_all(body, "%SELECTED_PERF2%", (2 == m_RdpOverrideParams.port) ? "selected" : "");
+                    	replace_all(body, "%DISABLED_PORT%", "disabled=\"disabled\"");
+                    	replace_all(body, "%SELECTED_PORT0%", (0 == m_RdpOverrideParams.port) ? "selected" : "");
+                    	replace_all(body, "%SELECTED_PORT1%", (1 == m_RdpOverrideParams.port) ? "selected" : "");
+                    	replace_all(body, "%SELECTED_PORT2%", (2 == m_RdpOverrideParams.port) ? "selected" : "");
                     } else {
-                    	replace_all(body, "%DISABLED_PERF%", "");
-                    	replace_all(body, "%SELECTED_PERF0%", "");
-                    	replace_all(body, "%SELECTED_PERF1%", "");
-                    	replace_all(body, "%SELECTED_PERF2%", "");
+                    	replace_all(body, "%DISABLED_PORT%", "");
+                    	replace_all(body, "%SELECTED_PORT0%", "");
+                    	replace_all(body, "%SELECTED_PORT1%", "");
+                    	replace_all(body, "%SELECTED_PORT2%", "");
                     }
 
                     //The Desktop Resolution
@@ -884,12 +884,18 @@ namespace wsgate {
                         } else {
                             m_bOverrideRdpPass = false;
                         }
+                       
                         if (m_pVm->count("rdpoverride.port")) {
-                            m_RdpOverrideParams.port = (*m_pVm)["rdpoverride.port"].as<uint16_t>();
+                            int n = (*m_pVm)["rdpoverride.port"].as<int>();
+                            if ((0 > n) || (2 < n)) {
+                                throw tracing::invalid_argument("Invalid port value.");
+                            }
+                            m_RdpOverrideParams.port = n;
                             m_bOverrideRdpPort = true;
                         } else {
                             m_bOverrideRdpPort = false;
                         }
+
                         if (m_pVm->count("rdpoverride.performance")) {
                             int n = (*m_pVm)["rdpoverride.performance"].as<int>();
                             if ((0 > n) || (2 < n)) {
@@ -1270,8 +1276,7 @@ namespace wsgate {
     {
         log::debug << "RDP Host:               '" << host << "'" << endl;
         log::debug << "RDP Pcb:               '" << pcb << "'" << endl;
-        log::debug << "RDP Port:               '" << params.port << "'" << endl;
-        log::info << "i am selected on port: " << params.port << endl;
+        log::info << "RDP Port:               '" << params.port << "'" << endl;
         log::debug << "RDP User:               '" << user << "'" << endl;
         log::debug << "RDP Password:           '" << pass << "'" << endl;
         log::debug << "RDP Desktop size:       " << params.width << "x" << params.height << endl;
