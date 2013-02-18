@@ -569,7 +569,7 @@ namespace wsgate {
                             } else {
                                 if (0 < tcode) {
                                 	//uint32_t tflag = RDP_SCANCODE_EXTENDED(tcode) ? KBD_FLAGS_EXTENDED : 0;
-                                	tcode = freerdp_keyboard_get_rdp_scancode_from_x11_keycode(tcode);
+                                	//tcode = freerdp_keyboard_get_rdp_scancode_from_x11_keycode(tcode);
                                 	//tcode = RDP_SCANCODE_CODE(tcode);
                                     //tcode = 48;
 
