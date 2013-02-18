@@ -56,17 +56,17 @@ namespace wsgate {
     0, /* 6 */
     0, /* 7 */
     VK_KEY_A, /* 8 */
-    VK_KEY_S, /* 9 */
+    RDP_SCANCODE_TAB, /* 9 */
     VK_KEY_D, /* 10 */
     VK_KEY_F, /* 11 */
     VK_KEY_H, /* 12 */
-    VK_KEY_G, /* 13 */
-    VK_KEY_Z, /* 14 */
+    RDP_SCANCODE_RETURN, /* 13 */
+    RDP_SCANCODE_BACKSPACE, /* 14 */
     VK_KEY_X, /* 15 */
     VK_KEY_C, /* 16 */
-    VK_KEY_V, /* 17 */
-    VK_OEM_102, /* 18 */
-    VK_KEY_B, /* 19 */
+    RDP_SCANCODE_LCONTROL, /* 17 */
+    RDP_SCANCODE_LMENU, /* 18 */
+    RDP_SCANCODE_PAUSE, /* 19 */
     VK_KEY_Q, /* 20 */
     VK_KEY_W, /* 21 */
     VK_KEY_E, /* 22 */
@@ -74,12 +74,12 @@ namespace wsgate {
     VK_KEY_Y, /* 24 */
     VK_KEY_A, /* 25 */
     VK_KEY_1, /* 26 */
-    VK_KEY_2, /* 27 */
+    RDP_SCANCODE_ESCAPE, /* 27 */
     VK_KEY_3, /* 28 */
     VK_KEY_4, /* 29 */
     VK_KEY_6, /* 30 */
     VK_KEY_5, /* 31 */
-    VK_OEM_PLUS, /* 32 */
+    RDP_SCANCODE_SPACE, /* 32 */
     VK_KEY_9, /* 33 */
     VK_KEY_7, /* 34 */
     VK_OEM_MINUS, /* 35 */
@@ -89,12 +89,12 @@ namespace wsgate {
     VK_KEY_O, /* 39 */
     VK_KEY_U, /* 40 */
     VK_OEM_4, /* 41 */
-    RDP_SCANCODE_LSHIFT, /* 42 */
-    VK_KEY_P, /* 43 */
+    RDP_SCANCODE_MULTIPLY, /* 42 */
+    RDP_SCANCODE_ADD, /* 43 */
     VK_RETURN, /* 44 */
     VK_KEY_L, /* 45 */
-    VK_KEY_J, /* 46 */
-    VK_OEM_7, /* 47 */
+    RDP_SCANCODE_DELETE, /* 46 */
+    RDP_SCANCODE_DIVIDE, /* 47 */
     RDP_SCANCODE_KEY_0, /* 48 */
     RDP_SCANCODE_KEY_1, /* 49 */
     RDP_SCANCODE_KEY_2, /* 50 */
@@ -112,35 +112,35 @@ namespace wsgate {
     0, /* 62 */
     0, /* 63 */
     VK_LSHIFT, /* 64 */
-    RDP_SCANCODE_KEY_A && RDP_SCANCODE_LSHIFT, /* 65 */
-    VK_LMENU, /* 66 */
-    VK_LCONTROL, /* 67 */
-    VK_RSHIFT, /* 68 */
-    VK_RMENU, /* 69 */
-    0, /* 70 */
-    0, /* 71 */
-    0, /* 72 */
-    VK_DECIMAL, /* 73 */
-    0, /* 74 */
-    VK_MULTIPLY, /* 75 */
-    0, /* 76 */
-    VK_ADD, /* 77 */
-    0, /* 78 */
-    VK_NUMLOCK, /* 79 */
-    0, /* 80 */
-    0, /* 81 */
-    0, /* 82 */
-    VK_DIVIDE, /* 83 */
-    VK_RETURN, /* 84 */
-    0, /* 85 */
-    VK_SUBTRACT, /* 86 */
-    0, /* 87 */
-    0, /* 88 */
-    0, /* 89 */
-    VK_NUMPAD0, /* 90 */
-    VK_NUMPAD1, /* 91 */
+    RDP_SCANCODE_KEY_A, /* 65 */
+    RDP_SCANCODE_KEY_B, /* 66 */
+    RDP_SCANCODE_KEY_C, /* 67 */
+    RDP_SCANCODE_KEY_D, /* 68 */
+    RDP_SCANCODE_KEY_E, /* 69 */
+    RDP_SCANCODE_KEY_F, /* 70 */
+    RDP_SCANCODE_KEY_G, /* 71 */
+    RDP_SCANCODE_KEY_H, /* 72 */
+    RDP_SCANCODE_KEY_I, /* 73 */
+    RDP_SCANCODE_KEY_J, /* 74 */
+    RDP_SCANCODE_KEY_K, /* 75 */
+    RDP_SCANCODE_KEY_L, /* 76 */
+    RDP_SCANCODE_KEY_M, /* 77 */
+    RDP_SCANCODE_KEY_N, /* 78 */
+    RDP_SCANCODE_KEY_O, /* 79 */
+    RDP_SCANCODE_KEY_P, /* 80 */
+    RDP_SCANCODE_KEY_Q, /* 81 */
+    RDP_SCANCODE_KEY_R, /* 82 */
+    RDP_SCANCODE_KEY_S, /* 83 */
+    RDP_SCANCODE_KEY_T, /* 84 */
+    RDP_SCANCODE_KEY_U, /* 85 */
+    RDP_SCANCODE_KEY_V, /* 86 */
+    RDP_SCANCODE_KEY_W, /* 87 */
+    RDP_SCANCODE_KEY_X, /* 88 */
+    RDP_SCANCODE_KEY_Y, /* 89 */
+    RDP_SCANCODE_KEY_Z, /* 90 */
+    RDP_SCANCODE_OEM_4, /* 91 */
     VK_NUMPAD2, /* 92 */
-    VK_NUMPAD3, /* 93 */
+    RDP_SCANCODE_OEM_6, /* 93 */
     VK_NUMPAD4, /* 94 */
     VK_NUMPAD5, /* 95 */
     VK_NUMPAD6, /* 96 */
@@ -530,7 +530,7 @@ namespace wsgate {
                             //SendInputKeyboardEvent(KBD_FLAGS_DOWN|tflag, tcode, TRUE);
                             //SendInputKeyboardEvent(KBD_FLAGS_RELEASE|tflag, tcode, FALSE);
 
-                            freerdp_input_send_keyboard_event(m_rdpInput, (m->down ? KBD_FLAGS_DOWN : KBD_FLAGS_RELEASE)|tflag, ASCII_TO_SCANCODE[tcode]);
+                            freerdp_input_send_keyboard_event(m_rdpInput, (m->down ? KBD_FLAGS_DOWN : KBD_FLAGS_RELEASE)|tflag, tcode);
                         }
                     }
                     break;
@@ -561,9 +561,9 @@ namespace wsgate {
                                     if (0 < tcode) {
                                     	log::info << "282\n";
                                         //SendInputKeyboardEvent(KBD_FLAGS_DOWN, tcode, true);
-                                    	SendInputUnicodeKeyboardEvent(KBD_FLAGS_DOWN, tcode);
+                                    	SendInputUnicodeKeyboardEvent(KBD_FLAGS_DOWN, ASCII_TO_SCANCODE[tcode]);
                                         //SendInputKeyboardEvent(KBD_FLAGS_RELEASE, tcode, false);
-                                    	SendInputUnicodeKeyboardEvent(KBD_FLAGS_RELEASE, tcode);
+                                    	SendInputUnicodeKeyboardEvent(KBD_FLAGS_RELEASE, ASCII_TO_SCANCODE[tcode]);
                                     }
                                 }
                             } else {
@@ -586,30 +586,20 @@ namespace wsgate {
                                 	//working on w8:
                                 	//freerdp_input_send_unicode_keyboard_event(m_rdpInput, KBD_FLAGS_RELEASE, tcode);
 
+                                    //freerdp_input_send_unicode_keyboard_event(m_rdpInput, KBD_FLAGS_DOWN|tflag, tcode);
+                                    //freerdp_input_send_unicode_keyboard_event(m_rdpInput, KBD_FLAGS_RELEASE|tflag, tcode);
+
                                 	freerdp_input_send_keyboard_event(m_rdpInput, KBD_FLAGS_DOWN, ASCII_TO_SCANCODE[tcode]);
                                     freerdp_input_send_keyboard_event(m_rdpInput, KBD_FLAGS_RELEASE, ASCII_TO_SCANCODE[tcode]);
 
                                 }
                             }
                         } else {
-                            log::info << "Kp2" << endl;
-                            tcode = 0;
-                            switch (m->code) {
-                                case 0x09:
-                                    tcode = RDP_SCANCODE_TAB;
-                                    break;
-                                case 0x0D:
-                                    tcode = RDP_SCANCODE_RETURN;
-                                    break;
-                                case 0x13:
-                                    tcode = RDP_SCANCODE_PAUSE;
-                                    break;
-                                case 0x1B:
-                                    tcode = RDP_SCANCODE_ESCAPE;
-                                    break;
-                                case 0x20:
-                                    tcode = RDP_SCANCODE_SPACE;
-                                    break;
+                            log::info << "Kp2" << " tcode: " << tcode << endl;
+                            
+                            //Work in progress: Switching all the keys to their ASCII based value
+
+                            /*switch (tcode) {
                                 case 0x21:
                                     tcode = RDP_SCANCODE_PRIOR; // Page up
                                     break;
@@ -644,27 +634,20 @@ namespace wsgate {
                                     tcode = RDP_SCANCODE_DELETE;
                                     break;
                             }
+                            */
                             if (0 < tcode) {
                             	//tflag initially uint32_t
                             	uint32_t tflag = RDP_SCANCODE_EXTENDED(tcode) ? KBD_FLAGS_EXTENDED : 0;
                                 tcode = RDP_SCANCODE_CODE(tcode);
 
                                 log::info << "353 tcode: " << tcode <<" & tflag: " << tflag << "\n";
-
-                                //tcode = freerdp_keyboard_get_rdp_scancode_from_x11_keycode(tcode);
-
-                                log::info << "357 tcode: " << tcode <<" & tflag: " << tflag << "\n";
-
                                 //SendInputUnicodeKeyboardEvent(KBD_FLAGS_DOWN, tcode);
                                 //SendInputUnicodeKeyboardEvent(KBD_FLAGS_RELEASE, tcode);
 
                                 //SendInputKeyboardEvent(KBD_FLAGS_DOWN|tflag, tcode, true);
 
-                                //gasit cu fara unicode
-                                freerdp_input_send_keyboard_event(m_rdpInput, KBD_FLAGS_DOWN, tcode);
-                                freerdp_input_send_keyboard_event(m_rdpInput, KBD_FLAGS_RELEASE, tcode);
-
-                                //SendInputKeyboardEvent(KBD_FLAGS_RELEASE|tflag, tcode, false);
+                                freerdp_input_send_keyboard_event(m_rdpInput, KBD_FLAGS_DOWN, ASCII_TO_SCANCODE[tcode]);
+                                freerdp_input_send_keyboard_event(m_rdpInput, KBD_FLAGS_RELEASE, ASCII_TO_SCANCODE[tcode]);
                             }
                         }
                     }
