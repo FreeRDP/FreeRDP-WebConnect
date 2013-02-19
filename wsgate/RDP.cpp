@@ -80,20 +80,20 @@ namespace wsgate {
     VK_KEY_6, /* 30 */
     VK_KEY_5, /* 31 */
     RDP_SCANCODE_SPACE, /* 32 */
-    VK_KEY_9, /* 33 */
-    VK_KEY_7, /* 34 */
-    VK_OEM_MINUS, /* 35 */
-    VK_KEY_8, /* 36 */
-    VK_KEY_0, /* 37 */
-    VK_OEM_6, /* 38 */
-    VK_KEY_O, /* 39 */
-    VK_KEY_U, /* 40 */
-    VK_OEM_4, /* 41 */
+    RDP_SCANCODE_KEY_1, /* 33 */
+    RDP_SCANCODE_OEM_7, /* 34 */
+    RDP_SCANCODE_KEY_3, /* 35 */
+    RDP_SCANCODE_KEY_4, /* 36 */
+    RDP_SCANCODE_KEY_5, /* 37 */
+    RDP_SCANCODE_KEY_7, /* 38 */
+    RDP_SCANCODE_OEM_7, /* 39 */
+    RDP_SCANCODE_KEY_9, /* 40 */
+    RDP_SCANCODE_KEY_0, /* 41 */
     RDP_SCANCODE_MULTIPLY, /* 42 */
     RDP_SCANCODE_ADD, /* 43 */
-    VK_RETURN, /* 44 */
-    VK_KEY_L, /* 45 */
-    RDP_SCANCODE_DELETE, /* 46 */
+    RDP_SCANCODE_OEM_COMMA, /* 44 */
+    RDP_SCANCODE_OEM_MINUS, /* 45 */
+    RDP_SCANCODE_OEM_PERIOD, /* 46 */
     RDP_SCANCODE_DIVIDE, /* 47 */
     RDP_SCANCODE_KEY_0, /* 48 */
     RDP_SCANCODE_KEY_1, /* 49 */
@@ -105,13 +105,13 @@ namespace wsgate {
     RDP_SCANCODE_KEY_7, /* 55 */
     RDP_SCANCODE_KEY_8, /* 56 */
     RDP_SCANCODE_KEY_9, /* 57 */
-    VK_OEM_3, /* 58 */
-    VK_BACK, /* 59 */
-    0, /* 60 */
-    RDP_SCANCODE_ADD, /* 61 */
-    0, /* 62 */
-    0, /* 63 */
-    VK_LSHIFT, /* 64 */
+    RDP_SCANCODE_OEM_1, /* 58 */
+    RDP_SCANCODE_OEM_1, /* 59 */
+    RDP_SCANCODE_OEM_COMMA, /* 60 */
+    RDP_SCANCODE_OEM_PLUS, /* 61 */
+    RDP_SCANCODE_OEM_PERIOD, /* 62 */
+    RDP_SCANCODE_DIVIDE, /* 63 */
+    RDP_SCANCODE_KEY_2, /* 64 */
     RDP_SCANCODE_KEY_A, /* 65 */
     RDP_SCANCODE_KEY_B, /* 66 */
     RDP_SCANCODE_KEY_C, /* 67 */
@@ -139,10 +139,10 @@ namespace wsgate {
     RDP_SCANCODE_KEY_Y, /* 89 */
     RDP_SCANCODE_KEY_Z, /* 90 */
     RDP_SCANCODE_OEM_4, /* 91 */
-    VK_NUMPAD2, /* 92 */
+    RDP_SCANCODE_OEM_5, /* 92 */
     RDP_SCANCODE_OEM_6, /* 93 */
-    VK_NUMPAD4, /* 94 */
-    VK_NUMPAD5, /* 95 */
+    RDP_SCANCODE_KEY_6, /* 94 */
+    RDP_SCANCODE_OEM_MINUS, /* 95 */
     VK_NUMPAD6, /* 96 */
     RDP_SCANCODE_KEY_A, /* 97 */
     RDP_SCANCODE_KEY_B, /* 98 */
@@ -170,9 +170,9 @@ namespace wsgate {
     RDP_SCANCODE_KEY_X, /* 120 */
     RDP_SCANCODE_KEY_Y, /* 121 */
     RDP_SCANCODE_KEY_Z, /* 122 */
-    VK_HOME, /* 123 */
-    VK_PRIOR, /* 124 */
-    VK_DELETE, /* 125 */
+    RDP_SCANCODE_OEM_4, /* 123 */
+    RDP_SCANCODE_OEM_5, /* 124 */
+    RDP_SCANCODE_OEM_6, /* 125 */
     VK_F4, /* 126 */
     VK_END, /* 127 */
     VK_F2, /* 128 */
