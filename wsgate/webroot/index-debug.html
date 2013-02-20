@@ -179,8 +179,8 @@
                     var w = sza[0];
                     var h = sza[1];
                 }
-                $('screen').width = w;
-                $('screen').height = h;
+                $('screen').width = w-50;
+                $('screen').height = h-50;
             }
             function OnDesktopSize() {
                 ResizeCanvas($('dtsize').value);
@@ -242,7 +242,7 @@
         </script>
     </head>
     <body>
-        <canvas id="screen" width="640px" height="480px">
+        <canvas id="screen" width="95%" height="95%">
         <p class="error">Sorry, It looks as though your browser does not support the canvas tag.</p>
         </canvas>
         <noscript><p class="error">Please enable JavaScript.</p></noscript>
