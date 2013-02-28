@@ -103,9 +103,6 @@ namespace pt = boost::posix_time;
 using boost::filesystem::path;
 
 namespace wsgate {
-
-
-    string pcb = "D63E75FC-2F61-43EA-BB58-16311126FFF1";
     static const char * const ws_magic = "258EAFA5-E914-47DA-95CA-C5AB0DC85B11";
 
     int nFormValue(HttpRequest *request, const string & name, int defval) {
@@ -300,6 +297,7 @@ namespace wsgate {
                     string rdphost(request->FormValues("host").m_sBody);
                     string rdppcb(request->FormValues("pcb").m_sBody);
                     string rdpuser(request->FormValues("user").m_sBody);
+                    string port(request->FormValues("port").m_sBody);
                     string rdppass(base64_decode(request->FormValues("pass").m_sBody));
 
                     if (m_bOverrideRdpHost) {
@@ -376,7 +374,7 @@ namespace wsgate {
                     }
                     response->SetBody("", 0);
                     if (0 != request->HttpVersion().compare("1.1")) {
-                        log::warn << "Request from " << request->RemoteAddress()
+                        log::info << "Request from " << request->RemoteAddress()
                             << ": " << uri << " => 400 (Not HTTP 1.1)" << endl;
                         return HTTPRESPONSECODE_400_BADREQUEST;
                     }
@@ -388,23 +386,26 @@ namespace wsgate {
                     string wsproto(request->Headers("Sec-WebSocket-Protocol"));
                     string wsext(request->Headers("Sec-WebSocket-Extension"));
                     if (!MultivalHeaderContains(wsconn, "upgrade")) {
-                        log::warn << "Request from " << request->RemoteAddress()
+                        log::info << "Request from " << request->RemoteAddress()
                             << ": " << uri << " => 400 (No upgrade header)" << endl;
+                        log::info << "HOST: " << wshost << endl;
+                        log::info << "CONECTION: " << wsconn << endl;
+                        log::info << "UPGRADE: " << wsupg << endl;
                         return HTTPRESPONSECODE_400_BADREQUEST;
                     }
                     if (!MultivalHeaderContains(wsupg, "websocket")) {
-                        log::warn << "Request from " << request->RemoteAddress()
+                        log::info << "Request from " << request->RemoteAddress()
                             << ": " << uri << " => 400 (Upgrade header does not contain websocket tag)" << endl;
                         return HTTPRESPONSECODE_400_BADREQUEST;
                     }
                     if (0 != wshost.compare(thisHost)) {
-                        log::warn << "Request from " << request->RemoteAddress()
+                        log::info << "Request from " << request->RemoteAddress()
                             << ": " << uri << " => 400 (Host header does not match)" << endl;
                         return HTTPRESPONSECODE_400_BADREQUEST;
                     }
                     string wskey_decoded(base64_decode(wskey));
                     if (16 != wskey_decoded.length()) {
-                        log::warn << "Request from " << request->RemoteAddress()
+                        log::info << "Request from " << request->RemoteAddress()
                             << ": " << uri << " => 400 (Invalid WebSocket key)" << endl;
                         return HTTPRESPONSECODE_400_BADREQUEST;
                     }

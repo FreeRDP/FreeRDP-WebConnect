@@ -364,6 +364,59 @@ label.big {
     padding: 0;
 }
 
+/* ====== extra commands bar ================================================
+   ========================================================================== */
+
+#extracommands ul
+{
+  list-style-type: none;
+  display: inline;
+  cursor: default;
+}
+
+#extracommands ul li
+{
+  display: inline-block;
+  margin-top: 4px;
+  margin-right: 16px;
+  font-size: 13px;
+  text-decoration: none;
+  text-align: center;
+  color: #a1a1a1;
+
+  cursor: hand;
+  cursor:pointer;
+
+  /*unselectable*/
+  -webkit-user-select: none; /* Chrome/Safari */        
+  -moz-user-select: none; /* Firefox */
+  -ms-user-select: none; /* IE10+ */
+
+  /* Rules below not implemented in browsers yet */
+  -o-user-select: none;
+  user-select: none;
+
+  /*color change on hover*/
+  -moz-transition-property: color;  /* FF4+ */
+  -moz-transition-duration: 0.5s;
+  -webkit-transition-property: color;  /* Saf3.2+, Chrome */
+  -webkit-transition-duration: 0.5s;
+  -o-transition-property: color;  /* Opera 10.5+ */
+  -o-transition-duration: 0.5s;
+  -ms-transition-property: color;  /* IE10? */
+  -ms-transition-duration: 0.5s;
+  transition-property: color;  /* Standard */
+  transition-duration: 0.5s;
+}
+
+#extracommands ul li:hover
+{
+  color:#717171;
+  cursor:hand;
+}
+
+
+
 /* ==|== media queries ======================================================
    EXAMPLE Media Query for Responsive Design.
    This example overrides the primary ('mobile first') styles

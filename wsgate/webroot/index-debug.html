@@ -30,7 +30,7 @@
             function RDPrun() {
                 var wsUri = wsBase
                     + '?host=' + encodeURIComponent($('rdphost').value.trim())
-		    + '&pcb='  + encodeURIComponent($('rdppcb').value.trim())
+		            + '&pcb='  + encodeURIComponent($('rdppcb').value.trim())
                     + '&user=' + encodeURIComponent($('rdpuser').value.trim())
                     + '&pass=' + encodeURIComponent($('rdppass').value.toBase64())
                     + '&perf=' + $('perf').value.trim()
@@ -53,8 +53,8 @@
                         button = $("rdpconnect");
                         button.removeEvents();
                         window.removeEvent('resize', OnDesktopSize);
-                        /* button.value = 'Disconnect';
-                        button.addEvent('click', rdp.Disconnect.bind(rdp)); */
+                        button.value = 'Disconnect';
+                        button.addEvent('click', rdp.Disconnect.bind(rdp));
 
                         });
                 rdp.addEvent('disconnected', function() {
@@ -201,6 +201,14 @@
                             }).removeClass('invisible');
                 } else {
                     $('maindialog').addClass('invisible');
+                    $('extracommands').setStyles(
+                    {
+                        'visibility':'visible'
+                    });
+                    $('ctrlaltdelete').addEvent('click', function()
+                    {
+                        alert("CTRL ALT DELETE");
+                    });
                 }
             }
             window.addEvent('domready', function() {
@@ -241,7 +249,32 @@
             });
         </script>
     </head>
-    <body>
+    <body id="wrapper">
+        <div id="extracommands" style="height:28px; background-color:#f1f1f1; padding-left:25px; cursor:default; visibility:hidden;">
+            Extra commands:
+            <ul>
+
+                <li id="ctrlaltdelete">
+                    Ctrl+Alt+Delete
+                </li>
+
+                <li>
+                    Alt+Tab
+                </li>
+
+                <li>
+                    Shift+Alt
+                </li>
+                
+                <li>
+                    Ctrl+C
+                </li>
+                
+                <li>
+                    Ctrl+V
+                </li>
+            </ul>
+        </div>
         <canvas id="screen" width="95%" height="95%">
         <p class="error">Sorry, It looks as though your browser does not support the canvas tag.</p>
         </canvas>
@@ -266,17 +299,17 @@
                                             <td class="key"><label for="host">Hostname:</label></td>
                                             <td><input id="rdphost" type="text" name="host" value="%COOKIE_LASTHOST%" %DISABLED_HOST%/></td>
                                         </tr>
-					<tr>
-					    <td class="key"><label for="port">Port:</label></td>
-					    <td><select id="port" name="port" %DISABLED_PORT%>
-							<option value="auto" %SELECTED_PERF0%>3389</option>
-							<option %SELECTED_PERF1%>2179</option>
-						</select>
-					</tr>
-					<tr>
-						<td class="key"><label for="pcb">PCB (vmID):</label></td>
-						<td><input id="rdppcb" type="text" name="pcb" value="%COOKIE_LASTPCB%" %DISABLED_PCB%/></td>
-					</tr>
+                    					<tr>
+                    					    <td class="key"><label for="port">Port:</label></td>
+                    					    <td><select id="port" name="port" %DISABLED_PORT%>
+                    							<option value="auto" %SELECTED_PERF0%>3389</option>
+                    							<option %SELECTED_PERF1%>2179</option>
+                    						</select>
+                    					</tr>
+                    					<tr>
+                    						<td class="key"><label for="pcb">PCB (vmID):</label></td>
+                    						<td><input id="rdppcb" type="text" name="pcb" value="%COOKIE_LASTPCB%" %DISABLED_PCB%/></td>
+                    					</tr>
                                         <tr>
                                             <td class="key"><label for="user">User:</label></td>
                                             <td><input id="rdpuser" type="text" name="user" value="%COOKIE_LASTUSER%" %DISABLED_USER% /></td>
