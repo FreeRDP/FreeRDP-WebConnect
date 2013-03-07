@@ -287,7 +287,7 @@ namespace wsgate {
                             }
                         }
                     }
-                    log::warn << "Request from " << request->RemoteAddress()
+                    log::warn << "Request from (line 294) " << request->RemoteAddress()
                         << ": " << uri << " => 404 Not found" << endl;
                     return HTTPRESPONSECODE_404_NOTFOUND;
                 }
@@ -383,15 +383,19 @@ namespace wsgate {
                     string wsupg(to_lower_copy(request->Headers("Upgrade")));
                     string wsver(request->Headers("Sec-WebSocket-Version"));
                     string wskey(request->Headers("Sec-WebSocket-Key"));
+
                     string wsproto(request->Headers("Sec-WebSocket-Protocol"));
                     string wsext(request->Headers("Sec-WebSocket-Extension"));
+
                     if (!MultivalHeaderContains(wsconn, "upgrade")) {
                         log::info << "Request from " << request->RemoteAddress()
                             << ": " << uri << " => 400 (No upgrade header)" << endl;
                         log::info << "HOST: " << wshost << endl;
                         log::info << "CONECTION: " << wsconn << endl;
                         log::info << "UPGRADE: " << wsupg << endl;
-                        return HTTPRESPONSECODE_400_BADREQUEST;
+
+                        return nonWSRequest(request, response);
+                        //return HTTPRESPONSECODE_400_BADREQUEST;
                     }
                     if (!MultivalHeaderContains(wsupg, "websocket")) {
                         log::info << "Request from " << request->RemoteAddress()
@@ -404,6 +408,9 @@ namespace wsgate {
                         return HTTPRESPONSECODE_400_BADREQUEST;
                     }
                     string wskey_decoded(base64_decode(wskey));
+
+                    log::info << "wskey decoded: " << wskey_decoded << endl;
+
                     if (16 != wskey_decoded.length()) {
                         log::info << "Request from " << request->RemoteAddress()
                             << ": " << uri << " => 400 (Invalid WebSocket key)" << endl;
@@ -521,6 +528,15 @@ namespace wsgate {
                     return HTTPRESPONSECODE_101_SWITCHING_PROTOCOLS;
                 }
 
+                return nonWSRequest(request, response);
+            }
+
+            ResponseCode nonWSRequest(HttpRequest *request, HttpResponse *response)
+            {
+                string uri(request->Uri());
+
+                string thisHost(m_sHostname.empty() ? request->Headers("Host") : m_sHostname);
+
                 // Regular (non WebSockets) request
                 bool bDynDebug = m_bDebug;
                 if (!bDynDebug) {
@@ -530,10 +546,12 @@ namespace wsgate {
                     }
                 }
                 if (0 != thisHost.compare(request->Headers("Host"))) {
-                    log::warn << "Request from " << request->RemoteAddress()
+                    log::warn << "Request from (lint 554) " << request->RemoteAddress()
                         << ": " << uri << " => 404 Not found" << endl;
                     return HTTPRESPONSECODE_404_NOTFOUND;
                 }
+
+
                 path p(m_sDocumentRoot);
                 p /= uri;
                 if (ends_with(uri, "/")) {
@@ -541,15 +559,20 @@ namespace wsgate {
                 }
                 p.normalize();
 
+                log::info << "p after normalize: " << p << endl;
+
                 if (!exists(p)) {
-                    log::warn << "Request from " << request->RemoteAddress()
+                    log::info << "Request from (line 566) " << request->RemoteAddress()
                         << ": " << uri << " => 404 Not found" << endl;
-                    return HTTPRESPONSECODE_404_NOTFOUND;
+                //changed from HTTPRESPONSECODE_404_NOTFOUND to 200_OK
+                    p = "/usr/local/share/wsgate/index-debug.html";
                 }
+
                 if (!is_regular_file(p)) {
                     log::warn << "Request from " << request->RemoteAddress()
                         << ": " << uri << " => 403 Forbidden" << endl;
-                    return HTTPRESPONSECODE_403_FORBIDDEN;
+                    //return HTTPRESPONSECODE_403_FORBIDDEN;
+                    p = "/usr/local/share/wsgate/index-debug.html";
                 }
 
                 // Handle If-modified-sice request header
@@ -630,15 +653,15 @@ namespace wsgate {
 
                     //The new Port Selector
                     if(m_bOverrideRdpPort) {
-                    	replace_all(body, "%DISABLED_PORT%", "disabled=\"disabled\"");
-                    	replace_all(body, "%SELECTED_PORT0%", (0 == m_RdpOverrideParams.port) ? "selected" : "");
-                    	replace_all(body, "%SELECTED_PORT1%", (1 == m_RdpOverrideParams.port) ? "selected" : "");
-                    	replace_all(body, "%SELECTED_PORT2%", (2 == m_RdpOverrideParams.port) ? "selected" : "");
+                        replace_all(body, "%DISABLED_PORT%", "disabled=\"disabled\"");
+                        replace_all(body, "%SELECTED_PORT0%", (0 == m_RdpOverrideParams.port) ? "selected" : "");
+                        replace_all(body, "%SELECTED_PORT1%", (1 == m_RdpOverrideParams.port) ? "selected" : "");
+                        replace_all(body, "%SELECTED_PORT2%", (2 == m_RdpOverrideParams.port) ? "selected" : "");
                     } else {
-                    	replace_all(body, "%DISABLED_PORT%", "");
-                    	replace_all(body, "%SELECTED_PORT0%", "");
-                    	replace_all(body, "%SELECTED_PORT1%", "");
-                    	replace_all(body, "%SELECTED_PORT2%", "");
+                        replace_all(body, "%DISABLED_PORT%", "");
+                        replace_all(body, "%SELECTED_PORT0%", "");
+                        replace_all(body, "%SELECTED_PORT1%", "");
+                        replace_all(body, "%SELECTED_PORT2%", "");
                     }
 
                     //The Desktop Resolution
