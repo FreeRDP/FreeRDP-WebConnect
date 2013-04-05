@@ -17,6 +17,7 @@
         <script src="js/simpletabs%JSDEBUG%.js"></script>
         <script src="js/wsgate%JSDEBUG%.js"></script>
         <script src="js/vkb%JSDEBUG%.js"></script>
+        <!--<script language="javascript" type="text/javascript" src="js/rdpevents%JSDEBUG%.js"></script>-->
         <script language="javascript" type="text/javascript">
             var wsBase = "%WSURI%";
             var RIMtablet = navigator.appVersion && (-1 != navigator.appVersion.indexOf('RIM Tablet'));
@@ -27,10 +28,51 @@
             var inDrag = false;
             var rdp = null;
             var vkbd = null;
+
+            var externalConnection = false;
+
+            function RDPGet(uri, title) {
+                var wsUri = wsBase + uri;
+
+                rdp = new wsgate.RDP(wsUri, $('screen'), !RIMtablet, RIMtablet, vkbd);
+
+                rdp.addEvent('alert', function(msg) {
+                    alert(msg);
+                    });
+                rdp.addEvent('connected', function() {
+                        document.title = title;
+                        button = $("rdpconnect");
+                        button.removeEvents();
+                        window.removeEvent('resize', OnDesktopSize);
+                        button.value = 'Disconnect';
+                        button.addEvent('click', rdp.Disconnect.bind(rdp));
+
+                        });
+                rdp.addEvent('disconnected', function() {
+                        showDialog(true);
+                        button = $("rdpconnect");
+                        button.removeEvents();
+                        button.value = 'Connect';
+                        button.addEvent('click', RDPrun);
+                        OnDesktopSize();
+                        window.addEvent('resize', OnDesktopSize);
+                        });
+                rdp.addEvent('mouserelease', ResetRdpMouseFlags);
+                rdp.addEvent('touch2', function() {
+                    ShowMouseHelper($('mousehelper').hasClass('invisible'));
+                });
+                rdp.addEvent('touch3', function() {
+                    vkbd.toggle();
+                });
+
+                showDialog(false);
+                rdp.Run();
+            }
+
             function RDPrun() {
                 var wsUri = wsBase
                     + '?host=' + encodeURIComponent($('rdphost').value.trim())
-		            + '&pcb='  + encodeURIComponent($('rdppcb').value.trim())
+                    + '&pcb='  + encodeURIComponent($('rdppcb').value.trim())
                     + '&user=' + encodeURIComponent($('rdpuser').value.trim())
                     + '&pass=' + encodeURIComponent($('rdppass').value.toBase64())
                     + '&perf=' + $('perf').value.trim()
@@ -43,7 +85,9 @@
                     + '&notls=' + ($('notls').checked ? '1' : '0')
                     + '&dtsize=' + $('screen').width + 'x' + $('screen').height
                     ;
+
                 rdp = new wsgate.RDP(wsUri, $('screen'), !RIMtablet, RIMtablet, vkbd);
+
                 rdp.addEvent('alert', function(msg) {
                         alert(msg);
                         });
@@ -78,9 +122,11 @@
                         rdp.Disconnect();
                     }
                 });
+
                 showDialog(false);
                 rdp.Run();
             }
+
             function SetRdpMouseFlags() {
                 var mf = {
                     'r': $('rclick').checked,
@@ -121,6 +167,12 @@
                     $('cclick').removeEvents();
                 }
             }
+
+            function OnDesktopSize() {
+               ResizeCanvas($('dtsize').value);
+               DrawLogo();
+            }
+
             function DragStart(evt) {
                 var mh = $('mousehelper');
                 if (!mh.hasClass('invisible')) {
@@ -151,17 +203,19 @@
                     }
                 }
             }
+
             function DrawLogo() {
                     var logo = new Element('img', {'src': 'empty_on_purpose'});
                     logo.addEvent('load', function() {
-			    var scaleWCoeficient = 0.5;
-			    var scaleHCoeficient = 0.5;
+                var scaleWCoeficient = 0.5;
+                var scaleHCoeficient = 0.5;
                             var iw = this.width * scaleWCoeficient;
                             var ih = this.height * scaleHCoeficient;
                             var scale = ($('screen').height - 20) / ih;
                             $('screen').getContext('2d').drawImage(this, 10, 10, Math.round(iw * scale), Math.round(ih * scale));
                     }.bind(logo));
             }
+
             function ResizeCanvas(sz) {
                 var w, h;
                 if (sz == 'auto') {
@@ -211,7 +265,11 @@
                     });
                 }
             }
+
             window.addEvent('domready', function() {
+
+                    var querystring = window.location.href.slice(window.location.href.indexOf('?'))
+
                     $('dtsize').addEvent('change', OnDesktopSize);
                     var tabs = new SimpleTabs('rdpdialog',{selector:'h4'});
                     OnDesktopSize();
@@ -233,9 +291,38 @@
                         (Browser.chrome && (Browser.version >= 17)) ||
                         (Browser.safari && (Browser.version >= 6)) ||
                         (Browser.ie && (Browser.version >= 10.0));
+                    if(externalConnection == true)
+                    {
+                        RDPrun();
+                        vkbd = new wsgate.vkbd({
+                            version:false,
+                            sizeswitch:false,
+                            numpadtoggle:false
+                        });
+                    }
                     if (wsOK) {
-                        $('rdpconnect').addEvent('click', RDPrun);
-                        showDialog(true);
+                        if(querystring.length > 2)
+                        {
+                            showDialog(false);
+                            var urlParams;
+                            (window.onpopstate = function () {
+                                var match,
+                                    pl     = /\+/g,  // Regex for replacing addition symbol with a space
+                                    search = /([^&=]+)=?([^&]*)/g,
+                                    decode = function (s) { return decodeURIComponent(s.replace(pl, " ")); },
+                                    query  = window.location.search.substring(1);
+
+                                urlParams = {};
+                                while (match = search.exec(query))
+                                   urlParams[decode(match[1])] = decode(match[2]);
+                            })();
+                            RDPGet(querystring, urlParams["title"]);
+                        }
+                        else
+                        {
+                            $('rdpconnect').addEvent('click', RDPrun);
+                            showDialog(true);
+                        }
                         vkbd = new wsgate.vkbd({
                             version:false,
                             sizeswitch:false,
@@ -265,11 +352,11 @@
                 <li>
                     Shift+Alt
                 </li>
-                
+
                 <li>
                     Ctrl+C
                 </li>
-                
+
                 <li>
                     Ctrl+V
                 </li>
@@ -442,4 +529,4 @@
             </tr>
         </table>
     </body>
-</html> 
+</html>

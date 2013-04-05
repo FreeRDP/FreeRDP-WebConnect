@@ -295,7 +295,7 @@ wsgate.RDP = new Class( {
                 // left, top, right, bottom
                 hdr = new Int32Array(data, 4, 4);
                 this._cR(hdr[0], hdr[1], hdr[2] - hdr[0], hdr[3] - hdr[1], true);
-                break; 
+                break;
             case 5:
                 // PatBlt
                 if (28 == data.byteLength) {
@@ -317,7 +317,7 @@ wsgate.RDP = new Class( {
                 } else {
                     this.log.warn('PatBlt: Patterned brush not yet implemented');
                 }
-                break; 
+                break;
             case 6:
                 // Multi Opaque rect
                 // color, nrects
@@ -334,7 +334,7 @@ wsgate.RDP = new Class( {
                     // this._fR(rects[offs], rects[offs+1], rects[offs+2], rects[offs+3], c);
                     offs += 4;
                 }
-                break; 
+                break;
             case 7:
                 // ScrBlt
                 // rop3, x, y, w, h, sx, sy
@@ -359,7 +359,7 @@ wsgate.RDP = new Class( {
                 } else {
                     this.log.warn('ScrBlt: width and/or height is zero');
                 }
-                break; 
+                break;
             case 8:
                 // PTR_NEW
                 // id, xhot, yhot
