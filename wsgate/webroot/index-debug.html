@@ -46,7 +46,6 @@
                         window.removeEvent('resize', OnDesktopSize);
                         button.value = 'Disconnect';
                         button.addEvent('click', rdp.Disconnect.bind(rdp));
-
                         });
                 rdp.addEvent('disconnected', function() {
                         showDialog(true);
@@ -61,6 +60,7 @@
                 rdp.addEvent('touch2', function() {
                     ShowMouseHelper($('mousehelper').hasClass('invisible'));
                 });
+
                 rdp.addEvent('touch3', function() {
                     vkbd.toggle();
                 });
@@ -99,6 +99,7 @@
                         window.removeEvent('resize', OnDesktopSize);
                         button.value = 'Disconnect';
                         button.addEvent('click', rdp.Disconnect.bind(rdp));
+                        window.addEvent("beforeunload", rdp.Disconnect.bind(rdp));
 
                         });
                 rdp.addEvent('disconnected', function() {
@@ -235,10 +236,7 @@
                 }
                 $('screen').width = w-50;
                 $('screen').height = h-50;
-            }
-            function OnDesktopSize() {
-                ResizeCanvas($('dtsize').value);
-                DrawLogo();
+                $('screen').style["margin"] = "0 auto";
             }
             function showDialog(show) {
                 if (show) {
@@ -265,6 +263,13 @@
                     });
                 }
             }
+
+            window.addEventListener("beforeunload", function() {
+                 var ans = confirm("Are you sure?");
+                 if (ans) {
+                      disconnect();
+                 }
+            }, false);
 
             window.addEvent('domready', function() {
 
@@ -338,7 +343,7 @@
     </head>
     <body id="wrapper">
         <div id="extracommands" style="height:28px; background-color:#f1f1f1; padding-left:25px; cursor:default; visibility:hidden;">
-            Extra commands:
+            Send keys:
             <ul>
 
                 <li id="ctrlaltdelete">
@@ -362,7 +367,7 @@
                 </li>
             </ul>
         </div>
-        <canvas id="screen" width="95%" height="95%">
+        <canvas id="screen" width="5%" height="5%">
         <p class="error">Sorry, It looks as though your browser does not support the canvas tag.</p>
         </canvas>
         <noscript><p class="error">Please enable JavaScript.</p></noscript>

@@ -120,6 +120,9 @@ namespace wsgate {
         string opsTitle;
     }opStack;
 
+    //disable two connections to the same host
+    std::map<string, bool> activeConnections;
+
     int nFormValue(HttpRequest *request, const string & name, int defval) {
         string tmp(request->FormValues(name).m_sBody);
         int ret = defval;
@@ -307,6 +310,7 @@ namespace wsgate {
                 char * tuplHost = "";
                 char * tuplPort = "";
                 PyObject *pName, *pModule, *pDict, *pFunc, *pArgs, *pTuple;
+                opStack opsParams;
 
                 if (!Py_IsInitialized())
                 {
@@ -316,6 +320,7 @@ namespace wsgate {
                 //init thread lock
                 PyGILState_STATE gstate;
                 gstate = PyGILState_Ensure();
+
 
                 try
                 {
@@ -346,30 +351,49 @@ namespace wsgate {
                     else
                     {
                         PyErr_Print();
+                        Py_DECREF(pName);
+                        Py_XDECREF(pModule);
+
+                        //Py_Finalize();
+                        PyGILState_Release(gstate);
+                        return opsParams;
                     }
                 }
                 catch(int exCode)
                 {
                     log::info << "Unhandled exception: " << exCode << endl;
+                    Py_DECREF(pName);
+                    Py_XDECREF(pModule);
+
+                    //Py_Finalize();
+                    PyGILState_Release(gstate);
+                    return opsParams;
                 }
                 catch(...)
                 {
 
                     log::info << "error when parsing openstack token" << endl;
+                    Py_DECREF(pName);
+                    Py_XDECREF(pModule);
+
+                    //Py_Finalize();
+                    PyGILState_Release(gstate);
+                    return opsParams;
                 }
                 //release thread lock
 
+
+                log::info << "dereferencing the modules" << endl;
                 Py_DECREF(pName);
                 Py_XDECREF(pModule);
-
+                //Py_Finalize();
                 PyGILState_Release(gstate);
-                Py_Finalize();
 
-                opStack opsParams;
-                opsParams.opsTitle = request->FormValues("title").m_sBody;
                 opsParams.opsHost = tuplHost;
                 opsParams.opsVmId = tuplVmId;
                 opsParams.opsPort = tuplPort;
+
+                log::info << "Finished the python part" << endl;
 
                 return opsParams;
             }
@@ -577,20 +601,34 @@ namespace wsgate {
 
                 if(boost::starts_with(uri, "/wsgate?token="))
                 {
-                    opStack Params = GetRDPConnectionParams(request);
-                    rdphost = Params.opsHost;
-                    rdppcb = Params.opsVmId;
-                    rdpuser = Params.opsUser;
-                    rdpuser = "Administrator";
-                    port = Params.opsPort;
-                    //future password decoding comes here
-                    rdppass = Params.opsPass;
-                    rdppass = "Passw0rd";
+                    try
+                    {
+                        opStack Params = GetRDPConnectionParams(request);
+                        if(Params.opsHost != "" || Params.opsPort != "" || Params.opsVmId != "")
+                        {
+                            rdphost = Params.opsHost;
+                            rdppcb = Params.opsVmId;
+                            rdpuser = Params.opsUser;
+                            rdpuser = "Administrator";
+                            port = Params.opsPort;
+                            //future password decoding comes here
+                            rdppass = Params.opsPass;
+                            rdppass = "Passw0rd";
 
-                    log::info << "i got the params from opstack:" << endl;
-                    log::info << Params.opsHost << " : " << Params.opsPort << endl;
-                    log::info << Params.opsVmId << endl;
-                    log::info << Params.opsUser << " >> " << Params.opsPass << endl;
+                            log::info << "i got the params from opstack:" << endl;
+                            log::info << Params.opsHost << " : " << Params.opsPort << endl;
+                            log::info << Params.opsVmId << endl;
+                            log::info << Params.opsUser << " >> " << Params.opsPass << endl;
+                        }
+                        else
+                        {
+                            return HTTPRESPONSECODE_400_BADREQUEST;
+                        }
+                    }
+                    catch(...)
+                    {
+                        return HTTPRESPONSECODE_400_BADREQUEST;
+                    }
                 }
                 else
                 {
@@ -677,11 +715,19 @@ namespace wsgate {
                 }
                 response->EnableIdleTimeout(false);
                 response->EnableKeepAlive(true);
-                if (!sh->Prepare(request->Connection(), rdphost, rdppcb, rdpuser, rdppass, params))
+                try
                 {
-                    LogInfo(request->RemoteAddress(), uri, "503 (RDP backend not available)");
-                    response->EnableIdleTimeout(true);
-                    return HTTPRESPONSECODE_503_SERVICEUNAVAILABLE;
+                    if (!sh->Prepare(request->Connection(), rdphost, rdppcb, rdpuser, rdppass, params))
+                    {
+                        LogInfo(request->RemoteAddress(), uri, "503 (RDP backend not available)");
+                        response->EnableIdleTimeout(true);
+                        return HTTPRESPONSECODE_503_SERVICEUNAVAILABLE;
+                        //return HTTPRESPONSECODE_200_OK;
+                    }
+                }
+                catch(...)
+                {
+                    log::info << "caught exception!" << endl;
                 }
 
                 //to wrap around a condition statement for disabling cookies
@@ -1544,17 +1590,24 @@ namespace wsgate {
         log::debug << "RDP Disable NLA:        " << params.nonla << endl;
         log::debug << "RDP NTLM auth:          " << params.fntlm << endl;
 
-        handler_ptr h(new MyWsHandler(conn, m_parent, this));
-        conn_ptr c(new wspp::wsendpoint(h.get()));
-        rdp_ptr r(new RDP(h.get()));
-        m_cmap[conn] = conn_tuple(c, h, r);
+
+        try
+        {
+            handler_ptr h(new MyWsHandler(conn, m_parent, this));
+            conn_ptr c(new wspp::wsendpoint(h.get()));
+            rdp_ptr r(new RDP(h.get()));
+            m_cmap[conn] = conn_tuple(c, h, r);
 
         //log::info << "Reached the connection point >> wsgate_main:1249" << endl;
 
-        r->Connect(host, pcb, user, string() /*domain*/, pass, params);
-
-        m_parent->RegisterRdpSession(r);
-
+            r->Connect(host, pcb, user, string() /*domain*/, pass, params);
+            m_parent->RegisterRdpSession(r);
+        }
+        catch(...)
+        {
+            log::info << "Attemtped double connection to the same machine" << endl;
+            return false;
+        }
         return true;
     }
 

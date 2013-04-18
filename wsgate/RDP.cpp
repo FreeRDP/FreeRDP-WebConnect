@@ -520,6 +520,9 @@ namespace wsgate {
                             case 147:
                                 tcode = RDP_SCANCODE_LWIN;
                                 break;
+                            case 46:
+                                tcode = RDP_SCANCODE_DELETE;
+                                break;
                         }
                         if (0 < tcode) {
 
@@ -579,6 +582,19 @@ namespace wsgate {
                                     //SendInputUnicodeKeyboardEvent(KBD_FLAGS_RELEASE, tcode);
 
                                 	log::info << "308 :" << " " << KBD_FLAGS_DOWN << " " << KBD_FLAGS_RELEASE << "\n";
+
+                                    if(tcode == 96)
+                                    {
+                                        log::info << "JACKPOT2!" << endl;
+                                        freerdp_input_send_keyboard_event(m_rdpInput, KBD_FLAGS_DOWN, RDP_SCANCODE_LCONTROL);
+                                        freerdp_input_send_keyboard_event(m_rdpInput, KBD_FLAGS_DOWN, RDP_SCANCODE_LMENU);
+                                        freerdp_input_send_keyboard_event(m_rdpInput, KBD_FLAGS_DOWN, RDP_SCANCODE_DELETE);
+
+                                        freerdp_input_send_keyboard_event(m_rdpInput, KBD_FLAGS_RELEASE, RDP_SCANCODE_LCONTROL);
+                                        freerdp_input_send_keyboard_event(m_rdpInput, KBD_FLAGS_RELEASE, RDP_SCANCODE_LMENU);
+                                        freerdp_input_send_keyboard_event(m_rdpInput, KBD_FLAGS_RELEASE, RDP_SCANCODE_DELETE);
+                                    }
+
                                 	log::info << "tcode: " << tcode << " m->code: " << m->code << endl;
                                 	//freerdp_input_send_unicode_keyboard_event(m_rdpInput, KBD_FLAGS_DOWN|tflag, tcode);
                                 	//working on w8:
@@ -596,7 +612,7 @@ namespace wsgate {
                             }
                         } else {
                             log::info << "Kp2" << " tcode: " << tcode << endl;
-                            
+
                             //Work in progress: Switching all the keys to their ASCII based value
 
                             /*switch (tcode) {
@@ -634,7 +650,7 @@ namespace wsgate {
                                     tcode = RDP_SCANCODE_DELETE;
                                     break;
                             }*/
-                            
+
                             if (0 < tcode) {
                             	//tflag initially uint32_t
                             	uint32_t tflag = RDP_SCANCODE_EXTENDED(tcode) ? KBD_FLAGS_EXTENDED : 0;
@@ -832,7 +848,7 @@ namespace wsgate {
         ostringstream oss;
         oss << "S:" << hex << this;
         m_wshandler->send_text(oss.str());
-        rdpPointer p; 
+        rdpPointer p;
         memset(&p, 0, sizeof(p));
         p.size = sizeof(MyPointer);
         p.New = cbPointer_New;

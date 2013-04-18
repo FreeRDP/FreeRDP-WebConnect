@@ -742,6 +742,21 @@ wsgate.RDP = new Class( {
             this.sock.send(buf);
         }
     },
+
+    /**
+     * Event handler for sending array of keys to be pressed
+     */
+    sendKeys: function(codes) {
+        var myStringArray = ["Hello","World"];
+        for (var i = 0; i < codes.length; i++) {
+            alert(codes[i]);
+            if(this.sock.readyState == this.sock.OPEN) {
+                buf = new ArrayBuffer(12);
+
+            }
+        }
+    },
+
     /**
      * Event handler for key down events
      */
@@ -903,15 +918,15 @@ wsgate.RDP = new Class( {
      * Event handler for WebSocket disconnect events
      */
     onWSclose: function(evt) {
-        if (Browser.name == 'chrome') {
+        /*if (Browser.name == 'chrome') {
             // Current chrome is buggy in that it does not
             // fire WebSockets error events, so we use the
             // wasClean flag in the close event.
             if ((!evt.wasClean) && (!this.open)) {
                 this.fireEvent('alert', 'Could not connect to WebSockets gateway');
             }
-        }
-        this.open = false;
+        }*/
+        //this.open = false;
         this._reset();
         this.fireEvent('disconnected');
     },

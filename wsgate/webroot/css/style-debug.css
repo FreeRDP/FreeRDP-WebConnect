@@ -33,7 +33,7 @@ html { font-size: 100%; -webkit-text-size-adjust: 100%; -ms-text-size-adjust: 10
 
 html, button, input, select, textarea { font-family: sans-serif; color: #222; }
 
-body { margin: 0; font-size: 1em; line-height: 1.4; 
+body { margin: 0; font-size: 1em; line-height: 1.4;
 	background-image:url(http://www.cloudbase.it/wp-content/uploads/2012/10/background33.jpg);
 }
 
@@ -357,10 +357,8 @@ label.big {
 
 #screen {
     border: 0;
-    margin-top: 25px;
-    margin-left: 25px;
-    margin-bottom: 25px;
-    margin-right: 25px;
+    display: block;
+    position: absolute;
     padding: 0;
 }
 
@@ -388,7 +386,7 @@ label.big {
   cursor:pointer;
 
   /*unselectable*/
-  -webkit-user-select: none; /* Chrome/Safari */        
+  -webkit-user-select: none; /* Chrome/Safari */
   -moz-user-select: none; /* Firefox */
   -ms-user-select: none; /* IE10+ */
 
