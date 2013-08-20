@@ -318,7 +318,7 @@ AC_CHECK_LIB([freerdp-cache],[pointer_cache_register_callbacks],
 dnl Test for libpng
 png_ok=no
 AC_LANG_PUSH([C])
-AC_CHECK_LIB([png],[png_read_info],AC_CHECK_HEADER([png.h],[png_ok=yes]),,[-lz -lm])
+AC_CHECK_LIB([png],[png_read_info],[AC_CHECK_HEADER([png.h],[png_ok=yes])],,[-lz -lm])
 if test "$png_ok" = yes; then
     AC_MSG_CHECKING([for png_structp in png.h])
     AC_COMPILE_IFELSE([AC_LANG_PROGRAM([[#include <png.h>]],
