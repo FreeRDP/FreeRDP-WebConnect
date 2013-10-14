@@ -1,7 +1,7 @@
 #!/bin/bash -
 set -e
+echo ---- Fetching webconnect dependencies into $(dirname `pwd`)/prereqs ----
 cd ..
-echo ---- Fetching webconnect dependencies into ../prereqs ----
 mkdir -p prereqs
 cd prereqs
 echo '---- Checking out ehs trunk code ----'
@@ -18,7 +18,7 @@ cd ..
 echo '---- Checking out freerdp master ----'
 git clone https://github.com/FreeRDP/FreeRDP.git
 cd FreeRDP
-mkdir -p build && cd build && cmake -DCMAKE_INSTALL_PREFIX=/usr.. ..
+mkdir -p build && cd build && cmake -DCMAKE_INSTALL_PREFIX=.. ..
 echo '---- Building freerdp ----'
 make
 echo '---- Finished building freerdp ----'
