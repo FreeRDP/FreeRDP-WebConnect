@@ -333,7 +333,7 @@ namespace wsgate {
             throw tracing::runtime_error("Could not create freerep instance");
         }
         m_instances[m_freerdp] = this;
-        m_freerdp->context_size = sizeof(wsgContext);
+        m_freerdp->ContextSize = sizeof(wsgContext);
         m_freerdp->ContextNew = cbContextNew;
         m_freerdp->ContextFree = cbContextFree;
         m_freerdp->Authenticate = cbAuthenticate;
@@ -561,7 +561,8 @@ namespace wsgate {
 
                                 	log::info << "shiftstate: " << m->shiftstate << endl;
 
-                                    tcode = freerdp_keyboard_get_rdp_scancode_from_virtual_key_code(tcode);
+                                	//mrd: why 4 and not 7? what do 4 and 7 mean?
+                                    tcode = GetVirtualScanCodeFromVirtualKeyCode(tcode, 4);
                                     //tcode = freerdp_keyboard_get_rdp_scancode_from_x11_keycode(tcode);
 
                                     log::info << "Kpress oc=" << tcode << endl;
