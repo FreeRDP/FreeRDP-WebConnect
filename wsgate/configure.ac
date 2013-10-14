@@ -285,7 +285,7 @@ void mv(std::unique_ptr<foo>p) { int v = p->bar; }]],
 AC_LANG_POP
 AC_SUBST([USE_UNIQUE_PTR])
 
-CPPFLAGS="-I ../../ehs-code/include/ehs -I ../../FreeRDP/include -L ../../ehs-code/lib -L ../../FreeRDP/lib $CPPFLAGS"
+CPPFLAGS="-I ../../prereqs/ehs-code/include/ehs -I ../../prereqs/FreeRDP/include -L ../../prereqs/ehs-code/lib -L ../../prereqs/FreeRDP/lib $CPPFLAGS"
 AC_LANG_PUSH([C++])
 AC_CHECK_LIB(ehs,getEHSconfig,[WSGATE_LDADD="$WSGATE_LDADD -lehs"],,$BOOST_REGEX_LIBS)
 AC_CHECK_HEADERS([ehs.h])
