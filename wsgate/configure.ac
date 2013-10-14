@@ -308,8 +308,8 @@ AC_CHECK_LIB([freerdp-codec],[freerdp_color_convert_var],
 AC_CHECK_LIB([freerdp-gdi],[gdi_init],
     [WSGATE_LDADD="$WSGATE_LDADD -lfreerdp-gdi"],
     [AC_MSG_ERROR([You need freerdp from GIT!])])
-AC_CHECK_LIB([freerdp-locale],[freerdp_keyboard_get_rdp_scancode_from_virtual_key_code],
-    [WSGATE_LDADD="$WSGATE_LDADD -lfreerdp-locale"],
+AC_CHECK_LIB([winpr-input],[GetVirtualScanCodeFromVirtualKeyCode],
+    [WSGATE_LDADD="$WSGATE_LDADD -lwinpr-input"],
     [AC_MSG_ERROR([You need freerdp from GIT!])])
 AC_CHECK_LIB([freerdp-cache],[pointer_cache_register_callbacks],
     [WSGATE_LDADD="$WSGATE_LDADD -lfreerdp-cache"],
