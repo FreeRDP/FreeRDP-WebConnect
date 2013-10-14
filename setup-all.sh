@@ -3,6 +3,7 @@ set -e
 cd ..
 echo '---- Creating development environment ----'
 mkdir -p development
+cd development
 echo '---- Checking out ehs trunk code ----'
 svn checkout svn://svn.code.sf.net/p/ehs/code/trunk ehs-code
 cd ehs-code
@@ -23,10 +24,8 @@ make
 echo '---- Finished building freerdp ----'
 make install
 echo '---- Finished installing freerdp ----'
-cd ../..
-echo '---- Checking out webconnect code ----'
-git clone https://github.com/mrd-cloudbase/FreeRDP-WebConnect.git
-cd FreeRDP-WebConnect/wsgate/
+echo '---- Going back to webconnect ----'
+cd ../../FreeRDP-WebConnect/wsgate/
 make -f Makefile.am
 ./configure
 echo '---- Building webconnect ----'
