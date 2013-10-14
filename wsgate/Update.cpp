@@ -156,7 +156,7 @@ namespace wsgate {
         log::debug << __PRETTY_FUNCTION__ << endl;
     }
 
-    void Update::SurfaceCommand(rdpContext*, STREAM*) {
+    void Update::SurfaceCommand(rdpContext*, wStream*) {
         log::debug << __PRETTY_FUNCTION__ << endl;
     }
 
@@ -239,7 +239,7 @@ namespace wsgate {
         }
     }
 
-    void Update::cbSurfaceCommand(rdpContext* context, STREAM* s) {
+    void Update::cbSurfaceCommand(rdpContext* context, wStream* s) {
         Update *self = reinterpret_cast<wsgContext *>(context)->pUpdate;
         if (self) {
             self->SurfaceCommand(context, s);

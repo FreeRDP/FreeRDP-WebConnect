@@ -748,7 +748,7 @@ namespace wsgate {
     }
 
     // private
-    void RDP::ContextNew(freerdp *inst, rdpContext *ctx)
+    int RDP::ContextNew(freerdp *inst, rdpContext *ctx)
     {
         log::debug << "RDP::ContextNew" << endl;
         inst->PreConnect = cbPreConnect;
@@ -756,6 +756,9 @@ namespace wsgate {
         m_rdpContext = ctx;
         m_rdpInput = inst->input;
         m_rdpSettings = inst->settings;
+
+        //mrd: return value not used. just set it to 0
+        return 0;
     }
 
     // private
@@ -1062,11 +1065,11 @@ namespace wsgate {
     }
 
     // private C callback
-    void RDP::cbContextNew(freerdp *inst, rdpContext *ctx)
+    int RDP::cbContextNew(freerdp *inst, rdpContext *ctx)
     {
         RDP *self = m_instances[inst];
         if (self) {
-            self->ContextNew(inst, ctx);
+            return self->ContextNew(inst, ctx);
         }
     }
 

@@ -136,7 +136,7 @@ namespace wsgate {
             void ThreadFunc();
             void addError(const std::string &msg);
 
-            void ContextNew(freerdp *inst, rdpContext *ctx);
+            int ContextNew(freerdp *inst, rdpContext *ctx);
             void ContextFree(freerdp *inst, rdpContext *ctx);
             BOOL PreConnect(freerdp *inst);
             BOOL PostConnect(freerdp *inst);
@@ -171,7 +171,7 @@ namespace wsgate {
             // Callbacks from C pthreads - Must be static in order t be assigned to C fnPtrs.
             static void *cbThreadFunc(void *ctx);
             // Callbacks from C - Must be static in order t be assigned to C fnPtrs.
-            static void cbContextNew(freerdp *inst, rdpContext *ctx);
+            static int cbContextNew(freerdp *inst, rdpContext *ctx);
             static void cbContextFree(freerdp *inst, rdpContext *ctx);
             static BOOL cbPreConnect(freerdp *inst);
             static BOOL cbPostConnect(freerdp *inst);

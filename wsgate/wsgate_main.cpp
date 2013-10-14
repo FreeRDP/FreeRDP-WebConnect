@@ -17,9 +17,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-#include "Python.h"
-#include "pythonrun.h"
-
 #ifdef HAVE_CONFIG_H
 # include "config.h"
 #endif
@@ -305,12 +302,14 @@ namespace wsgate {
             //method that handles the token usage
             paramsOpStack GetRDPConnectionParams(HttpRequest *request)
             {
+            	opStack opsParams = {0};
+#if 0 //mrd ToDo: Python not used anymore. Replace with REST
                 tokenId = request->FormValues("token").m_sBody;
                 char * tuplVmId = "";
                 char * tuplHost = "";
                 char * tuplPort = "";
                 PyObject *pName, *pModule, *pDict, *pFunc, *pArgs, *pTuple;
-                opStack opsParams;
+
 
                 if (!Py_IsInitialized())
                 {
@@ -394,7 +393,7 @@ namespace wsgate {
                 opsParams.opsPort = tuplPort;
 
                 log::info << "Finished the python part" << endl;
-
+#endif
                 return opsParams;
             }
 
@@ -451,6 +450,7 @@ namespace wsgate {
             }
 
             /* =================================== HANDLE TOKEN REQUEST =================================== */
+#if 0 //mrd ToDo: commented out above, need to check if it is required
             ResponseCode HandleTokenRequest(HttpRequest *request, HttpResponse *response, string uri, string thisHost)
             {
                 opStack Params = GetRDPConnectionParams(request);
@@ -469,7 +469,7 @@ namespace wsgate {
                     log::info << "TOKEN PASSED IN: " << tokenUri << " : " << uri << endl;
                 }
             }
-
+#endif
             /* =================================== HANDLE WSGATE REQUEST =================================== */
             int CheckIfWSocketRequest(HttpRequest *request, HttpResponse *response, string uri, string thisHost)
             {
