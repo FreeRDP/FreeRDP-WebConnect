@@ -285,12 +285,14 @@ void mv(std::unique_ptr<foo>p) { int v = p->bar; }]],
 AC_LANG_POP
 AC_SUBST([USE_UNIQUE_PTR])
 
-CPPFLAGS="-I ../../prereqs/ehs-code/include/ehs -I ../../prereqs/FreeRDP/include -L ../../prereqs/ehs-code/lib -L ../../prereqs/FreeRDP/lib $CPPFLAGS"
+CFLAGS="$CFLAGS -I$HOME/local/include -I$HOME/local/include/ehs -I$HOME/local/include/freerdp"
+CXXFLAGS="$CXXFLAGS -I$HOME/local/include -I$HOME/local/include/ehs -I$HOME/local/include/freerdp"
+CPPFLAGS="$CPPFLAGS -I$HOME/local/include -I$HOME/local/include/ehs -I$HOME/local/include/freerdp"
+LDFLAGS="$LDFLAGS -L$HOME/local/lib -L$HOME/local/lib64 -Wl,--rpath -Wl,$HOME/local/lib64 -Wl,--rpath -Wl,$HOME/local/lib"
+
 AC_LANG_PUSH([C++])
 AC_CHECK_LIB(ehs,getEHSconfig,[WSGATE_LDADD="$WSGATE_LDADD -lehs"],,$BOOST_REGEX_LIBS)
-AC_CHECK_HEADERS([ehs.h])
-AC_LANG_POP
-
+AC_CHECK_HEADERS([ehs.h]) AC_LANG_POP 
 if test "$ac_cv_lib_ehs_getEHSconfig$ac_cv_header_ehs_h" != "yesyes" ; then
     AC_MSG_ERROR([Mandatory EHS development package not found])
 fi
