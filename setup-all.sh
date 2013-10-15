@@ -25,7 +25,6 @@ make
 echo '---- Finished building freerdp ----'
 make install
 echo '---- Finished installing freerdp ----'
-read -p "Press [Enter] key to start backup..."
 echo '---- Going back to webconnect ----'
 cd ../../../FreeRDP-WebConnect/wsgate/
 make -f Makefile.am
