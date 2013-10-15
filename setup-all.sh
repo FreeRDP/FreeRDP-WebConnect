@@ -19,7 +19,7 @@ cd ..
 echo '---- Checking out freerdp master ----'
 git clone https://github.com/FreeRDP/FreeRDP.git
 cd FreeRDP
-mkdir -p build && cd build && cmake -DCMAKE_INSTALL_PREFIX=$HOME/local ..
+mkdir -p build && cd build && cmake -DCMAKE_INSTALL_PREFIX=$HOME/local .. -DLIB_SUFFIX=64
 echo '---- Building freerdp ----'
 make
 echo '---- Finished building freerdp ----'
