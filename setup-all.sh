@@ -20,7 +20,7 @@ USAGE=$(basename $0) [-f|--force-root] [-i|--install-deps]
 
 if [[ $# -gt 1 ]]; then
 	# Get command-line options
-	TEMP=`getopt -o fi --long force-root,install-deps -q -- "$@"`
+	TEMP=`getopt -o fih --long force-root,install-deps,help -q -- "$@"`
 	# getopt failed because of improper arguments. Terminate script.
 	if [ $? != 0 ] ; then echo "$USAGE" >&2 ; exit 1 ; fi
 	# preserve whitespace
@@ -30,6 +30,7 @@ if [[ $# -gt 1 ]]; then
 		case "$1" in
 			-f|--force-root) force_root=1 ; shift ;;
 			-i|--install-deps) instal_deps=1 ; shift ;;
+			-h|--help) echo "$USAGE"; exit 0;;
 			--) shift ; break ;;
 			*) echo "Internal error while parsing command-line. Exiting..." ; exit 1 ;;
 		esac
