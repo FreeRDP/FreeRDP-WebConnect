@@ -1,32 +1,43 @@
 #!/bin/bash -
 set -e
+#Variable which determines if we install prereqs or not
+cont=1
 if [[ $EUID -ne 0 ]]; then
-   echo "This script must be run as root (or with sudo)" 1>&2
-   exit 1
+   echo "In order to install the dependencies of this package, the script must be run as root (or with sudo)"
+   echo -n "However, if all dependencies are installed (see README for a list), do you wish to proceed? [y/N] "
+   read response
+   [[ $response == "y" ]] && cont=2 || exit 1
 fi
-#Get distro (snipper take from alsa-info.sh)
-DISTRO=`grep -ihs "buntu\|SUSE\|Fedora\|PCLinuxOS\|MEPIS\|Mandriva\|Debian\|Damn\|Sabayon\|Slackware\|KNOPPIX\|Gentoo\|Zenwalk\|Mint\|Kubuntu\|FreeBSD\|Puppy\|Freespire\|Vector\|Dreamlinux\|CentOS\|Arch\|Xandros\|Elive\|SLAX\|Red\|BSD\|KANOTIX\|Nexenta\|Foresight\|GeeXboX\|Frugalware\|64\|SystemRescue\|Novell\|Solaris\|BackTrack\|KateOS\|Pardus" /etc/{issue,*release,*version}`
-case $DISTRO in
-	*buntu*)
-		echo 'Ubuntu distro detected. Installing required packages...'
-		yum install -y git svn subversion-svn2cl openssl-devel boost-devel libpng-devel
-		yum -y groupinstall "Development tools"
-		;;
-	Fedora*)
-		echo 'Fedora detected.'
-		;;
-	SUSE*)
-		;;
-	CentOS*)
-		yum install -y git svn subversion-svn2cl openssl-devel boost-devel libpng-devel
-		yum groupinstall -y "Development tools"
-		wget http://www.cmake.org/files/v2.8/cmake-2.8.12.tar.gz && tar -xzvf cmake-2.8.12.tar.gz && cd cmake-2.8.12 && ./bootstrap --prefix=/usr && make && make install
-		cd ..
-		rm -rf cmake-2.8.12 && rm -f cmake-2.8.12.tar.gz
-		;;
-		*)
-		echo 'Distro not found! You shall need git, svn-devel, autotools, gcc, g++, boost, openssl-devel and libpng-devel to successfully build this package.'
-		echo 'For tracing to work, libdwarf is also required.'
+if [[ $cont -eq 1 ]]; then
+	#Get distro (snipper take from alsa-info.sh)
+	DISTRO=`grep -ihs "buntu\|SUSE\|Fedora\|Debian\|Kubuntu\|CentOS" /etc/{issue,*release,*version}`
+	case $DISTRO in
+		*buntu*)
+			echo 'Ubuntu distro detected. Installing required packages...'
+			yum install -y git svn subversion-svn2cl openssl-devel boost-devel libpng-devel
+			yum -y groupinstall "Development tools"
+			;;
+		Fedora*19)
+			echo 'Fedora 19 detected.Installing required packages...'
+			;;
+		SUSE*)
+			echo 'SUSE detected. Installing required packages...'
+			;;
+		CentOS*)
+			echo 'CentOS detected. Installing required packages...'
+			yum install -y git svn subversion-svn2cl openssl-devel boost-devel libpng-devel
+			yum groupinstall -y "Development tools"
+			echo 'Getting cmake 2.8.12 (CentOS has old cmake version)'
+			wget http://www.cmake.org/files/v2.8/cmake-2.8.12.tar.gz && tar -xzvf cmake-2.8.12.tar.gz && cd cmake-2.8.12 && ./bootstrap --prefix=/usr && make && make install
+			cd ..
+			rm -rf cmake-2.8.12 && rm -f cmake-2.8.12.tar.gz
+			;;
+			*)
+			echo 'Distro not found! You shall need git, svn-devel, autotools, gcc, g++, boost, openssl-devel and libpng-devel to successfully build this package.'
+			echo 'For tracing to work, libdwarf is also required.'
+			;;
+	esac
+fi
 echo ---- Fetching webconnect dependencies into $(dirname `pwd`)/prereqs ----
 cd ..
 mkdir -p prereqs
