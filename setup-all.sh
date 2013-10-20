@@ -12,6 +12,7 @@ else
 	BITNESS=''
 fi
 
+
 # Exit status:
 # 0 = Success
 # 1 = improper command-line arguments
@@ -31,9 +32,10 @@ function exit_handler()
         MYSELF="$0"               # equals to my script name
         LASTLINE="$1"            # argument 1: last line of error occurence
         LASTERR="$2"             # argument 2: error code of last command
-        echo "${MYSELF}: line ${LASTLINE}: exit status of last command: ${LASTERR}"
+        #echo "${MYSELF}: line ${LASTLINE}: exit status of last command: ${LASTERR}"
 
         case ${LASTERR} in
+			0)	;;
 			1)	echo ${USAGE}
 				;;
 			2) 	echo "If you wish to run this script as root, use the --force-root option."
@@ -56,9 +58,12 @@ function exit_handler()
 					rm -rf $HOME/prereqs
 				fi
 				if [ -d $HOME/local/lib$BITNESS ]; then
-					rm -f libfreerdp*.so
-					rm -f libwinpr*.so
-					rm -f libehs*.so
+					rm -f $HOME/local/lib$BITNESS/libfreerdp*.so*
+					rm -f $HOME/local/lib$BITNESS/libwinpr*.so*
+					rm -f $HOME/local/lib$BITNESS/libwinpr*.a
+					rm -f $HOME/local/lib$BITNESS/libehs*.so*
+					rm -f $HOME/local/lib$BITNESS/libehs.*a
+					rm -f $HOME/local/lib$BITNESS/pkgconfig/freerdp.pc
 				fi
 				if [ -d $HOME/local/include/ehs ]; then
 					rm -rf $HOME/local/include/ehs
@@ -70,14 +75,15 @@ function exit_handler()
 					echo 'Internal error. Make sure you have an internet connection and that nothing is interfering with this script before running again (broken/rooted system or something deleting parts of the file-tree in mid-process).'
 				fi
 				;;
-			*)
+			*)	echo 'Unknown error exit. Should not have happened.'
+				;;
 		esac
 }
 
 # trap exit errors and handle them in the exit_handler above
-trap 'exit_handler ${LINENO} $?' ERR
+trap 'exit_handler ${LINENO} $?' EXIT
 
-if [[ $# -gt 1 ]]; then
+if [[ $# -gt 0 ]]; then
 	# Get command-line options
 	TEMP=`getopt -o fih --long force-root,install-deps,help -q -- "$@"`
 	# getopt failed because of improper arguments. Terminate script.
@@ -88,7 +94,7 @@ if [[ $# -gt 1 ]]; then
 	while true ; do
 		case "$1" in
 			-f|--force-root) force_root=1 ; shift ;;
-			-i|--install-deps) instal_deps=1 ; shift ;;
+			-i|--install-deps) install_deps=1 ; shift ;;
 			-h|--help) echo "$USAGE"; exit 0;;
 			--) shift ; break ;;
 			*) echo "Internal error while parsing command-line. Exiting..." ; exit 1 ;;
@@ -119,7 +125,11 @@ if [[ $install_deps -eq 1 ]]; then
 			echo 'sudo available. Please enter your password: '
 			sudo ./install_prereqs.sh
 			if [[ $? -ne 0 ]]; then
-				exit 3
+				echo 'sudo failed. Trying to do it with root. Please enter root password: '
+				su -c ./install_prereqs.sh
+				if [[ $? -ne 0 ]]; then
+					exit 3
+				fi
 			fi
 		else
 			echo 'sudo command unavailable. Please enter root password: '
@@ -140,7 +150,7 @@ mkdir -p prereqs || exit 99
 mkdir -p local || exit 99
 cd prereqs || exit 99
 echo '---- Checking out ehs trunk code ----'
-svn checkout svn://svn.code.sf.net/p/ehs/code/trunk ehs-code || { echo 'Failed to download ehs code from svn'; exit 99 }
+svn checkout svn://svn.code.sf.net/p/ehs/code/trunk ehs-code || { echo 'Unable to download ehs from svn'; exit 99; }
 cd ehs-code || exit 99
 make -f Makefile.am || exit 4
 ./configure --with-ssl --prefix=$HOME/local --libdir=$HOME/local/lib$BITNESS || exit 4
@@ -151,7 +161,7 @@ make install || exit 5
 echo '---- Finished installing ehs ----'
 cd .. || exit 99
 echo '---- Checking out freerdp master ----'
-git clone https://github.com/FreeRDP/FreeRDP.git || { echo 'Failed to download FreeRDP code from github.'; exit 99 }
+git clone https://github.com/FreeRDP/FreeRDP.git || { echo 'Unable to download FreeRDP from github'; exit 99; }
 cd FreeRDP || exit 99
 mkdir -p build && cd build && cmake -DCMAKE_INSTALL_PREFIX=$HOME/local .. || exit 6
 echo '---- Building freerdp ----'

@@ -9,15 +9,15 @@ if [[ $EUID -ne 0 ]]; then
 fi
 
 #Get distro (snipper take from alsa-info.sh)
-DISTRO=`grep -ihs "buntu\|SUSE\|Fedora\|Debian\|Kubuntu\|CentOS" /etc/{issue,*release,*version}`
+DISTRO=`grep -ihs "buntu\|SUSE\|Fedora\|Debian\|CentOS" /etc/{issue,*release,*version}`
 case $DISTRO in
 	*buntu*)
 		echo 'Ubuntu distro detected. Installing required packages...'
 		;;
-	Fedora*19)
+	Fedora*19*)
 		echo 'Fedora 19 detected.Installing required packages...'
-		yum -y groupinstall "Development tools"
-		yum install -y svn svn2cl openssl-devel boost-devel libpng-devel elfutils-devel
+		yum install -y gcc-c++ autoconf automake libtool cmake svn svn2cl \
+		openssl-devel boost-devel libpng-devel elfutils-devel
 		;;
 	SUSE*)
 		echo 'SUSE detected. Installing required packages...'
