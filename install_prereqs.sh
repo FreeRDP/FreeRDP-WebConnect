@@ -13,18 +13,18 @@ DISTRO=`grep -ihs "buntu\|SUSE\|Fedora\|Debian\|Kubuntu\|CentOS" /etc/{issue,*re
 case $DISTRO in
 	*buntu*)
 		echo 'Ubuntu distro detected. Installing required packages...'
-		yum install -y git svn subversion-svn2cl openssl-devel boost-devel libpng-devel
-		yum -y groupinstall "Development tools"
 		;;
 	Fedora*19)
 		echo 'Fedora 19 detected.Installing required packages...'
+		yum -y groupinstall "Development tools"
+		yum install -y svn svn2cl openssl-devel boost-devel libpng-devel elfutils-devel
 		;;
 	SUSE*)
 		echo 'SUSE detected. Installing required packages...'
 		;;
 	CentOS*)
 		echo 'CentOS detected. Installing required packages...'
-		yum install -y git svn subversion-svn2cl openssl-devel boost-devel libpng-devel
+		yum install -y svn subversion-svn2cl openssl-devel boost-devel libpng-devel elfutils-devel
 		yum groupinstall -y "Development tools"
 		echo 'Getting cmake 2.8.12 (CentOS has old cmake version)'
 		wget http://www.cmake.org/files/v2.8/cmake-2.8.12.tar.gz && tar -xzvf cmake-2.8.12.tar.gz && cd cmake-2.8.12 && ./bootstrap --prefix=/usr && make && make install
@@ -37,3 +37,4 @@ case $DISTRO in
 		exit 1
 		;;
 esac
+exit 0
