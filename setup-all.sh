@@ -20,7 +20,7 @@ function cleanup()
 		rm -rf $HOME/prereqs
 	fi
 	if [ -d $HOME/local/lib$BITNESS ]; then
-		rm -f $HOME/local/lib$BITNESS/libfreerdp*.so*
+		rm -f $HOME/local/lib$BITNESS/lib*freerdp*.so*
 		rm -f $HOME/local/lib$BITNESS/libwinpr*.so*
 		rm -f $HOME/local/lib$BITNESS/libwinpr*.a
 		rm -f $HOME/local/lib$BITNESS/libehs*.so*
@@ -32,6 +32,9 @@ function cleanup()
 	fi
 	if [ -d $HOME/local/include/freerdp ]; then
 		rm -rf $HOME/local/include/freerdp
+	fi
+	if [ -d $HOME/local/include/winpr ]; then
+		rm -rf $HOME/local/include/winpr
 	fi
 }
 
