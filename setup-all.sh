@@ -3,7 +3,7 @@
 # Script used to install FreeRDP-WebConnect on the local machine
 
 # Usage indications
-USAGE="$(basename $0) [-f|--force-root] [-i|--install-deps]"
+USAGE="$(basename $0) [-f|--force-root] [-i|--install-deps] [-c|--clean] [-h|--help]"
 
 # determine if we are running on 32 or 64 bit
 if [[ $(uname -m) == 'x86_64' ]]; then
@@ -12,6 +12,28 @@ else
 	BITNESS=''
 fi
 
+# clean-up ehs and freerdp files and folders. Is automatically invoked if the script encounters an error.
+
+function cleanup()
+{
+	if [ -d $HOME/prereqs ]; then
+		rm -rf $HOME/prereqs
+	fi
+	if [ -d $HOME/local/lib$BITNESS ]; then
+		rm -f $HOME/local/lib$BITNESS/libfreerdp*.so*
+		rm -f $HOME/local/lib$BITNESS/libwinpr*.so*
+		rm -f $HOME/local/lib$BITNESS/libwinpr*.a
+		rm -f $HOME/local/lib$BITNESS/libehs*.so*
+		rm -f $HOME/local/lib$BITNESS/libehs.*a
+		rm -f $HOME/local/lib$BITNESS/pkgconfig/freerdp.pc
+	fi
+	if [ -d $HOME/local/include/ehs ]; then
+		rm -rf $HOME/local/include/ehs
+	fi
+	if [ -d $HOME/local/include/freerdp ]; then
+		rm -rf $HOME/local/include/freerdp
+	fi
+}
 
 # Exit status:
 # 0 = Success
@@ -45,35 +67,22 @@ function exit_handler()
 				echo 'After that, run the script without the --install-deps flag'
 				;;
 			4) 	echo 'Unable to build ehs package. Cleaning up and exiting...'
-				;&
+				cleanup
+				;;
 			5) 	echo "Unable to install ehs package into $HOME/local. Cleaning up and exiting..."
-				;&
+				cleanup
+				;;
 			6) 	echo 'Unable to build FreeRDP package. Cleaning up and exiting...'
-				;&
+				cleanup
+				;;
 			7)	echo "Unable to install FreeRDP package into $HOME/local. Cleaning up and exiting..."
-				;&
+				cleanup
+				;;
 			8)	echo "Unable to build FreeRDP-WebConnect. Cleaning up and exiting..."
-				;&
-			99) if [ -d $HOME/prereqs ]; then
-					rm -rf $HOME/prereqs
-				fi
-				if [ -d $HOME/local/lib$BITNESS ]; then
-					rm -f $HOME/local/lib$BITNESS/libfreerdp*.so*
-					rm -f $HOME/local/lib$BITNESS/libwinpr*.so*
-					rm -f $HOME/local/lib$BITNESS/libwinpr*.a
-					rm -f $HOME/local/lib$BITNESS/libehs*.so*
-					rm -f $HOME/local/lib$BITNESS/libehs.*a
-					rm -f $HOME/local/lib$BITNESS/pkgconfig/freerdp.pc
-				fi
-				if [ -d $HOME/local/include/ehs ]; then
-					rm -rf $HOME/local/include/ehs
-				fi
-				if [ -d $HOME/local/include/freerdp ]; then
-					rm -rf $HOME/local/include/freerdp
-				fi
-				if [[ ${LASTERR} -eq 99 ]]; then
-					echo 'Internal error. Make sure you have an internet connection and that nothing is interfering with this script before running again (broken/rooted system or something deleting parts of the file-tree in mid-process).'
-				fi
+				cleanup
+				;;
+			99) echo 'Internal error. Make sure you have an internet connection and that nothing is interfering with this script before running again (broken/rooted system or something deleting parts of the file-tree in mid-process).'
+				cleanup
 				;;
 			*)	echo 'Unknown error exit. Should not have happened.'
 				;;
@@ -85,7 +94,7 @@ trap 'exit_handler ${LINENO} $?' EXIT
 
 if [[ $# -gt 0 ]]; then
 	# Get command-line options
-	TEMP=`getopt -o fih --long force-root,install-deps,help -q -- "$@"`
+	TEMP=`getopt -o fich --long force-root,install-deps,clean,help -q -- "$@"`
 	# getopt failed because of improper arguments. Terminate script.
 	if [ $? != 0 ] ; then echo "$USAGE" >&2 ; exit 1 ; fi
 	# preserve whitespace
@@ -96,6 +105,7 @@ if [[ $# -gt 0 ]]; then
 			-f|--force-root) force_root=1 ; shift ;;
 			-i|--install-deps) install_deps=1 ; shift ;;
 			-h|--help) echo "$USAGE"; exit 0;;
+			-c|--clean) echo 'Cleaning up'; cleanup; exit 0;;
 			--) shift ; break ;;
 			*) echo "Internal error while parsing command-line. Exiting..." ; exit 1 ;;
 		esac
