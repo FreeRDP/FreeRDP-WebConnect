@@ -72,19 +72,24 @@ case $DISTRO in
 		# check for autoconf
 		yum list installed | grep -i autoconf
 		if [ $? -eq 0 ]; then
-			echo -n 'autoconf is already installed. CentOS 6.4 uses an old version of autoconf. Do you wish to remove the current version and get a newer one? [y/N]'
-			read response_remove
-			echo ''
-			if [[ $response_remove == 'y' ]]; then
+			if [[ $force_all == 0 ]]; then
+				echo -n 'autoconf is already installed. CentOS 6.4 uses an old version of autoconf. Do you wish to remove the current version and get a newer one? [y/N]'
+				read response_remove
+				echo ''
+				if [[ $response_remove == 'y' ]]; then
+					yum -y remove autoconf
+					response_install='y'
+				else
+					echo -n 'Do you still wish to install the newer version? [y/N]'
+					read response_install
+				fi
+			else
 				yum -y remove autoconf
 				response_install='y'
-			else
-				echo -n 'Do you still wish to install the newer version? [y/N]'
-				read response_install
 			fi
 		fi
 		
-		if [[ $response_install == 'y' ]]; then
+		if [[ $response_install == 'y' || $force_all == 1 ]]; then
 			if [[ $(uname -m) == 'x86_64' ]]; then
 				wget ftp://rpmfind.net/linux/centos/6.4/os/x86_64/Packages/autoconf-2.63-5.1.el6.noarch.rpm && yum install -y autoconf-2.63-5.1.el6.noarch.rpm
 				rm -f autoconf-2.63-5.1.el6.noarch.rpm
@@ -97,19 +102,24 @@ case $DISTRO in
 		
 		yum list installed | grep -i automake
 		if [ $? -eq 0 ]; then
-			echo -n 'automake is already installed. CentOS 6.4 uses an old version of automake. Do you wish to remove the current version and get a newer one? [y/N]'
-			read response_remove
-			echo ''
-			if [[ $response_remove == 'y' ]]; then
+			if [[ $force_all == 0 ]]; then
+				echo -n 'automake is already installed. CentOS 6.4 uses an old version of automake. Do you wish to remove the current version and get a newer one? [y/N]'
+				read response_remove
+				echo ''
+				if [[ $response_remove == 'y' ]]; then
+					yum -y remove automake
+					response_install='y'
+				else
+					echo -n 'Do you still wish to install the newer version? [y/N]'
+					read response_install
+				fi
+			else
 				yum -y remove automake
 				response_install='y'
-			else
-				echo -n 'Do you still wish to install the newer version? [y/N]'
-				read response_install
 			fi
 		fi
 		
-		if [[ $response_install == 'y' ]]; then
+		if [[ $response_install == 'y' || $force_all == 1 ]]; then
 			if [[ $(uname -m) == 'x86_64' ]]; then
 				wget ftp://rpmfind.net/linux/centos/6.4/os/x86_64/Packages/automake-1.11.1-4.el6.noarch.rpm && yum install -y automake-1.11.1-4.el6.noarch.rpm
 				rm -f automake-1.11.1-4.el6.noarch.rpm
@@ -121,19 +131,24 @@ case $DISTRO in
 		
 		yum list installed | grep -i libtool
 		if [ $? -eq 0 ]; then
-			echo -n 'libtool is already installed. CentOS 6.4 uses an old version of libtool. Do you wish to remove the current version and get a newer one? [y/N]'
-			read response_remove
-			echo ''
-			if [[ $response_remove == 'y' ]]; then
+			if [[ $force_all == 0 ]]; then
+				echo -n 'libtool is already installed. CentOS 6.4 uses an old version of libtool. Do you wish to remove the current version and get a newer one? [y/N]'
+				read response_remove
+				echo ''
+				if [[ $response_remove == 'y' ]]; then
+					yum -y remove libtool
+					response_install='y'
+				else
+					echo -n 'Do you still wish to install the newer version? [y/N]'
+					read response_install
+				fi
+			else
 				yum -y remove libtool
 				response_install='y'
-			else
-				echo -n 'Do you still wish to install the newer version? [y/N]'
-				read response_install
 			fi
 		fi
 		
-		if [[ $response_install == 'y' ]]; then
+		if [[ $response_install == 'y' || $force_all == 1 ]]; then
 			if [[ $(uname -m) == 'x86_64' ]]; then
 				wget ftp://rpmfind.net/linux/centos/6.4/os/x86_64/Packages/libtool-2.2.6-15.5.el6.x86_64.rpm && yum install -y libtool-2.2.6-15.5.el6.x86_64.rpm
 				rm -f libtool-2.2.6-15.5.el6.x86_64.rpm
