@@ -1,41 +1,22 @@
-Minimalistic build instructions (from GIT checkout)
+Added automated build/install script in parent folder: setup-all.sh
+Usage:
+setup-all.sh [-f|--force-root] [[-i|--install-deps] -d|--delete-packages] [-c|--clean] [-h|--help]
+
+If -i is specified, the script tries to install the prerequisites listed below. It shall try to sudo in order to install the components and fall back to su -c in case of failure. If both methods fail, the script will exit.
+At present, ehs and freerdp packages are downloaded from their source repositories (master branch) into $HOME/prereqs and installed locally, in the $HOME/local folder.
+By default, the script will exit if run by root. You can get around this issue by specifying the -f option when invoking the script.
+
+For unattended setup, installing all prereqs and deleting conflicting packages, run the script as root, specifying the following command:
+setup-all.sh -f -i -d
+
+If you have all prereqs installed, just run the script without any flags as long as you are NOT the root user. If you are sure you want to run the script as root use the -f flag.
 
 Prerequisites:
 
-autotools, g++, boost-devel, openssl-devel, libpng-devel,
-ehs-devel >= 1.5.0-160, FreeRDP GIT-HEAD,
+gcc/g++ svn subversion-svn2cl openssl-devel boost-devel, libpng-devel elfutils-devel
+ehs-devel >= 1.5.0-160, FreeRDP GIT-HEAD
 
 (For tracing exceptions additionally elfutils-devel or bfd-devel)
 
-The EHS package is available at http://sourceforge.net/projects/ehs/ (Source-tarball, windows-package) and at http://download.opensuse.org/repositories/home:/felfert/Fedora_15/ or http://download.opensuse.org/repositories/home:/felfert/Fedora_16/ (RPMs for F15 and F16)
-
-Suitable prebuild packages of FreeRDP-GIT for various distributions can be found at
-http://download.opensuse.org/repositories/home:/felfert/*/
-
-Only after initial checkout, run make -f Makefile.am
- 
-After that:
-
-./configure ...
-make
-make install
-
-Building an RPM on Fedora:
-Additional tools rpm-build rpmdevtools
-Instead of make install, use:
-
-make dist-platform
-
-mingw32 cross-build on Fedora:
-Prerequisites: The mingw32-aequivalent of the devel packages, for generating
-an installer executable: wine and iscc.
-The iscc package is available at http://download.opensuse.org/repositories/home:/felfert/Fedora_16/
-
-mingw32-configure
-make
-
-mingw32 cross-build of an installer on Fedora:
-
-mingw32-configure \
-    --with-dllpath=/usr/i686-pc-mingw32/sys-root/mingw/bin
-make dist-platform
+ehs repository:
+svn://svn.code.sf.net/p/ehs/code/trunk 

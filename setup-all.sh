@@ -3,7 +3,7 @@
 # Script used to install FreeRDP-WebConnect on the local machine
 
 # Usage indications
-USAGE="$(basename $0) [-f|--force-root] [-i|--install-deps] [-c|--clean] [-h|--help]"
+USAGE="$(basename $0) [-f|--force-root] [[-i|--install-deps] -d|--delete-packages] [-c|--clean] [-h|--help]"
 
 # determine if we are running on 32 or 64 bit
 if [[ $(uname -m) == 'x86_64' ]]; then
@@ -107,6 +107,7 @@ if [[ $# -gt 0 ]]; then
 		case "$1" in
 			-f|--force-root) force_root=1 ; shift ;;
 			-i|--install-deps) install_deps=1 ; shift ;;
+			-d|--delete-packages) delete_packages=1 ; shift ;;
 			-h|--help) echo "$USAGE"; exit 0;;
 			-c|--clean) echo 'Cleaning up'; cleanup; exit 0;;
 			--) shift ; break ;;
@@ -117,8 +118,16 @@ fi
 
 # Root is not supposed to run this script. If however -f or --force-root is given on the command-line
 # this rule will not be enforced. Otherwise, the script will exit.
-if [[ $UID -eq 0 && force_root -ne 1 ]]; then
+if [[ $UID -eq 0 && $force_root -ne 1 ]]; then
    exit 2
+fi
+
+if [[ $UID -ne 0 && $force_root -eq 1 ]]; then
+   echo 'Warning: You do not need to specify the -f|--force-root flag if you do not run the script as root.'
+fi
+
+if [[ $delete_packages -eq 1 && $install_deps -ne 1 ]]; then
+	echo 'Warning: You do not need to specify the -d|--delete-packages flag if you do not specify the -i|--install-deps flag.'
 fi
 
 # Install_deps set
@@ -126,8 +135,13 @@ if [[ $install_deps -eq 1 ]]; then
 	echo 'Preparing to install package dependencies'
 	
 	# If script executed by root and force_root enabled, then just install dependencies
-	if [[ $UID -eq 0 && force_root -eq 1 ]]; then
-		./install_prereqs.sh
+	if [[ $UID -eq 0 && $force_root -eq 1 ]]; then
+		if [[ $delete_packages -eq 1 ]]; then
+			./install_prereqs.sh -y
+		else
+			./install_prereqs.sh
+		fi
+		
 		if [[ $? -ne 0 ]]; then
 			exit 3
 		fi
@@ -136,17 +150,32 @@ if [[ $install_deps -eq 1 ]]; then
 		command -v sudo >/dev/null 2>&1 && sudo_present=1
 		if [[ sudo_present -eq 1 ]]; then
 			echo 'sudo available. Please enter your password: '
-			sudo ./install_prereqs.sh
+			if [[ $delete_packages -eq 1 ]]; then
+				sudo ./install_prereqs.sh -y
+			else
+				sudo ./install_prereqs.sh
+			fi
+			
 			if [[ $? -ne 0 ]]; then
 				echo 'sudo failed. Trying to do it with root. Please enter root password: '
-				su -c ./install_prereqs.sh
+				if [[ $delete_packages -eq 1 ]]; then
+					su -c ./install_prereqs.sh -y
+				else
+					su -c ./install_prereqs.sh
+				fi
+				
 				if [[ $? -ne 0 ]]; then
 					exit 3
 				fi
 			fi
 		else
 			echo 'sudo command unavailable. Please enter root password: '
-			su -c ./install_prereqs.sh
+			if [[ $delete_packages -eq 1 ]]; then
+				su -c ./install_prereqs.sh -y
+			else
+				su -c ./install_prereqs.sh
+			fi
+			
 			if [[ $? -ne 0 ]]; then
 				exit 3
 			fi
