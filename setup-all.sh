@@ -97,7 +97,7 @@ trap 'exit_handler ${LINENO} $?' EXIT
 
 if [[ $# -gt 0 ]]; then
 	# Get command-line options
-	TEMP=`getopt -o fich --long force-root,install-deps,clean,help -q -- "$@"`
+	TEMP=`getopt -o fidch --long force-root,install-deps,--delete-packages,clean,help -q -- "$@"`
 	# getopt failed because of improper arguments. Terminate script.
 	if [ $? != 0 ] ; then echo "$USAGE" >&2 ; exit 1 ; fi
 	# preserve whitespace
