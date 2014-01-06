@@ -7,4 +7,7 @@
 *.ac filter=rcs-keywords
 *.m4 filter=rcs-keywords
 
+# Set default behaviour, in case users don't have core.autocrlf set.
+* text=auto
+
 *.sh eol=lf
