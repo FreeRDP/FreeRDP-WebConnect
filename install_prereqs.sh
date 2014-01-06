@@ -91,10 +91,10 @@ case $DISTRO in
 		
 		if [[ $response_install == 'y' || $force_all == 1 ]]; then
 			if [[ $(uname -m) == 'x86_64' ]]; then
-				wget ftp://rpmfind.net/linux/centos/6.4/os/x86_64/Packages/autoconf-2.63-5.1.el6.noarch.rpm && yum install -y autoconf-2.63-5.1.el6.noarch.rpm
+				wget ftp://rpmfind.net/linux/centos/6/os/x86_64/Packages/autoconf-2.63-5.1.el6.noarch.rpm && yum install -y autoconf-2.63-5.1.el6.noarch.rpm
 				rm -f autoconf-2.63-5.1.el6.noarch.rpm
 			else
-				wget ftp://rpmfind.net/linux/centos/6.4/os/i386/Packages/autoconf-2.63-5.1.el6.noarch.rpm && yum install -y autoconf-2.63-5.1.el6.noarch.rpm
+				wget ftp://rpmfind.net/linux/centos/6/os/i386/Packages/autoconf-2.63-5.1.el6.noarch.rpm && yum install -y autoconf-2.63-5.1.el6.noarch.rpm
 				rm -f autoconf-2.63-5.1.el6.noarch.rpm
 			fi
 		fi
@@ -121,10 +121,10 @@ case $DISTRO in
 		
 		if [[ $response_install == 'y' || $force_all == 1 ]]; then
 			if [[ $(uname -m) == 'x86_64' ]]; then
-				wget ftp://rpmfind.net/linux/centos/6.4/os/x86_64/Packages/automake-1.11.1-4.el6.noarch.rpm && yum install -y automake-1.11.1-4.el6.noarch.rpm
+				wget ftp://rpmfind.net/linux/centos/6/os/x86_64/Packages/automake-1.11.1-4.el6.noarch.rpm && yum install -y automake-1.11.1-4.el6.noarch.rpm
 				rm -f automake-1.11.1-4.el6.noarch.rpm
 			else
-				wget ftp://rpmfind.net/linux/centos/6.4/os/i386/Packages/automake-1.11.1-4.el6.noarch.rpm && yum install -y automake-1.11.1-4.el6.noarch.rpm
+				wget ftp://rpmfind.net/linux/centos/6/os/i386/Packages/automake-1.11.1-4.el6.noarch.rpm && yum install -y automake-1.11.1-4.el6.noarch.rpm
 				rm -f automake-1.11.1-4.el6.noarch.rpm
 			fi
 		fi	
@@ -150,10 +150,10 @@ case $DISTRO in
 		
 		if [[ $response_install == 'y' || $force_all == 1 ]]; then
 			if [[ $(uname -m) == 'x86_64' ]]; then
-				wget ftp://rpmfind.net/linux/centos/6.4/os/x86_64/Packages/libtool-2.2.6-15.5.el6.x86_64.rpm && yum install -y libtool-2.2.6-15.5.el6.x86_64.rpm
+				wget ftp://rpmfind.net/linux/centos/6/os/x86_64/Packages/libtool-2.2.6-15.5.el6.x86_64.rpm && yum install -y libtool-2.2.6-15.5.el6.x86_64.rpm
 				rm -f libtool-2.2.6-15.5.el6.x86_64.rpm
 			else
-				wget ftp://rpmfind.net/linux/centos/6.4/os/i386/Packages/libtool-2.2.6-15.5.el6.i686.rpm && yum install -y libtool-2.2.6-15.5.el6.i686.rpm
+				wget ftp://rpmfind.net/linux/centos/6/os/i386/Packages/libtool-2.2.6-15.5.el6.i686.rpm && yum install -y libtool-2.2.6-15.5.el6.i686.rpm
 				rm -f libtool-2.2.6-15.5.el6.i686.rpm
 			fi
 		fi
