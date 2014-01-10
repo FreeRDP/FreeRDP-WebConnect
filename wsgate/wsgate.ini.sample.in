@@ -8,7 +8,7 @@ debug = true
 enablecore = true
 
 # Set non-SSL listener port. If omitted, no listener will be started.
-port = 80
+port = 8000
 
 # Set bind address of non-SSL listener.
 #bindaddr = 127.0.0.1
@@ -51,7 +51,7 @@ documentroot = %pkgdatadir%
 
 [ssl]
 # Set SSL listener port. If omitted, no SSL listener will be started.
-port = 443
+#port = 4430
 
 # Set bind address of non-SSL listener.
 #bindaddr = 127.0.0.1
