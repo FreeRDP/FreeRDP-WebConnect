@@ -650,11 +650,6 @@ namespace wsgate {
                     return HandleCursorRequest(request, response, uri, thisHost);
                 }
 
-                /*if(boost::starts_with(uri, "/?token="))
-                {
-                    return HandleTokenRequest(request, response, uri, thisHost);
-                }*/
-
                 if(boost::starts_with(uri, "/wsgate?"))
                 {
                     return HandleWsgateRequest(request, response, uri, thisHost);
@@ -696,16 +691,17 @@ namespace wsgate {
                 bool externalRequest = false;
 
                 if (!exists(p)) {
-                    //return HTTPRESPONSECODE_404_NOTFOUND;
-                    p = "/home/fedora/FreeRDP-WebConnect/wsgate/webroot/index.html";
-                    //externalRequest = true;
+                    p = m_sDocumentRoot;
+                    p /= "index.html";
                 }
 
                 if (!is_regular_file(p)) {
                     LogInfo(request->RemoteAddress(), uri, "403 Forbidden");
                     log::warn << "Request from " << request->RemoteAddress()
                         << ": " << uri << " => 403 Forbidden" << endl;
-                    p = "/home/fedora/FreeRDP-WebConnect/wsgate/webroot/index.html";
+
+                    p = m_sDocumentRoot;
+                    p /= "index.html";
                 }
 
                 // Handle If-modified-sice request header
