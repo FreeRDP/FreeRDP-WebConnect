@@ -218,7 +218,7 @@ cd ../.. || exit 99
 echo '---- Checking out casablanca master ----'
 git clone https://git01.codeplex.com/casablanca  || { echo 'Unable to download casablanca from codeplex'; exit 99; }
 cd casablanca/Release || exit 99
-make all || exit 8
+make release || exit 8
 cp ../Binaries/Release$BITNESS/libcasablanca.so /usr/lib || exit 9
 ldconfig || exit 9
 mkdir $HOME/local/include/casablanca || exit 9
