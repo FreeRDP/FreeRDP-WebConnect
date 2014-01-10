@@ -146,3 +146,20 @@ nofullwindowdrag = true
 # 1 = NTLMv1
 # 2 = NTLMv2
 #forcentlm = 2
+
+
+[openstack]
+
+#authurl = http://10.0.0.1:5000/v2.0
+#username = admin
+#password = secret
+#tenantname = admin
+
+[hyperv]
+
+# Credentials used to connect to the Hyper-V hosts when accessing
+# OpenStack instances consoles  
+
+#hostusername = Administrator
+#hostpassword = secret
+
