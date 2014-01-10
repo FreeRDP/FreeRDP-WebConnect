@@ -222,7 +222,7 @@ make all || exit 8
 cp ../Binaries/Release$BITNESS/libcasablanca.so /usr/lib || exit 9
 ldconfig || exit 9
 mkdir $HOME/local/include/casablanca || exit 9
-cp include/* $HOME/local/include/casablanca || exit 9
+cp -r include/* $HOME/local/include/casablanca || exit 9
 popd
 cd wsgate/ || exit 99
 make -f Makefile.am || exit 10

@@ -27,6 +27,11 @@ case $DISTRO in
 		apt-get install -y build-essential g++-4.8 libxml++2.6-dev libssl-dev \
 		libboost1.48-all-dev libpng-dev libdwarf-dev subversion subversion-tools \
 		autotools-dev autoconf libtool cmake
+		# replace old gcc/g++ with new one
+		sudo rm /usr/bin/g++  
+		sudo ln -s /usr/bin/g++-4.8 /usr/bin/g++  
+		sudo rm /usr/bin/gcc  
+		sudo ln -s /usr/bin/gcc-4.8 /usr/bin/gcc 
 		;;
 	Fedora*)
 		echo 'Fedora detected.Installing required packages...'
