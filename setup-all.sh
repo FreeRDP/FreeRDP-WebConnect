@@ -47,7 +47,9 @@ function cleanup()
 # 5 = failed to install ehs package
 # 6 = failed to build FreeRDP package
 # 7 = failed to install FreeRDP package
-# 8 = failed to build FreeRDP-WebConnect package
+# 8 = failed to build casablanca package
+# 9 = failed to install casablanca package
+# 10 = failed to build FreeRDP-WebConnect package
 # 99 = failed to execute some shell command
 
 # trap handler: print location of last error and process it further
@@ -212,11 +214,17 @@ echo '---- Finished building freerdp ----'
 make install || exit 7
 echo '---- Finished installing freerdp ----'
 echo '---- Going back to webconnect ----'
+cd ../.. || exit 99
+echo '---- Checking out casablanca master ----'
+git clone https://git01.codeplex.com/casablanca  || { echo 'Unable to download casablanca from codeplex'; exit 99; }
+cd casablanca/Release || exit 99
+make all || exit 8
+# make install || exit 9
 popd
 cd wsgate/ || exit 99
-make -f Makefile.am || exit 8
-./configure || exit 8
+make -f Makefile.am || exit 10
+./configure || exit 10
 echo '---- Building webconnect ----'
-make || exit 8
+make || exit 10
 echo '---- Finished successfully ----'
 echo '---- To run please use `cd wsgate && ./wsgate -c wsgate.mrd.ini` and connect on localhost:8888 ----'
