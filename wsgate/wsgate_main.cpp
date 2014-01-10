@@ -79,6 +79,7 @@
 #include "wsendpoint.hpp"
 #include "wsgate.hpp"
 #include "myrawsocket.hpp"
+#include "nova_token_auth.hpp"
 
 #ifdef _WIN32
 # define WIN32_LEAN_AND_MEAN
@@ -104,18 +105,6 @@ using boost::filesystem::path;
 
 namespace wsgate {
     static const char * const ws_magic = "258EAFA5-E914-47DA-95CA-C5AB0DC85B11";
-
-    //OpenStack Params
-    string tokenId;
-    typedef struct paramsOpStack
-    {
-        string opsHost;
-        string opsVmId;
-        string opsPort;
-        string opsUser;
-        string opsPass;
-        string opsTitle;
-    }opStack;
 
     //disable two connections to the same host
     std::map<string, bool> activeConnections;
@@ -299,104 +288,6 @@ namespace wsgate {
                 log::info << "To URI: " << uri << " => " << response << endl;
             }
 
-            //method that handles the token usage
-            paramsOpStack GetRDPConnectionParams(HttpRequest *request)
-            {
-            	opStack opsParams = {0};
-#if 0 //mrd ToDo: Python not used anymore. Replace with REST
-                tokenId = request->FormValues("token").m_sBody;
-                char * tuplVmId = "";
-                char * tuplHost = "";
-                char * tuplPort = "";
-                PyObject *pName, *pModule, *pDict, *pFunc, *pArgs, *pTuple;
-
-
-                if (!Py_IsInitialized())
-                {
-                    Py_Initialize();
-                }
-
-                //init thread lock
-                PyGILState_STATE gstate;
-                gstate = PyGILState_Ensure();
-
-
-                try
-                {
-                    log::info << "token : " <<tokenId << " got me! " << endl;
-
-                    pName = PyString_FromString("hyperv_console_utils");
-                    pModule = PyImport_Import(pName);
-
-                    if(pModule == NULL)
-                        throw 1;
-
-                    pDict = PyModule_GetDict(pModule);
-                    if(pDict == NULL)
-                        throw 2;
-
-                    pFunc = PyDict_GetItemString(pDict, "get_console_connect_info");
-                    pArgs = Py_BuildValue("(s)", (char*)tokenId.c_str());
-
-                    if(PyCallable_Check(pFunc))
-                    {
-                        pTuple = PyObject_CallObject(pFunc, pArgs);
-                        log::info << "just finished the python call object part" << endl;
-                        PyArg_ParseTuple(pTuple, "zzz", &tuplHost, &tuplPort, &tuplVmId);
-
-                        log::info << "request to connect to: " << tuplHost << ":" << tuplPort <<endl;
-                        log::info << "    >> with vmid: " << tuplVmId << endl;
-                    }
-                    else
-                    {
-                        PyErr_Print();
-                        Py_DECREF(pName);
-                        Py_XDECREF(pModule);
-
-                        //Py_Finalize();
-                        PyGILState_Release(gstate);
-                        return opsParams;
-                    }
-                }
-                catch(int exCode)
-                {
-                    log::info << "Unhandled exception: " << exCode << endl;
-                    Py_DECREF(pName);
-                    Py_XDECREF(pModule);
-
-                    //Py_Finalize();
-                    PyGILState_Release(gstate);
-                    return opsParams;
-                }
-                catch(...)
-                {
-
-                    log::info << "error when parsing openstack token" << endl;
-                    Py_DECREF(pName);
-                    Py_XDECREF(pModule);
-
-                    //Py_Finalize();
-                    PyGILState_Release(gstate);
-                    return opsParams;
-                }
-                //release thread lock
-
-
-                log::info << "dereferencing the modules" << endl;
-                Py_DECREF(pName);
-                Py_XDECREF(pModule);
-                //Py_Finalize();
-                PyGILState_Release(gstate);
-
-                opsParams.opsHost = tuplHost;
-                opsParams.opsVmId = tuplVmId;
-                opsParams.opsPort = tuplPort;
-
-                log::info << "Finished the python part" << endl;
-#endif
-                return opsParams;
-            }
-
             ResponseCode HandleRobotsRequest(HttpRequest *request, HttpResponse *response, string uri, string thisHost)
             {
                 response->SetHeader("Content-Type", "text/plain");
@@ -449,27 +340,6 @@ namespace wsgate {
                 return HTTPRESPONSECODE_301_MOVEDPERMANENTLY;
             }
 
-            /* =================================== HANDLE TOKEN REQUEST =================================== */
-#if 0 //mrd ToDo: commented out above, need to check if it is required
-            ResponseCode HandleTokenRequest(HttpRequest *request, HttpResponse *response, string uri, string thisHost)
-            {
-                opStack Params = GetRDPConnectionParams(request);
-
-                if( (Params.opsHost == "" || Params.opsPort == "" || Params.opsVmId == "") && true )
-                    return HTTPRESPONSECODE_400_BADREQUEST;
-                else
-                {
-                    //set mock user and password for now
-                    Params.opsUser = "Administrator";
-                    Params.opsPass = "Passw0rd";
-
-                    string tokenUri = thisHost;
-                    tokenUri += "/";
-
-                    log::info << "TOKEN PASSED IN: " << tokenUri << " : " << uri << endl;
-                }
-            }
-#endif
             /* =================================== HANDLE WSGATE REQUEST =================================== */
             int CheckIfWSocketRequest(HttpRequest *request, HttpResponse *response, string uri, string thisHost)
             {
@@ -595,38 +465,39 @@ namespace wsgate {
                 string rdphost;
                 string rdppcb;
                 string rdpuser;
-                string port;
+                int rdpport;
                 string rdppass;
                 WsRdpParams params;
 
                 if(boost::starts_with(uri, "/wsgate?token="))
                 {
+                    // OpenStack console authentication
                     try
                     {
-                        opStack Params = GetRDPConnectionParams(request);
-                        if(Params.opsHost != "" || Params.opsPort != "" || Params.opsVmId != "")
-                        {
-                            rdphost = Params.opsHost;
-                            rdppcb = Params.opsVmId;
-                            rdpuser = Params.opsUser;
-                            rdpuser = "Administrator";
-                            port = Params.opsPort;
-                            //future password decoding comes here
-                            rdppass = Params.opsPass;
-                            rdppass = "Passw0rd";
+                        log::info << "Starting OpenStack token authentication" << endl;
 
-                            log::info << "i got the params from opstack:" << endl;
-                            log::info << Params.opsHost << " : " << Params.opsPort << endl;
-                            log::info << Params.opsVmId << endl;
-                            log::info << Params.opsUser << " >> " << Params.opsPass << endl;
-                        }
-                        else
-                        {
-                            return HTTPRESPONSECODE_400_BADREQUEST;
-                        }
+                        string tokenId = request->FormValues("token").m_sBody;
+
+                        nova_console_token_auth* token_auth = nova_console_token_auth_factory::get_instance();
+
+                        nova_console_info info = token_auth->get_console_info(m_sOpenStackAuthUrl, m_sOpenStackUsername,
+                                                                              m_sOpenStackPassword, m_sOpenStackTenantName,
+                                                                              tokenId);
+
+                        log::info << "Host: " << info.host << " Port: " << info.port
+                                  << " Internal access path: " << info.internal_access_path
+                                  << endl;
+
+                        rdphost = info.host;
+                        rdpport = info.port;
+                        rdppcb = info.internal_access_path;
+
+                        rdpuser = m_sHyperVHostUsername;
+                        rdppass = m_sHyperVHostPassword;
                     }
-                    catch(...)
+                    catch(exception& ex)
                     {
+                        log::err << "OpenStack token authentication failed: " << ex.what() << endl;
                         return HTTPRESPONSECODE_400_BADREQUEST;
                     }
                 }
@@ -636,13 +507,14 @@ namespace wsgate {
                     rdphost = request->FormValues("host").m_sBody;
                     rdppcb  = request->FormValues("pcb").m_sBody;
                     rdpuser = request->FormValues("user").m_sBody;
-                    port    = request->FormValues("port").m_sBody;
+                    istringstream(request->FormValues("port").m_sBody) >> rdpport;
                     rdppass = base64_decode(request->FormValues("pass").m_sBody);
                 }
 
                 params =
                 {
-                    m_bOverrideRdpPort ? m_RdpOverrideParams.port : nFormValue(request, "port", 3389),
+                    rdpport,
+                    //m_bOverrideRdpPort ? m_RdpOverrideParams.port : nFormValue(request, "port", 3389),
                     1024,
                     768,
                     m_bOverrideRdpPerf ? m_RdpOverrideParams.perf : nFormValue(request, "perf", 0),
@@ -1101,6 +973,12 @@ namespace wsgate {
                     ("rdpoverride.nonla", po::value<string>(), "Predefined RDP flag: Disable NLA")
                     ("rdpoverride.forcentlm", po::value<int>(), "Predefined RDP flag: Force NTLM")
                     ("rdpoverride.size", po::value<string>(), "Predefined RDP desktop size")
+                    ("openstack.authurl", po::value<string>(), "OpenStack authentication URL")
+                    ("openstack.username", po::value<string>(), "OpenStack username")
+                    ("openstack.password", po::value<string>(), "OpenStack password")
+                    ("openstack.tenantname", po::value<string>(), "OpenStack tenant name")
+                    ("hyperv.hostusername", po::value<string>(), "Hyper-V username")
+                    ("hyperv.hostpassword", po::value<string>(), "Hyper-V user's password")
                     ;
 
                 m_pVm = new po::variables_map();
@@ -1256,6 +1134,36 @@ namespace wsgate {
                             m_sHostname.assign((*m_pVm)["global.hostname"].as<string>());
                         } else {
                             m_sHostname.clear();
+                        }
+                        if (m_pVm->count("openstack.authurl")) {
+                            m_sOpenStackAuthUrl.assign((*m_pVm)["openstack.authurl"].as<string>());
+                        } else {
+                            m_sOpenStackAuthUrl.clear();
+                        }
+                        if (m_pVm->count("openstack.username")) {
+                            m_sOpenStackUsername.assign((*m_pVm)["openstack.username"].as<string>());
+                        } else {
+                            m_sOpenStackUsername.clear();
+                        }
+                        if (m_pVm->count("openstack.password")) {
+                            m_sOpenStackPassword.assign((*m_pVm)["openstack.password"].as<string>());
+                        } else {
+                            m_sOpenStackPassword.clear();
+                        }
+                        if (m_pVm->count("openstack.tenantname")) {
+                            m_sOpenStackTenantName.assign((*m_pVm)["openstack.tenantname"].as<string>());
+                        } else {
+                            m_sOpenStackTenantName.clear();
+                        }
+                        if (m_pVm->count("hyperv.hostusername")) {
+                            m_sHyperVHostUsername.assign((*m_pVm)["hyperv.hostusername"].as<string>());
+                        } else {
+                            m_sHyperVHostUsername.clear();
+                        }
+                        if (m_pVm->count("hyperv.hostpassword")) {
+                            m_sHyperVHostPassword.assign((*m_pVm)["hyperv.hostpassword"].as<string>());
+                        } else {
+                            m_sHyperVHostPassword.clear();
                         }
                     } catch (const tracing::invalid_argument & e) {
                         cerr << e.what() << endl;
@@ -1432,6 +1340,12 @@ namespace wsgate {
             bool m_bDaemon;
             bool m_bRedirect;
             StaticCache m_StaticCache;
+            string m_sOpenStackAuthUrl;
+            string m_sOpenStackUsername;
+            string m_sOpenStackPassword;
+            string m_sOpenStackTenantName;
+            string m_sHyperVHostUsername;
+            string m_sHyperVHostPassword;
     };
 
 #ifndef _WIN32
