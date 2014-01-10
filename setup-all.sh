@@ -213,7 +213,6 @@ make || exit 6
 echo '---- Finished building freerdp ----'
 make install || exit 7
 echo '---- Finished installing freerdp ----'
-echo '---- Going back to webconnect ----'
 cd ../.. || exit 99
 echo '---- Checking out casablanca master ----'
 git clone https://git01.codeplex.com/casablanca  || { echo 'Unable to download casablanca from codeplex'; exit 99; }
@@ -223,6 +222,7 @@ cp ../Binaries/Release$BITNESS/libcasablanca.so /usr/lib || exit 9
 ldconfig || exit 9
 mkdir $HOME/local/include/casablanca || exit 9
 cp -r include/* $HOME/local/include/casablanca || exit 9
+echo '---- Going back to webconnect ----'
 popd
 cd wsgate/ || exit 99
 make -f Makefile.am || exit 10
