@@ -195,7 +195,7 @@ echo '---- Checking out ehs trunk code ----'
 svn checkout svn://svn.code.sf.net/p/ehs/code/trunk ehs-code || { echo 'Unable to download ehs from svn'; exit 99; }
 cd ehs-code || exit 99
 make -f Makefile.am || exit 4
-./configure --with-ssl --prefix=/usr --libdir/usr/lib$BITNESS || exit 4
+./configure --with-ssl --prefix=/usr || exit 4
 echo '---- Starting ehs build ----'
 make || exit 4
 echo '---- Finished building ehs ----'
