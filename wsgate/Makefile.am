@@ -22,7 +22,8 @@ wsgate_SOURCES = \
 	RDP.cpp \
 	Update.cpp \
 	Primary.cpp \
-	Png.cpp
+	Png.cpp \
+	nova_token_auth.cpp
 
 wsgate_CPPFLAGS = \
 	-DBINDHELPER_PATH=\"$(pkglibexecdir)/bindhelper$(EXEEXT)\" \
@@ -49,11 +50,12 @@ noinst_HEADERS = \
 	Update.hpp \
 	Primary.hpp \
 	NTService.hpp \
-	Png.hpp
+	Png.hpp \
+	nova_token_auth.hpp
 
 sysconf_DATA = wsgate.ini wsgate.ini.sample
 
-# Extra stuff to distribute in tarball 
+# Extra stuff to distribute in tarball
 EXTRA_DIST = $(DX_CONFIG) conf/wsgate.spec \
 	tools/yuicompressor.jar tools/strip-debug.pl \
 	wsgate.ini.sample.in logging.mc conf/logrotate conf/rsyslog \

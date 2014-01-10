@@ -100,6 +100,8 @@ AC_CHECK_LIB(bfd, bfd_openr, [BFDLIB1="-lbfd"])
 AC_CHECK_LIB(iberty, cplus_demangle, [BFDLIB2="-liberty"])
 havessl=$ac_cv_lib_ssl_SSL_library_init$ac_cv_lib_crypto_ERR_free_strings
 
+WSGATE_LDADD="$WSGATE_LDADD -lcasablanca"
+
 AC_MSG_CHECKING([whether to build with SSL support])
 withval=AUTO
 AC_ARG_WITH([ssl],AS_HELP_STRING([--with-ssl],[compile with SSL support (requires OpenSSL)]))
@@ -286,13 +288,13 @@ AC_LANG_POP
 AC_SUBST([USE_UNIQUE_PTR])
 
 CFLAGS="$CFLAGS -I$HOME/local/include -I$HOME/local/include/ehs -I$HOME/local/include/freerdp"
-CXXFLAGS="$CXXFLAGS -I$HOME/local/include -I$HOME/local/include/ehs -I$HOME/local/include/freerdp"
+CXXFLAGS="$CXXFLAGS -std=c++11 -I$HOME/local/include -I$HOME/local/include/ehs -I$HOME/local/include/freerdp -I$HOME/local/include/casablanca"
 CPPFLAGS="$CPPFLAGS -I$HOME/local/include -I$HOME/local/include/ehs -I$HOME/local/include/freerdp"
 LDFLAGS="$LDFLAGS -L$HOME/local/lib -L$HOME/local/lib64 -Wl,--rpath -Wl,$HOME/local/lib64 -Wl,--rpath -Wl,$HOME/local/lib"
 
 AC_LANG_PUSH([C++])
 AC_CHECK_LIB(ehs,getEHSconfig,[WSGATE_LDADD="$WSGATE_LDADD -lehs"],,$BOOST_REGEX_LIBS)
-AC_CHECK_HEADERS([ehs.h]) AC_LANG_POP 
+AC_CHECK_HEADERS([ehs.h]) AC_LANG_POP
 if test "$ac_cv_lib_ehs_getEHSconfig$ac_cv_header_ehs_h" != "yesyes" ; then
     AC_MSG_ERROR([Mandatory EHS development package not found])
 fi
