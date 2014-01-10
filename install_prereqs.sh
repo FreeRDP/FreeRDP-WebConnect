@@ -21,9 +21,17 @@ fi
 DISTRO=`grep -ihs "buntu\|SUSE\|Fedora\|Debian\|CentOS" /etc/{issue,*release,*version}`
 case $DISTRO in
 	*buntu*)
-		echo 'Ubuntu not yet supported! Please install prereqs by hand:'
-		echo 'git, svn-devel, autotools, gcc, g++, boost, openssl-devel and libpng-devel. For tracing to work, libdwarf is also required'
-		exit 1
+		echo 'Ubuntu detected. Installing required packages...'
+		echo | sudo add-apt-repository ppa:ubuntu-toolchain-r/test  
+		sudo apt-get update  
+		apt-get install -y build-essential g++-4.8 libxml++2.6-dev libssl-dev \
+		libboost1.48-all-dev libpng-dev libdwarf-dev subversion subversion-tools \
+		autotools-dev autoconf libtool cmake
+		# replace old gcc/g++ with new one
+		sudo rm /usr/bin/g++  
+		sudo ln -s /usr/bin/g++-4.8 /usr/bin/g++  
+		sudo rm /usr/bin/gcc  
+		sudo ln -s /usr/bin/gcc-4.8 /usr/bin/gcc 
 		;;
 	Fedora*)
 		echo 'Fedora detected.Installing required packages...'
@@ -31,7 +39,9 @@ case $DISTRO in
 		openssl-devel boost-devel libpng-devel elfutils-devel
 		;;
 	SUSE*)
-		echo 'SUSE detected. Installing required packages...'
+		echo 'SUSE not yet supported! Please install prereqs by hand:'
+		echo 'git, svn-devel, autotools, gcc, g++, boost, openssl-devel and libpng-devel. For tracing to work, libdwarf is also required'
+		exit 1
 		;;
 	CentOS*6*)
 		echo 'CentOS detected. Installing required packages...'
@@ -90,73 +100,11 @@ case $DISTRO in
 		fi
 		
 		if [[ $response_install == 'y' || $force_all == 1 ]]; then
-			if [[ $(uname -m) == 'x86_64' ]]; then
-				wget mirror.centos.org/centos/6/os/x86_64/Packages/autoconf-2.63-5.1.el6.noarch.rpm && yum install -y autoconf-2.63-5.1.el6.noarch.rpm
-				rm -f autoconf-2.63-5.1.el6.noarch.rpm
-			else
-				wget mirror.centos.org/centos/6/os/i386/Packages/autoconf-2.63-5.1.el6.noarch.rpm && yum install -y autoconf-2.63-5.1.el6.noarch.rpm
-				rm -f autoconf-2.63-5.1.el6.noarch.rpm
-			fi
+			rpm -ivh wsgate/deps/rpms/autoconf-2.69-12.2.noarch.rpm
 		fi
 		
-		
-		yum list installed | grep -i automake
-		if [ $? -eq 0 ]; then
-			if [[ $force_all == 0 ]]; then
-				echo -n 'automake is already installed. CentOS 6.4 uses an old version of automake. Do you wish to remove the current version and get a newer one? [y/N]'
-				read response_remove
-				echo ''
-				if [[ $response_remove == 'y' ]]; then
-					yum -y remove automake
-					response_install='y'
-				else
-					echo -n 'Do you still wish to install the newer version? [y/N]'
-					read response_install
-				fi
-			else
-				yum -y remove automake
-				response_install='y'
-			fi
-		fi
-		
-		if [[ $response_install == 'y' || $force_all == 1 ]]; then
-			if [[ $(uname -m) == 'x86_64' ]]; then
-				wget mirror.centos.org/centos/6/os/x86_64/Packages/automake-1.11.1-4.el6.noarch.rpm && yum install -y automake-1.11.1-4.el6.noarch.rpm
-				rm -f automake-1.11.1-4.el6.noarch.rpm
-			else
-				wget mirror.centos.org/centos/6/os/i386/Packages/automake-1.11.1-4.el6.noarch.rpm && yum install -y automake-1.11.1-4.el6.noarch.rpm
-				rm -f automake-1.11.1-4.el6.noarch.rpm
-			fi
-		fi	
-		
-		yum list installed | grep -i libtool
-		if [ $? -eq 0 ]; then
-			if [[ $force_all == 0 ]]; then
-				echo -n 'libtool is already installed. CentOS 6.4 uses an old version of libtool. Do you wish to remove the current version and get a newer one? [y/N]'
-				read response_remove
-				echo ''
-				if [[ $response_remove == 'y' ]]; then
-					yum -y remove libtool
-					response_install='y'
-				else
-					echo -n 'Do you still wish to install the newer version? [y/N]'
-					read response_install
-				fi
-			else
-				yum -y remove libtool
-				response_install='y'
-			fi
-		fi
-		
-		if [[ $response_install == 'y' || $force_all == 1 ]]; then
-			if [[ $(uname -m) == 'x86_64' ]]; then
-				wget mirror.centos.org/centos/6/os/x86_64/Packages/libtool-2.2.6-15.5.el6.x86_64.rpm && yum install -y libtool-2.2.6-15.5.el6.x86_64.rpm
-				rm -f libtool-2.2.6-15.5.el6.x86_64.rpm
-			else
-				wget mirror.centos.org/centos/6/os/i386/Packages/libtool-2.2.6-15.5.el6.i686.rpm && yum install -y libtool-2.2.6-15.5.el6.i686.rpm
-				rm -f libtool-2.2.6-15.5.el6.i686.rpm
-			fi
-		fi
+		# autoconf is a prereq of automake
+		yum install -y automake libtool
 		;;
 	CentOS*5*)
 		echo 'CentOS 5 not yet supported! Please install prereqs by hand:'
