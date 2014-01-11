@@ -16,6 +16,7 @@ fi
 
 function cleanup()
 {
+
 	if [ -d $HOME/prereqs ]; then
 		rm -rf $HOME/prereqs
 	fi
@@ -72,22 +73,22 @@ function exit_handler()
 				echo 'After that, run the script without the --install-deps flag'
 				;;
 			4) 	echo 'Unable to build ehs package. Cleaning up and exiting...'
-				cleanup
+				#cleanup
 				;;
 			5) 	echo "Unable to install ehs package into $HOME/local. Cleaning up and exiting..."
-				cleanup
+				#cleanup
 				;;
 			6) 	echo 'Unable to build FreeRDP package. Cleaning up and exiting...'
-				cleanup
+				#cleanup
 				;;
 			7)	echo "Unable to install FreeRDP package into $HOME/local. Cleaning up and exiting..."
-				cleanup
+				#cleanup
 				;;
 			8)	echo "Unable to build FreeRDP-WebConnect. Cleaning up and exiting..."
-				cleanup
+				#cleanup
 				;;
 			99) echo 'Internal error. Make sure you have an internet connection and that nothing is interfering with this script before running again (broken/rooted system or something deleting parts of the file-tree in mid-process).'
-				cleanup
+				#cleanup
 				;;
 			*)	echo 'Unknown error exit. Should not have happened.'
 				;;
@@ -111,7 +112,7 @@ if [[ $# -gt 0 ]]; then
 			-i|--install-deps) install_deps=1 ; shift ;;
 			-d|--delete-packages) delete_packages=1 ; shift ;;
 			-h|--help) echo "$USAGE"; exit 0;;
-			-c|--clean) echo 'Cleaning up'; cleanup; exit 0;;
+			-c|--clean) echo 'Temporarily removed clean-up'; exit 0;;
 			--) shift ; break ;;
 			*) echo "Internal error while parsing command-line. Exiting..." ; exit 1 ;;
 		esac
@@ -195,7 +196,7 @@ echo '---- Checking out ehs trunk code ----'
 svn checkout svn://svn.code.sf.net/p/ehs/code/trunk ehs-code || { echo 'Unable to download ehs from svn'; exit 99; }
 cd ehs-code || exit 99
 make -f Makefile.am || exit 4
-./configure --with-ssl --prefix=/usr || exit 4
+./configure --with-ssl || exit 4
 echo '---- Starting ehs build ----'
 make || exit 4
 echo '---- Finished building ehs ----'
@@ -211,16 +212,26 @@ cd .. || exit 99
 echo '---- Checking out freerdp master ----'
 git clone https://github.com/FreeRDP/FreeRDP.git || { echo 'Unable to download FreeRDP from github'; exit 99; }
 cd FreeRDP || exit 99
-mkdir -p build && cd build && cmake -DCMAKE_INSTALL_PREFIX=/usr .. || exit 6
+mkdir -p build && cd build && cmake -DCMAKE_INSTALL_PREFIX=/usr/local .. || exit 6
 echo '---- Building freerdp ----'
 make || exit 6
 echo '---- Finished building freerdp ----'
 if [[ sudo_present -eq 1 ]]; then
 	echo 'sudo available. Please enter your password to install freerdp: '
 	sudo make install || exit 7
+	if [ -d /etc/ld.so.conf.d ]; then
+		sudo touch /etc/ld.so.conf.d/freerdp.conf
+		sudo echo '/usr/local/lib/x86_64-linux-gnu' > /etc/ld.so.conf.d/freerdp.conf
+		sudo ldconfig
+	fi
 else
 	echo 'sudo command unavailable. Please enter root password to install freerdp'
 	su -c make install || exit 7
+	if [ -d /etc/ld.so.conf.d ]; then
+		su -c touch /etc/ld.so.conf.d/freerdp.conf
+		su -c echo '/usr/local/lib/x86_64-linux-gnu' > /etc/ld.so.conf.d/freerdp.conf
+		su -c ldconfig
+	fi
 fi
 echo '---- Finished installing freerdp ----'
 cd ../.. || exit 99
@@ -232,13 +243,13 @@ if [[ sudo_present -eq 1 ]]; then
 	echo 'sudo available. Please enter your password to install casablanca: '
 	sudo cp ../Binaries/Release$BITNESS/libcasablanca.so /usr/lib || exit 9
 	sudo ldconfig || exit 9
-	sudo mkdir /usr/include/casablanca || exit 9
+	sudo mkdir -p /usr/include/casablanca || exit 9
 	sudo cp -r include/* /usr/include/casablanca || exit 9
 else
 	echo 'sudo command unavailable. Please enter root password to install casablanca'
 	su -c cp ../Binaries/Release$BITNESS/libcasablanca.so /usr/lib$BITNESS || exit 9
 	su -c ldconfig || exit 9
-	su -c mkdir /usr/include/casablanca || exit 9
+	su -c mkdir -p /usr/include/casablanca || exit 9
 	su -c cp -r include/* /usr/include/casablanca || exit 9
 fi
 echo '---- Going back to webconnect ----'
