@@ -211,7 +211,7 @@ cd .. || exit 99
 echo '---- Checking out freerdp master ----'
 git clone https://github.com/FreeRDP/FreeRDP.git || { echo 'Unable to download FreeRDP from github'; exit 99; }
 cd FreeRDP || exit 99
-mkdir -p build && cd build && cmake .. || exit 6
+mkdir -p build && cd build && cmake -DCMAKE_INSTALL_PREFIX=/usr/local .. || exit 6
 echo '---- Building freerdp ----'
 make || exit 6
 echo '---- Finished building freerdp ----'
