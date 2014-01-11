@@ -190,38 +190,57 @@ pushd $HOME || exit 99
 
 # Downloading ehs and FreeRDP source code in $HOME/prereqs
 mkdir -p prereqs || exit 99
-# Installing ehs and FreeRDP libs and headers into $HOME/local
-mkdir -p local || exit 99
 cd prereqs || exit 99
 echo '---- Checking out ehs trunk code ----'
 svn checkout svn://svn.code.sf.net/p/ehs/code/trunk ehs-code || { echo 'Unable to download ehs from svn'; exit 99; }
 cd ehs-code || exit 99
 make -f Makefile.am || exit 4
-./configure --with-ssl --prefix=$HOME/local --libdir=$HOME/local/lib$BITNESS || exit 4
+./configure --with-ssl --prefix=/usr || exit 4
 echo '---- Starting ehs build ----'
 make || exit 4
 echo '---- Finished building ehs ----'
-make install || exit 5
+if [[ sudo_present -eq 1 ]]; then
+	echo 'sudo available. Please enter your password to install ehs: '
+	sudo make install || exit 5
+else
+	echo 'sudo command unavailable. Please enter root password to install ehs'
+	su -c make install
+fi
 echo '---- Finished installing ehs ----'
 cd .. || exit 99
 echo '---- Checking out freerdp master ----'
 git clone https://github.com/FreeRDP/FreeRDP.git || { echo 'Unable to download FreeRDP from github'; exit 99; }
 cd FreeRDP || exit 99
-mkdir -p build && cd build && cmake -DCMAKE_INSTALL_PREFIX=$HOME/local .. || exit 6
+mkdir -p build && cd build && cmake -DCMAKE_INSTALL_PREFIX=/usr .. || exit 6
 echo '---- Building freerdp ----'
 make || exit 6
 echo '---- Finished building freerdp ----'
-make install || exit 7
+if [[ sudo_present -eq 1 ]]; then
+	echo 'sudo available. Please enter your password to install freerdp: '
+	sudo make install || exit 7
+else
+	echo 'sudo command unavailable. Please enter root password to install freerdp'
+	su -c make install || exit 7
+fi
 echo '---- Finished installing freerdp ----'
 cd ../.. || exit 99
 echo '---- Checking out casablanca master ----'
 git clone https://git01.codeplex.com/casablanca  || { echo 'Unable to download casablanca from codeplex'; exit 99; }
 cd casablanca/Release || exit 99
 make release || exit 8
-cp ../Binaries/Release$BITNESS/libcasablanca.so /usr/lib || exit 9
-ldconfig || exit 9
-mkdir $HOME/local/include/casablanca || exit 9
-cp -r include/* $HOME/local/include/casablanca || exit 9
+if [[ sudo_present -eq 1 ]]; then
+	echo 'sudo available. Please enter your password to install casablanca: '
+	sudo cp ../Binaries/Release$BITNESS/libcasablanca.so /usr/lib || exit 9
+	sudo ldconfig || exit 9
+	sudo mkdir /usr/include/casablanca || exit 9
+	sudo cp -r include/* /usr/include/casablanca || exit 9
+else
+	echo 'sudo command unavailable. Please enter root password to install casablanca'
+	su -c cp ../Binaries/Release$BITNESS/libcasablanca.so /usr/lib$BITNESS || exit 9
+	su -c ldconfig || exit 9
+	su -c mkdir /usr/include/casablanca || exit 9
+	su -c cp -r include/* /usr/include/casablanca || exit 9
+fi
 echo '---- Going back to webconnect ----'
 popd
 cd wsgate/ || exit 99
@@ -230,4 +249,3 @@ make -f Makefile.am || exit 10
 echo '---- Building webconnect ----'
 make || exit 10
 echo '---- Finished successfully ----'
-echo '---- To run please use `cd wsgate && ./wsgate -c wsgate.mrd.ini` and connect on localhost:8888 ----'

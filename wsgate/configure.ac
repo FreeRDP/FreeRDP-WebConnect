@@ -287,10 +287,10 @@ void mv(std::unique_ptr<foo>p) { int v = p->bar; }]],
 AC_LANG_POP
 AC_SUBST([USE_UNIQUE_PTR])
 
-CFLAGS="$CFLAGS -I$HOME/local/include -I$HOME/local/include/ehs -I$HOME/local/include/freerdp"
-CXXFLAGS="$CXXFLAGS -std=c++11 -I$HOME/local/include -I$HOME/local/include/ehs -I$HOME/local/include/freerdp -I$HOME/local/include/casablanca"
-CPPFLAGS="$CPPFLAGS -I$HOME/local/include -I$HOME/local/include/ehs -I$HOME/local/include/freerdp"
-LDFLAGS="$LDFLAGS -L$HOME/local/lib -L$HOME/local/lib64 -Wl,--rpath -Wl,$HOME/local/lib64 -Wl,--rpath -Wl,$HOME/local/lib"
+CFLAGS="$CFLAGS -I/usr/include -I/usr/include/ehs -I/usr/include/freerdp"
+CXXFLAGS="$CXXFLAGS -std=c++11 -I/usr/include -I/usr/include/ehs -I/usr/include/freerdp -I/usr/include/casablanca"
+CPPFLAGS="$CPPFLAGS -I/usr/include -I$HOME/local/include/ehs -I$HOME/local/include/freerdp"
+LDFLAGS="$LDFLAGS -L/usr/lib -L/usr/lib64 -Wl,--rpath -Wl,/usr/lib64 -Wl,--rpath -Wl,/usr/lib"
 
 AC_LANG_PUSH([C++])
 AC_CHECK_LIB(ehs,getEHSconfig,[WSGATE_LDADD="$WSGATE_LDADD -lehs"],,$BOOST_REGEX_LIBS)
