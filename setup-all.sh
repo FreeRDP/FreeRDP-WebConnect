@@ -16,6 +16,7 @@ fi
 
 function cleanup()
 {
+
 	if [ -d $HOME/prereqs ]; then
 		rm -rf $HOME/prereqs
 	fi
@@ -72,22 +73,22 @@ function exit_handler()
 				echo 'After that, run the script without the --install-deps flag'
 				;;
 			4) 	echo 'Unable to build ehs package. Cleaning up and exiting...'
-				cleanup
+				#cleanup
 				;;
 			5) 	echo "Unable to install ehs package into $HOME/local. Cleaning up and exiting..."
-				cleanup
+				#cleanup
 				;;
 			6) 	echo 'Unable to build FreeRDP package. Cleaning up and exiting...'
-				cleanup
+				#cleanup
 				;;
 			7)	echo "Unable to install FreeRDP package into $HOME/local. Cleaning up and exiting..."
-				cleanup
+				#cleanup
 				;;
 			8)	echo "Unable to build FreeRDP-WebConnect. Cleaning up and exiting..."
-				cleanup
+				#cleanup
 				;;
 			99) echo 'Internal error. Make sure you have an internet connection and that nothing is interfering with this script before running again (broken/rooted system or something deleting parts of the file-tree in mid-process).'
-				cleanup
+				#cleanup
 				;;
 			*)	echo 'Unknown error exit. Should not have happened.'
 				;;
@@ -111,7 +112,7 @@ if [[ $# -gt 0 ]]; then
 			-i|--install-deps) install_deps=1 ; shift ;;
 			-d|--delete-packages) delete_packages=1 ; shift ;;
 			-h|--help) echo "$USAGE"; exit 0;;
-			-c|--clean) echo 'Cleaning up'; cleanup; exit 0;;
+			-c|--clean) echo 'Temporarily removed clean-up'; exit 0;;
 			--) shift ; break ;;
 			*) echo "Internal error while parsing command-line. Exiting..." ; exit 1 ;;
 		esac
