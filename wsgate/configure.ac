@@ -290,7 +290,7 @@ AC_SUBST([USE_UNIQUE_PTR])
 CFLAGS="$CFLAGS -I/usr/local/include -I/usr/local/include/ehs -I/usr/local/include/freerdp -I/usr/local/casablanca"
 CXXFLAGS="$CXXFLAGS -std=c++11 -I/usr/local/include -I/usr/local/include/ehs -I/usr/local/include/freerdp -I/usr/include/casablanca"
 CPPFLAGS="$CPPFLAGS -I/usr/local/include -I/usr/local/include/ehs -I/usr/local/include/freerdp -I/usr/include/casablanca"
-LDFLAGS="$LDFLAGS -L/usr/lib -L/usr/lib64 -L/usr/local/lib -L/usr/local/lib64 -Wl,--rpath -Wl,/usr/lib64 -Wl,--rpath -Wl,/usr/lib -Wl,--rpath -Wl,/usr/local/lib64 -Wl,--rpath -Wl,/usr/local/lib"
+LDFLAGS="$LDFLAGS -L/usr/lib -L/usr/lib64 -L/usr/local/lib -L/usr/local/lib64 -L/usr/local/lib/x86_64-linux-gnu -Wl,--rpath -Wl,/usr/lib64 -Wl,--rpath -Wl,/usr/lib -Wl,--rpath -Wl,/usr/local/lib64 -Wl,--rpath -Wl,/usr/local/lib -Wl,--rpath -Wl,/usr/local/lib/x86_64-linux-gnu"
 
 AC_LANG_PUSH([C++])
 AC_CHECK_LIB(ehs,getEHSconfig,[WSGATE_LDADD="$WSGATE_LDADD -lehs"],,$BOOST_REGEX_LIBS)

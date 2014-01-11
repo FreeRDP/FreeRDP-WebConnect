@@ -219,9 +219,19 @@ echo '---- Finished building freerdp ----'
 if [[ sudo_present -eq 1 ]]; then
 	echo 'sudo available. Please enter your password to install freerdp: '
 	sudo make install || exit 7
+	if [ -d /etc/ld.so.conf.d ]; then
+		sudo touch /etc/ld.so.conf.d/freerdp.conf
+		sudo echo '/usr/local/lib/x86_64-linux-gnu' > /etc/ld.so.conf.d/freerdp.conf
+		sudo ldconfig
+	fi
 else
 	echo 'sudo command unavailable. Please enter root password to install freerdp'
 	su -c make install || exit 7
+	if [ -d /etc/ld.so.conf.d ]; then
+		su -c touch /etc/ld.so.conf.d/freerdp.conf
+		su -c echo '/usr/local/lib/x86_64-linux-gnu' > /etc/ld.so.conf.d/freerdp.conf
+		su -c ldconfig
+	fi
 fi
 echo '---- Finished installing freerdp ----'
 cd ../.. || exit 99
