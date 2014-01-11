@@ -36,11 +36,9 @@ case $DISTRO in
 		;;
 	*buntu*13*)
 		echo 'Ubuntu 13.10 detected. Installing required packages...'
-		apt-get install -y python-software-properties
-		echo | add-apt-repository ppa:ubuntu-toolchain-r/test  
 		apt-get update  
 		apt-get install -y build-essential g++-4.8 libxml++2.6-dev libssl-dev \
-		libboost1.49-all-dev libpng-dev libdwarf-dev subversion subversion-tools \
+		libboost1.49-all-dev libpng-dev libdwarf-dev subversion subversion-tools svn2cl \
 		autotools-dev autoconf libtool cmake
 		# replace old gcc/g++ with new one
 		rm /usr/bin/g++  
