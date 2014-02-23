@@ -105,7 +105,7 @@ json::value nova_console_token_auth_impl::get_console_token_data(
     jsonRequestBody[U("os-getConsoleConnectInfo")] = json::value::null();
 
     http::uri_builder console_token_uri;
-    console_token_uri.append(U("console-auth-tokens"));
+    console_token_uri.append(U("os-console-auth-tokens"));
     console_token_uri.append(consoleToken);
     console_token_uri.append(U("action"));
 
