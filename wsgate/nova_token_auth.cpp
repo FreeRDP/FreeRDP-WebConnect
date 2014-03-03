@@ -101,20 +101,16 @@ json::value nova_console_token_auth_impl::get_console_token_data(
 {
     http::client::http_client client(novaUrl);
 
-    auto jsonRequestBody = json::value::object();
-    jsonRequestBody[U("os-getConsoleConnectInfo")] = json::value::null();
-
     http::uri_builder console_token_uri;
     console_token_uri.append(U("os-console-auth-tokens"));
     console_token_uri.append(consoleToken);
     console_token_uri.append(U("action"));
 
-    http::http_request request(http::methods::POST);
+    http::http_request request(http::methods::GET);
     request.set_request_uri(console_token_uri.to_string());
     request.headers().add(U("X-Auth-Token"), authToken);
     request.headers().add(http::header_names::accept, U("application/json"));
     request.headers().set_content_type(U("application/json"));
-    request.set_body(jsonRequestBody);
 
     return execute_request_and_get_json_value(client, request);
 }
