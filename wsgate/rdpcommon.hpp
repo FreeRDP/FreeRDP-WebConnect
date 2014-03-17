@@ -83,7 +83,8 @@ namespace wsgate {
     typedef enum {
         WSOP_CS_MOUSE,
         WSOP_CS_KUPDOWN,
-        WSOP_CS_KPRESS
+        WSOP_CS_KPRESS,
+        WSOP_CS_SPECIALCOMB
     } WsOPcs;
 
     /**

@@ -188,6 +188,35 @@ wsgate.RDP = new Class( {
     Disconnect: function() {
         this._reset();
     },
+    SendKey: function(comb) {
+	//Add here all the keys from the canvas
+        switch (comb){
+	    case 1:
+                code = 0x2a; //ctrl+alt+delete 
+		break;
+	    case 2:
+                code = 0x2b; //alt+tab
+		break;
+	    case 3:
+                code = 0x2c; //shift+alt
+		break;
+	    case 4:
+                code = 0x2e; //ctrl + C
+		break;
+	    case 5:
+                code = 0x2f; //ctrl + V 
+		break;
+	};
+        if (this.sock.readyState == this.sock.OPEN) {
+            this.log.debug('send  special combination', code);
+            buf = new ArrayBuffer(12);
+            a = new Uint32Array(buf);
+            a[0] = 3; // WSOP_CS_SPECIALCOMB
+	    a[1] = code;
+            this.sock.send(buf);
+
+	};
+    },
     /**
      * Position cursor image
      */
