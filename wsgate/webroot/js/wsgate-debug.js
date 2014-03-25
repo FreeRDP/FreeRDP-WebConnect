@@ -195,16 +195,13 @@ wsgate.RDP = new Class( {
                 code = 0x2a; //ctrl+alt+delete 
 		break;
 	    case 2:
-                code = 0x2b; //alt+tab
+                code = 0x2b; //shift+alt
 		break;
 	    case 3:
-                code = 0x2c; //shift+alt
+                code = 0x2c; //ctrl + C
 		break;
 	    case 4:
-                code = 0x2e; //ctrl + C
-		break;
-	    case 5:
-                code = 0x2f; //ctrl + V 
+                code = 0x2e; //ctrl + V 
 		break;
 	};
         if (this.sock.readyState == this.sock.OPEN) {

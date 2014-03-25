@@ -474,38 +474,34 @@ namespace wsgate {
                         
                         const wsmsg *m = reinterpret_cast<const wsmsg *>(data.data());
                         log::debug << "Special combination sent: " << m->code << endl;
-			uint32_t tcode1, tcode2, tcode3  = 0;
+			            uint32_t tcode1, tcode2, tcode3  = 0;
                         switch (m->code){ 
-			    case 42:    //ctrl+alt+delete
-	                        tcode1 = RDP_SCANCODE_LCONTROL; 
-				tcode2 = RDP_SCANCODE_LMENU;
-				tcode3 = RDP_SCANCODE_DELETE;
-				break;
-			    case 43:    //alt+tab
-        	                tcode1 = RDP_SCANCODE_LMENU; 
-				tcode2 = RDP_SCANCODE_TAB;
-				break;
-			    case 44:    //alt+shift
-	                        tcode1 = RDP_SCANCODE_LMENU; 
-				tcode2 = RDP_SCANCODE_LSHIFT;
-				break;
-			    case 46:    //ctrl+C
-	                	tcode1 = RDP_SCANCODE_LCONTROL; 
-				tcode2 = RDP_SCANCODE_KEY_C;
-				break;
-			    case 47:    //ctrl+V
-	                        //using left control
-	                        tcode1 = RDP_SCANCODE_LCONTROL; 
-				tcode2 = RDP_SCANCODE_KEY_V;
-				break;
-			}
+			                case 42:    //ctrl+alt+delete
+	                            tcode1 = RDP_SCANCODE_LCONTROL; 
+                				tcode2 = RDP_SCANCODE_LMENU;
+                				tcode3 = RDP_SCANCODE_DELETE;
+                				break;
+			                case 43:    //alt+shift
+        	                    tcode1 = RDP_SCANCODE_LMENU; 
+                				tcode2 = RDP_SCANCODE_LSHIFT;
+                				break;
+            			    case 44:    //ctrl+C
+        	                	tcode1 = RDP_SCANCODE_LCONTROL; 
+                				tcode2 = RDP_SCANCODE_KEY_C;
+                				break;
+            			    case 46:    //ctrl+V
+	                            //using left control
+	                            tcode1 = RDP_SCANCODE_LCONTROL; 
+			                	tcode2 = RDP_SCANCODE_KEY_V;
+                				break;
+			                }
                         //send down signal for the keys
                         freerdp_input_send_keyboard_event(m_rdpInput, KBD_FLAGS_DOWN, tcode1);
                         freerdp_input_send_keyboard_event(m_rdpInput, KBD_FLAGS_DOWN, tcode2);
 
-			//aditional signal send/release for the delete key
-			if (m->code == 42){
-	                    freerdp_input_send_keyboard_event(m_rdpInput, KBD_FLAGS_DOWN, tcode3);
+			            //aditional signal send/release for the delete key
+			            if (m->code == 42){
+	                        freerdp_input_send_keyboard_event(m_rdpInput, KBD_FLAGS_DOWN, tcode3);
                             freerdp_input_send_keyboard_event(m_rdpInput, KBD_FLAGS_RELEASE, tcode3);
                         } 
 		    
