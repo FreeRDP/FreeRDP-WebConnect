@@ -158,7 +158,7 @@ namespace wsgate {
     0, /* 108 */
     RDP_SCANCODE_SUBTRACT, /* 109 */
     RDP_SCANCODE_DELETE, /* 110 */
-    RDP_SCANCODE_DECIMAL, /* 111 */
+    RDP_SCANCODE_DIVIDE, /* 111 */
     RDP_SCANCODE_F1, /* 112 */
     RDP_SCANCODE_F2, /* 113 */
     RDP_SCANCODE_F3, /* 114 */
