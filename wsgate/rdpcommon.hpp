@@ -20,6 +20,10 @@
 #ifndef _WSGATE_RDPCOMMON_H_
 #define _WSGATE_RDPCOMMON_H_
 
+#ifdef _WIN32
+#define __PRETTY_FUNCTION__ __FILE__":" << __LINE__
+#endif
+
 extern "C" {
 #include <freerdp/input.h>
 #include <freerdp/gdi/gdi.h>

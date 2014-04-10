@@ -169,8 +169,13 @@ namespace tracing {
 # ifdef USE_DWARF
             dwarf_tracer tracer;
 # else
+#ifdef _WIN32
+#pragma message("Neither libbfd nor libdwarf are available, so no backtracing enabled")
+			dummy_tracer tracer;
+#else
 # warning Neither libbfd nor libdwarf are available, so no backtracing enabled
-            dummy_tracer tracer;
+			dummy_tracer tracer;
+#endif
 # endif
 #endif
     };
