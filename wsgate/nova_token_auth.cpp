@@ -131,7 +131,11 @@ json::value nova_console_token_auth_impl::get_console_token_data(
 
     http::http_request request(http::methods::GET);
     request.set_request_uri(console_token_uri.to_string());
+#ifdef _WIN32
+	request.headers().add(U("X-Auth-Token"), utility::conversions::to_string_t(authToken));
+#else
     request.headers().add(U("X-Auth-Token"), authToken);
+#endif
     request.headers().add(http::header_names::accept, U("application/json"));
     request.headers().set_content_type(U("application/json"));
 
