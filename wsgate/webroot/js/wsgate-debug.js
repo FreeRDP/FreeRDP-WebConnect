@@ -163,7 +163,7 @@ wsgate.RDP = new Class( {
         this.mY = 0;
         this.chx = 10;
         this.chy = 10;
-        this.modkeys = [8, 16, 17, 18, 20, 144, 145];
+        this.modkeys = [144, ];
         this.cursors = new Array();
         this.sid = null;
         this.open = false;
@@ -788,17 +788,16 @@ wsgate.RDP = new Class( {
      */
     onKd: function(evt) {
         var a, buf;
-        if (this.modkeys.contains(evt.code)) {
-            evt.preventDefault();
-            // this.log.debug('kD code: ', evt.code, ' ', evt);
-            if (this.sock.readyState == this.sock.OPEN) {
-                buf = new ArrayBuffer(12);
-                a = new Uint32Array(buf);
-                a[0] = 1; // WSOP_CS_KUPDOWN
-                a[1] = 1; // down
-                a[2] = evt.code;
-                this.sock.send(buf);
-            }
+	this.log.debug('kD code: ', evt.code, ' ', evt);
+        evt.preventDefault();
+        // this.log.debug('kD code: ', evt.code, ' ', evt);
+        if (this.sock.readyState == this.sock.OPEN) {
+            buf = new ArrayBuffer(12);
+            a = new Uint32Array(buf);
+            a[0] = 1; // WSOP_CS_KUPDOWN
+            a[1] = 1; // down
+            a[2] = evt.code;
+            this.sock.send(buf);
         }
     },
     /**
@@ -806,19 +805,16 @@ wsgate.RDP = new Class( {
      */
     onKu: function(evt) {
         var a, buf;
-        if (this.modkeys.contains(evt.code)) {
-            evt.preventDefault();
-            // this.log.debug('kU code: ', evt.code);
-            if (this.sock.readyState == this.sock.OPEN) {
-                buf = new ArrayBuffer(12);
-                a = new Uint32Array(buf);
-                a[0] = 1; // WSOP_CS_KUPDOWN
-                a[1] = 0; // up
-                a[2] = evt.code;
-                this.sock.send(buf);
-            }
-        }
-    },
+        evt.preventDefault();
+        this.log.debug('ku code: ', evt.code, ' ', evt);
+        if (this.sock.readyState == this.sock.OPEN) {
+            buf = new ArrayBuffer(12);
+            a = new Uint32Array(buf);
+            a[0] = 1; // WSOP_CS_KUPDOWN
+            a[1] = 0; // up
+            a[2] = evt.code;
+            this.sock.send(buf);
+        }    },
     /**
      * Event handler for virtual keyboard
      */
@@ -848,7 +844,8 @@ wsgate.RDP = new Class( {
      * Event handler for key pressed events
      */
     onKp: function(evt) {
-        var a, buf;
+	return;
+/*        var a, buf;
         evt.preventDefault();
         if (this.modkeys.contains(evt.code)) {
             return;
@@ -861,7 +858,7 @@ wsgate.RDP = new Class( {
             a[1] = (evt.shift ? 1 : 0)|(evt.control ? 2 : 0)|(evt.alt ? 4 : 0)|(evt.meta ? 8 : 0);
             a[2] = evt.code;
             this.sock.send(buf);
-        }
+        }*/
     },
     /**
      * Event handler for WebSocket RX events
