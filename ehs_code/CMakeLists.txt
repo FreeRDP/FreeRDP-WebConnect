@@ -563,14 +563,14 @@ endif()
 include_directories(${CMAKE_CURRENT_SOURCE_DIR})
 
 set(EHS_SOURCES datum.cpp dynamicssllocking.cpp ehs.cpp formvalue.cpp httprequest.cpp
-			httpresponse.cpp osdep.cpp securesocket.cpp socket.cpp sslerror.cpp staticssllocking.cpp)
+   httpresponse.cpp osdep.cpp securesocket.cpp socket.cpp sslerror.cpp staticssllocking.cpp)
 
+set(EHS_HEADERS ${CMAKE_CURRENT_BINARY_DIR}/config.h  contentdisposition.h datum.h debug.h dynamicssllocking.h ehs.h 
+  ehsconnection.h ehsserver.h ehstypes.h httprequest.h httpresponse.h mutexhelper.h networkabstraction.h
+  securesocket.h socket.h sslerror.h staticssllocking.h)
 if (WIN32)
-	# in order for header files to appear in VS solution, add them to the sources list
-	set(EHS_SOURCES "${EHS_SOURCES}" ${CMAKE_CURRENT_BINARY_DIR}/config.h contentdisposition.h datum.h
-			debug.h dynamicssllocking.h ehs.h ehsconnection.h ehsserver.h ehstypes.h httprequest.h
-			httpresponse.h mutexhelper.h networkabstraction.h securesocket.h socket.h sslerror.h 
-			staticssllocking.h)
+ # in order for header files to appear in VS solution, add them to the sources list
+ set(EHS_SOURCES "${EHS_SOURCES}" ${EHS_HEADERS})
 endif()
 
 add_library(ehs STATIC ${EHS_SOURCES})
@@ -580,3 +580,6 @@ add_library(ehs STATIC ${EHS_SOURCES})
 target_link_libraries(ehs ${LIBS})
 
 set_target_properties(ehs PROPERTIES VERSION ${EHS_MAJOR_VERSION} SOVERSION ${EHS_VERSION})
+
+install(TARGETS ehs DESTINATION lib)
+install(FILES ${EHS_HEADERS} DESTINATION include)
