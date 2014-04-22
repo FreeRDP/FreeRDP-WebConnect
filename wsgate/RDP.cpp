@@ -233,10 +233,10 @@ namespace wsgate {
     0, /* 183 */
     0, /* 184 */
     0, /* 185 */
-    0, /* 186 */
-    0, /* 187 */
+	RDP_SCANCODE_OEM_COMMA, /* 186 */
+	RDP_SCANCODE_OEM_PLUS, /* 187 */
     RDP_SCANCODE_OEM_COMMA, /* 188 */
-    0, /* 189 */
+	RDP_SCANCODE_OEM_MINUS, /* 189 */
     RDP_SCANCODE_OEM_PERIOD, /* 190 */
     RDP_SCANCODE_OEM_2, /* 191 */
     RDP_SCANCODE_OEM_3, /* 192 */
