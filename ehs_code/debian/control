@@ -1,0 +1,29 @@
+Source: ehs
+Priority: extra
+Maintainer: Fritz Elfert <ehsdev@fritz-elfert.de>
+Build-Depends: debhelper (>= 8.0.0), autotools-dev, g++, libssl-dev, libdw-dev, libboost-dev, libboost-regex-dev, libpcre3-dev, libtool, doxygen, graphviz
+Standards-Version: 3.9.2
+Section: libs
+Homepage: http://ehs.fritz-elfert.de
+#Vcs-Git: git://git.debian.org/collab-maint/ehs.git
+#Vcs-Browser: http://git.debian.org/?p=collab-maint/ehs.git;a=summary
+
+Package: libehs-dev
+Section: libdevel
+Architecture: any
+Depends: libehs (= ${binary:Version})
+Description: Embedded HTTP server
+ Embedded HTTP Server (EHS) is a C++ class which can be inherited from in order
+ to give HTTP server functionality to any class or application. It supports form
+ data via POST or GET, and uploads via multi-part form attachments.
+ . 
+ This package provides headers, documentation and static libs.
+
+Package: libehs
+Section: libs
+Architecture: any
+Depends: ${shlibs:Depends}, ${misc:Depends}
+Description: Embedded HTTP server
+ Embedded HTTP Server (EHS) is a C++ class which can be inherited from in order
+ to give HTTP server functionality to any class or application. It supports form
+ data via POST or GET, and uploads via multi-part form attachments.

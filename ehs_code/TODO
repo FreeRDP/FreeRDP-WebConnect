@@ -1,0 +1,15 @@
+List of things to do in EHS:
+-----------------------------
+
+HTTP/1.1:
+chunked transfer encoding
+
+Monitoring:
+Logging should be much more customizalbe
+ -- logging to a seperate file
+ -- logging to a seperate process
+
+Locking:
+Create visualization tool for lock utilization
+ -- shows when locks are open/closed/under contention
+ -- uses logs/direct file write

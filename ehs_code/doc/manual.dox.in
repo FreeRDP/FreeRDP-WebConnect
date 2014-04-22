@@ -1,0 +1,62 @@
+/** \mainpage EHS
+ EHS is a library for embedding HTTP(S) support into a C++ application.\par
+ Copyright &copy; 2004 Zachary J. Hansen\par
+ Code cleanup, new features and bugfixes: Copyright &copy; 2010 Fritz Elfert\par
+    This library is free software; you can redistribute it and/or
+    modify it under the terms of the GNU Lesser General Public
+    License version 2.1 as published by the Free Software Foundation;\par
+    This library is distributed in the hope that it will be useful,
+    but <b>WITHOUT ANY WARRANTY</b>; without even the implied warranty of
+    <b>MERCHANTABILITY</b> or <b>FITNESS FOR A PARTICULAR PURPOSE</b>.  See the GNU
+    Lesser General Public License for more details.\par
+    You should have received a copy of the GNU Lesser General Public
+    License along with this library; if not, write to the Free Software
+    Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA\par
+    This can be found in the 'COPYING' file.\par
+
+\example ehs_simple.cpp
+The most simplistic example.
+This example simply responds with a text containing the current timestamp.
+
+\example ehs_testharness.cpp
+A little more useful.
+In this example, the HandleRequest method is reimplemented in order to produce a
+custom response.
+
+\example ehs_test.cpp
+Multiple instances serving different URI paths.
+This example shows, how multiple EHS instances can handle different URI paths.
+Furthermore, handling of cookies is demonstrated as well.
+
+\example ehs_formtest.cpp
+A simple form test.
+This example shows how to handle form data and use cookies.
+
+\example ehs_uploader.cpp
+A file upload form.
+This example shows how to implement a file upload.
+
+\example ehs_privport.cpp
+Binding do privileged ports.
+This example shows, how to use a BindHelper in order to bind to privileged ports.
+Before trying this, the bindhelper binary must be changed setuid-root.
+
+\example ehs_https.cpp
+Secure connections.
+
+\example ehs_mirror.cpp
+Serving the same content via two ports (HTTP and HTTPS).
+
+\example ehs_exception.cpp
+This example shows, how to handle excetions in your code.\par
+In your derived EHS class, reimplement EHS::HandleThreadException. Its return value
+determines, if EHS responds with an HTTP error response (return a response) or terminates (return NULL).
+In your main code, you should have a try/catch block around StartServer, the main loop and StopServer. The
+main loop should use EHS::ShouldTerminate to check for an eventual termination.
+
+\example ehs_basicauth.cpp
+This example shows how to handle basic authentication.
+
+\example ehs_wsgate.cpp
+A WebSockets gateway.
+*/
