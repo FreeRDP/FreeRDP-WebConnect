@@ -48,7 +48,7 @@ set(PNG_NAMES png libpng)
 
 # Try each search configuration.
 SET(CMAKE_FIND_LIBRARY_PREFIXES "")
-SET(CMAKE_FIND_LIBRARY_SUFFIXES ".lib" ".a")
+SET(CMAKE_FIND_LIBRARY_SUFFIXES ".lib" ".a" ".so")
 foreach(search ${_PNG_SEARCHES})
   find_path(PNG_INCLUDE_DIR NAMES png.h        ${${search}} PATH_SUFFIXES include)
   find_library(PNG_LIBRARY  NAMES ${PNG_NAMES} ${${search}} PATH_SUFFIXES lib)
