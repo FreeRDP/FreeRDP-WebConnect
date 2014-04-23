@@ -44,7 +44,7 @@ set(_PNG_SEARCH_NORMAL
   )
 list(APPEND _PNG_SEARCHES _PNG_SEARCH_NORMAL)
 
-set(PNG_NAMES png libpng)
+set(PNG_NAMES png libpng libpng16)
 
 # Try each search configuration.
 SET(CMAKE_FIND_LIBRARY_PREFIXES "")
