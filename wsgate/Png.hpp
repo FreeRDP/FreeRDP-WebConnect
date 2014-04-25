@@ -22,6 +22,9 @@
 
 #include <string>
 #include <png.h>
+#ifdef _WIN32
+#include <stdint.h>
+#endif
 
 #include "rdpcommon.hpp"
 

@@ -259,8 +259,20 @@
                     });
                     $('ctrlaltdelete').addEvent('click', function()
                     {
-                        //TODO: Add implementation
+                        rdp.SendKey(1);
                     });
+	            $('shiftalt').addEvent('click', function()
+                    {
+                        rdp.SendKey(2);
+                    });
+		    $('ctrlc').addEvent('click', function()
+		    {
+			rdp.SendKey(3);			
+		    });
+    		    $('ctrlv').addEvent('click', function()
+		    {
+			rdp.SendKey(4);
+		    });
                 }
             }
 
@@ -350,19 +362,15 @@
                     Ctrl+Alt+Delete
                 </li>
 
-                <li>
-                    Alt+Tab
-                </li>
-
-                <li>
+                <li id="shiftalt">
                     Shift+Alt
                 </li>
 
-                <li>
+                <li id="ctrlc">
                     Ctrl+C
                 </li>
 
-                <li>
+                <li id="ctrlv">
                     Ctrl+V
                 </li>
             </ul>

@@ -21,6 +21,10 @@
 # include "config.h"
 #endif
 
+#ifdef _WIN32
+#include <stdint.h>
+#endif
+
 #include "rdpcommon.hpp"
 #include "Update.hpp"
 

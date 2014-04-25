@@ -55,7 +55,7 @@ namespace wsgate {
     0, /* 5 */
     0, /* 6 */
     0, /* 7 */
-    VK_KEY_A, /* 8 */
+    RDP_SCANCODE_BACKSPACE, /* 8 */
     RDP_SCANCODE_TAB, /* 9 */
     VK_KEY_D, /* 10 */
     VK_KEY_F, /* 11 */
@@ -63,11 +63,11 @@ namespace wsgate {
     RDP_SCANCODE_RETURN, /* 13 */
     RDP_SCANCODE_BACKSPACE, /* 14 */
     VK_KEY_X, /* 15 */
-    VK_KEY_C, /* 16 */
+    RDP_SCANCODE_LSHIFT, /* 16 */
     RDP_SCANCODE_LCONTROL, /* 17 */
     RDP_SCANCODE_LMENU, /* 18 */
     RDP_SCANCODE_PAUSE, /* 19 */
-    VK_KEY_Q, /* 20 */
+    RDP_SCANCODE_CAPSLOCK, /* 20 */
     VK_KEY_W, /* 21 */
     VK_KEY_E, /* 22 */
     VK_KEY_R, /* 23 */
@@ -80,20 +80,20 @@ namespace wsgate {
     VK_KEY_6, /* 30 */
     VK_KEY_5, /* 31 */
     RDP_SCANCODE_SPACE, /* 32 */
-    RDP_SCANCODE_KEY_1, /* 33 */
-    RDP_SCANCODE_OEM_7, /* 34 */
-    RDP_SCANCODE_KEY_3, /* 35 */
-    RDP_SCANCODE_KEY_4, /* 36 */
-    RDP_SCANCODE_KEY_5, /* 37 */
-    RDP_SCANCODE_KEY_7, /* 38 */
-    RDP_SCANCODE_OEM_7, /* 39 */
-    RDP_SCANCODE_KEY_9, /* 40 */
+    RDP_SCANCODE_PRIOR, /* 33 */
+    RDP_SCANCODE_NEXT, /* 34 */
+    RDP_SCANCODE_END, /* 35 */
+    RDP_SCANCODE_HOME, /* 36 */
+    RDP_SCANCODE_LEFT, /* 37 */
+    RDP_SCANCODE_UP, /* 38 */
+    RDP_SCANCODE_RIGHT, /* 39 */
+    RDP_SCANCODE_DOWN, /* 40 */
     RDP_SCANCODE_KEY_0, /* 41 */
     RDP_SCANCODE_MULTIPLY, /* 42 */
     RDP_SCANCODE_ADD, /* 43 */
-    RDP_SCANCODE_OEM_COMMA, /* 44 */
-    RDP_SCANCODE_OEM_MINUS, /* 45 */
-    RDP_SCANCODE_OEM_PERIOD, /* 46 */
+    RDP_SCANCODE_PRINTSCREEN, /* 44 */
+    RDP_SCANCODE_INSERT, /* 45 */
+    RDP_SCANCODE_DELETE, /* 46 */
     RDP_SCANCODE_DIVIDE, /* 47 */
     RDP_SCANCODE_KEY_0, /* 48 */
     RDP_SCANCODE_KEY_1, /* 49 */
@@ -138,39 +138,39 @@ namespace wsgate {
     RDP_SCANCODE_KEY_X, /* 88 */
     RDP_SCANCODE_KEY_Y, /* 89 */
     RDP_SCANCODE_KEY_Z, /* 90 */
-    RDP_SCANCODE_OEM_4, /* 91 */
-    RDP_SCANCODE_OEM_5, /* 92 */
-    RDP_SCANCODE_OEM_6, /* 93 */
+    RDP_SCANCODE_LWIN, /* 91 */
+    RDP_SCANCODE_RWIN, /* 92 */
+    RDP_SCANCODE_APPS, /* 93 */
     RDP_SCANCODE_KEY_6, /* 94 */
     RDP_SCANCODE_OEM_MINUS, /* 95 */
-    VK_NUMPAD6, /* 96 */
-    RDP_SCANCODE_KEY_A, /* 97 */
-    RDP_SCANCODE_KEY_B, /* 98 */
-    RDP_SCANCODE_KEY_C, /* 99 */
-    RDP_SCANCODE_KEY_D, /* 100 */
-    RDP_SCANCODE_KEY_E, /* 101 */
-    RDP_SCANCODE_KEY_F, /* 102 */
-    RDP_SCANCODE_KEY_G, /* 103 */
-    RDP_SCANCODE_KEY_H, /* 104 */
-    RDP_SCANCODE_KEY_I, /* 105 */
-    RDP_SCANCODE_KEY_J, /* 106 */
-    RDP_SCANCODE_KEY_K, /* 107 */
-    RDP_SCANCODE_KEY_L, /* 108 */
-    RDP_SCANCODE_KEY_M, /* 109 */
-    RDP_SCANCODE_KEY_N, /* 110 */
-    RDP_SCANCODE_KEY_O, /* 111 */
-    RDP_SCANCODE_KEY_P, /* 112 */
-    RDP_SCANCODE_KEY_Q, /* 113 */
-    RDP_SCANCODE_KEY_R, /* 114 */
-    RDP_SCANCODE_KEY_S, /* 115 */
-    RDP_SCANCODE_KEY_T, /* 116 */
-    RDP_SCANCODE_KEY_U, /* 117 */
-    RDP_SCANCODE_KEY_V, /* 118 */
-    RDP_SCANCODE_KEY_W, /* 119 */
-    RDP_SCANCODE_KEY_X, /* 120 */
-    RDP_SCANCODE_KEY_Y, /* 121 */
-    RDP_SCANCODE_KEY_Z, /* 122 */
-    RDP_SCANCODE_OEM_4, /* 123 */
+    RDP_SCANCODE_NUMPAD0, /* 96 */
+    RDP_SCANCODE_NUMPAD1, /* 97 */
+    RDP_SCANCODE_NUMPAD2, /* 98 */
+    RDP_SCANCODE_NUMPAD3, /* 99 */
+    RDP_SCANCODE_NUMPAD4, /* 100 */
+    RDP_SCANCODE_NUMPAD5, /* 101 */
+    RDP_SCANCODE_NUMPAD6, /* 102 */
+    RDP_SCANCODE_NUMPAD7, /* 103 */
+    RDP_SCANCODE_NUMPAD8, /* 104 */
+    RDP_SCANCODE_NUMPAD9, /* 105 */
+    RDP_SCANCODE_MULTIPLY, /* 106 */
+    RDP_SCANCODE_ADD, /* 107 */
+    0, /* 108 */
+    RDP_SCANCODE_SUBTRACT, /* 109 */
+    RDP_SCANCODE_DELETE, /* 110 */
+    RDP_SCANCODE_DIVIDE, /* 111 */
+    RDP_SCANCODE_F1, /* 112 */
+    RDP_SCANCODE_F2, /* 113 */
+    RDP_SCANCODE_F3, /* 114 */
+    RDP_SCANCODE_F4, /* 115 */
+    RDP_SCANCODE_F5, /* 116 */
+    RDP_SCANCODE_F6, /* 117 */
+    RDP_SCANCODE_F7, /* 118 */
+    RDP_SCANCODE_F8, /* 119 */
+    RDP_SCANCODE_F9, /* 120 */
+    RDP_SCANCODE_F10, /* 121 */
+    RDP_SCANCODE_F11, /* 122 */
+    RDP_SCANCODE_F12, /* 123 */
     RDP_SCANCODE_OEM_5, /* 124 */
     RDP_SCANCODE_OEM_6, /* 125 */
     VK_F4, /* 126 */
@@ -191,8 +191,8 @@ namespace wsgate {
     0, /* 141 */
     0, /* 142 */
     0, /* 143 */
-    0, /* 144 */
-    0, /* 145 */
+    RDP_SCANCODE_NUMLOCK, /* 144 */
+    RDP_SCANCODE_SCROLLLOCK, /* 145 */
     0, /* 146 */
     0, /* 147 */
     0, /* 148 */
@@ -220,7 +220,7 @@ namespace wsgate {
     0, /* 170 */
     0, /* 171 */
     0, /* 172 */
-    0, /* 173 */
+    RDP_SCANCODE_OEM_MINUS, /* 173 */
     0, /* 174 */
     0, /* 175 */
     0, /* 176 */
@@ -233,13 +233,13 @@ namespace wsgate {
     0, /* 183 */
     0, /* 184 */
     0, /* 185 */
-    0, /* 186 */
-    0, /* 187 */
-    0, /* 188 */
-    0, /* 189 */
-    0, /* 190 */
-    0, /* 191 */
-    0, /* 192 */
+	RDP_SCANCODE_OEM_1, /* 186 */
+	RDP_SCANCODE_OEM_PLUS, /* 187 */
+    RDP_SCANCODE_OEM_COMMA, /* 188 */
+	RDP_SCANCODE_OEM_MINUS, /* 189 */
+    RDP_SCANCODE_OEM_PERIOD, /* 190 */
+    RDP_SCANCODE_OEM_2, /* 191 */
+    RDP_SCANCODE_OEM_3, /* 192 */
     0, /* 193 */
     0, /* 194 */
     0, /* 195 */
@@ -266,10 +266,10 @@ namespace wsgate {
     0, /* 216 */
     0, /* 217 */
     0, /* 218 */
-    0, /* 219 */
-    0, /* 220 */
-    0, /* 221 */
-    0, /* 222 */
+    RDP_SCANCODE_OEM_4, /* 219 */
+    RDP_SCANCODE_OEM_5, /* 220 */
+    RDP_SCANCODE_OEM_6, /* 221 */
+    RDP_SCANCODE_OEM_7, /* 222 */
     0, /* 223 */
     0, /* 224 */
     0, /* 225 */
@@ -465,6 +465,52 @@ namespace wsgate {
         if ((STATE_CONNECTED == m_State) && (data.length() >= 4)) {
             const uint32_t *op = reinterpret_cast<const uint32_t *>(data.data());
             switch (*op) {
+                case WSOP_CS_SPECIALCOMB:
+                    {
+                        typedef struct{
+                            uint32_t op;
+                            uint32_t code;
+                        } wsmsg;
+                        
+                        const wsmsg *m = reinterpret_cast<const wsmsg *>(data.data());
+                        log::debug << "Special combination sent: " << m->code << endl;
+			            uint32_t tcode1, tcode2, tcode3  = 0;
+                        switch (m->code){ 
+			                case 42:    //ctrl+alt+delete
+	                            tcode1 = RDP_SCANCODE_LCONTROL; 
+                				tcode2 = RDP_SCANCODE_LMENU;
+                				tcode3 = RDP_SCANCODE_DELETE;
+                				break;
+			                case 43:    //alt+shift
+        	                    tcode1 = RDP_SCANCODE_LMENU; 
+                				tcode2 = RDP_SCANCODE_LSHIFT;
+                				break;
+            			    case 44:    //ctrl+C
+        	                	tcode1 = RDP_SCANCODE_LCONTROL; 
+                				tcode2 = RDP_SCANCODE_KEY_C;
+                				break;
+            			    case 46:    //ctrl+V
+	                            //using left control
+	                            tcode1 = RDP_SCANCODE_LCONTROL; 
+			                	tcode2 = RDP_SCANCODE_KEY_V;
+                				break;
+			                }
+                        //send down signal for the keys
+                        freerdp_input_send_keyboard_event(m_rdpInput, KBD_FLAGS_DOWN, tcode1);
+                        freerdp_input_send_keyboard_event(m_rdpInput, KBD_FLAGS_DOWN, tcode2);
+
+			            //aditional signal send/release for the delete key
+			            if (m->code == 42){
+	                        freerdp_input_send_keyboard_event(m_rdpInput, KBD_FLAGS_DOWN, tcode3);
+                            freerdp_input_send_keyboard_event(m_rdpInput, KBD_FLAGS_RELEASE, tcode3);
+                        } 
+		    
+                        //send release signal for the keys
+                        freerdp_input_send_keyboard_event(m_rdpInput, KBD_FLAGS_RELEASE, tcode1);
+                        freerdp_input_send_keyboard_event(m_rdpInput, KBD_FLAGS_RELEASE, tcode2);
+
+                    }
+                    break;
                 case WSOP_CS_MOUSE:
                     {
                         typedef struct {
@@ -478,8 +524,7 @@ namespace wsgate {
                         m_freerdp->input->MouseEvent(m_freerdp->input, m->flags, m->x, m->y);
                     }
                     break;
-                case WSOP_CS_KUPDOWN:
-                    // used only for modifiers
+                case WSOP_CS_KUPDOWN:                    
                     {
                         typedef struct {
                             uint32_t op;
@@ -488,55 +533,17 @@ namespace wsgate {
                         } wsmsg;
                         const wsmsg *m = reinterpret_cast<const wsmsg *>(data.data());
                         log::info << "K" << ((m->down) ? "down" : "up") << ": c=" << m->code << endl;
-                        uint32_t tcode = 0;
-                        switch (m->code) {
-                            case 8:
-                                tcode = RDP_SCANCODE_BACKSPACE;
-                                break;
-                            case 16:
-                                tcode = RDP_SCANCODE_LSHIFT;
-                                break;
-                            case 17:
-                                tcode = RDP_SCANCODE_LCONTROL;
-                                break;
-                            case 18:
-                                tcode = RDP_SCANCODE_LMENU; // Alt
-                                break;
-                            case 20:
-                                // capslock
-                                tcode = RDP_SCANCODE_CAPSLOCK;
-                                break;
-                            case 93:
-                                tcode = RDP_SCANCODE_LWIN; // Win-Key
-                                break;
-                            case 144:
-                                // numlock
-                                 tcode = RDP_SCANCODE_NUMLOCK;
-                                break;
-                            case 145:
-                                // scrolllock
-                                tcode = RDP_SCANCODE_SCROLLLOCK;
-                                break;
-                            case 147:
-                                tcode = RDP_SCANCODE_LWIN;
-                                break;
-                            case 46:
-                                tcode = RDP_SCANCODE_DELETE;
-                                break;
-                        }
+                        uint32_t tcode = m->code;
                         if (0 < tcode) {
 
                         	log::info << "257 >> tcode: " << tcode << "\n";
-
-
-                            uint32_t tflag = RDP_SCANCODE_EXTENDED(tcode) ? KBD_FLAGS_EXTENDED : 0;
+                            //make byte
                             tcode = RDP_SCANCODE_CODE(tcode);
-                            //SendInputKeyboardEvent((m->down ? KBD_FLAGS_DOWN : KBD_FLAGS_RELEASE)|tflag, tcode, TRUE);
-                            //SendInputKeyboardEvent((m->down ? KBD_FLAGS_DOWN : KBD_FLAGS_RELEASE)|tflag, tcode, FALSE);
-
-                            //SendInputKeyboardEvent(KBD_FLAGS_DOWN|tflag, tcode, TRUE);
-                            //SendInputKeyboardEvent(KBD_FLAGS_RELEASE|tflag, tcode, FALSE);
-
+                            //apply extended 
+                            tcode = ASCII_TO_SCANCODE[tcode];
+                            //extract extended sepparatelly in tflag
+                            uint32_t tflag = RDP_SCANCODE_EXTENDED(tcode) ? KBD_FLAGS_EXTENDED : 0;                           
+                            //now make the call
                             freerdp_input_send_keyboard_event(m_rdpInput, (m->down ? KBD_FLAGS_DOWN : KBD_FLAGS_RELEASE)|tflag, tcode);
                         }
                     }
@@ -1047,6 +1054,7 @@ namespace wsgate {
                     //if (freerdp_connect(m_freerdp)) {
                 	if(freerdp_connect(m_freerdp)) {
                         m_State = STATE_CONNECTED;
+                        //set all flags to off
                         continue;
                     }
                     m_State = STATE_INITIAL;
@@ -1057,7 +1065,11 @@ namespace wsgate {
                 case STATE_CLOSED:
                     break;
             }
+#ifdef _WIN32
+			Sleep(0.1);
+#else
             usleep(100);
+#endif
         }
         log::debug << "RDP client thread terminated" << endl;
         if (STATE_CONNECTED == m_State) {
