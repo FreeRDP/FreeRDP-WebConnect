@@ -788,7 +788,7 @@ wsgate.RDP = new Class( {
      */
     onKd: function(evt) {
         var a, buf;
-	this.log.debug('kD code: ', evt.code, ' ', evt);
+        this.log.debug('kD code: ', evt.code, ' ', evt);
         evt.preventDefault();
         // this.log.debug('kD code: ', evt.code, ' ', evt);
         if (this.sock.readyState == this.sock.OPEN) {
@@ -814,7 +814,8 @@ wsgate.RDP = new Class( {
             a[1] = 0; // up
             a[2] = evt.code;
             this.sock.send(buf);
-        }    },
+        }
+    },
     /**
      * Event handler for virtual keyboard
      */
@@ -842,23 +843,10 @@ wsgate.RDP = new Class( {
     },
     /**
      * Event handler for key pressed events
+     Obsv: not used anymore. Will be removed after checking it's dependants. 
      */
     onKp: function(evt) {
-	return;
-/*        var a, buf;
-        evt.preventDefault();
-        if (this.modkeys.contains(evt.code)) {
-            return;
-        }
-        if (this.sock.readyState == this.sock.OPEN) {
-            // this.log.debug('kP code: ', evt.code);
-            buf = new ArrayBuffer(12);
-            a = new Uint32Array(buf);
-            a[0] = 2; // WSOP_CS_KPRESS
-            a[1] = (evt.shift ? 1 : 0)|(evt.control ? 2 : 0)|(evt.alt ? 4 : 0)|(evt.meta ? 8 : 0);
-            a[2] = evt.code;
-            this.sock.send(buf);
-        }*/
+	    return;
     },
     /**
      * Event handler for WebSocket RX events

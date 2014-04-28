@@ -25,6 +25,7 @@ using namespace pplx;
 using namespace std;
 using namespace web;
 using namespace wsgate;
+using namespace utility::conversions;
 
 
 class nova_console_token_auth_impl : public nova_console_token_auth
@@ -63,11 +64,7 @@ json::value nova_console_token_auth_impl::execute_request_and_get_json_value(
 
     if(response.status_code() >= 400)
     {
-#ifdef _WIN32
-		throw http_exception(response.status_code(), utility::conversions::to_utf8string(response.reason_phrase()));
-#else
-        throw http_exception(response.status_code(), response.reason_phrase());
-#endif
+        throw http_exception(response.status_code(), to_utf8string(response.reason_phrase()));
     }
 
     auto json_task = response.extract_json();
@@ -83,59 +80,33 @@ json::value nova_console_token_auth_impl::get_auth_token_data(
     auto jsonRequestBody = json::value::object();
     auto auth = json::value::object();
     auto cred = json::value::object();
-#ifdef _WIN32
-	cred[U("username")] = json::value::string(utility::conversions::to_string_t(osUserName));
-	cred[U("password")] = json::value::string(utility::conversions::to_string_t(osPassword));
-	auth[U("passwordCredentials")] = cred;
-	auth[U("tenantName")] = json::value::string(utility::conversions::to_string_t(osTenantName));
-	jsonRequestBody[U("auth")] = auth;
-#else
-	cred[U("username")] = json::value::string(osUserName);
-    cred[U("password")] = json::value::string(osPassword);
+    cred[U("username")] = json::value::string(to_string_t(osUserName));
+    cred[U("password")] = json::value::string(to_string_t(osPassword));
     auth[U("passwordCredentials")] = cred;
-    auth[U("tenantName")] = json::value::string(osTenantName);
+    auth[U("tenantName")] = json::value::string(to_string_t(osTenantName));
     jsonRequestBody[U("auth")] = auth;
-#endif
     http::http_request request(http::methods::POST);
     request.set_request_uri(U("tokens"));
     request.headers().add(http::header_names::accept, U("application/json"));
     request.headers().set_content_type(U("application/json"));
     request.set_body(jsonRequestBody);
 
-#ifdef _WIN32
-	http::client::http_client client(utility::conversions::to_string_t(osAuthUrl));
-#else
-    http::client::http_client client(osAuthUrl);
-#endif
-
+    http::client::http_client client(to_string_t(osAuthUrl));
     return execute_request_and_get_json_value(client, request);
 }
 
 json::value nova_console_token_auth_impl::get_console_token_data(
     string authToken, string novaUrl, string consoleToken)
 {
-#ifdef _WIN32
-	http::client::http_client client(utility::conversions::to_string_t(novaUrl));
-#else
-    http::client::http_client client(novaUrl);
-#endif
-
+    http::client::http_client client(to_string_t(novaUrl));
     http::uri_builder console_token_uri;
     console_token_uri.append(U("os-console-auth-tokens"));
-#ifdef _WIN32
-	console_token_uri.append(utility::conversions::to_string_t(consoleToken));
-#else
-    console_token_uri.append(consoleToken);
-#endif
+    console_token_uri.append(to_string_t(consoleToken));
     console_token_uri.append(U("action"));
 
     http::http_request request(http::methods::GET);
     request.set_request_uri(console_token_uri.to_string());
-#ifdef _WIN32
-	request.headers().add(U("X-Auth-Token"), utility::conversions::to_string_t(authToken));
-#else
-    request.headers().add(U("X-Auth-Token"), authToken);
-#endif
+    request.headers().add(U("X-Auth-Token"), to_string_t(authToken));
     request.headers().add(http::header_names::accept, U("application/json"));
     request.headers().set_content_type(U("application/json"));
 
@@ -156,30 +127,16 @@ nova_console_info nova_console_token_auth_impl::get_console_info(
 
     auto authToken = token_data[U("access")][U("token")]
                                [U("id")].as_string();
-#ifdef _WIN32
-	auto consoleTokenData = get_console_token_data(utility::conversions::to_utf8string(authToken),
-										utility::conversions::to_utf8string(novaUrl),consoleToken);
-#else
-    auto consoleTokenData = get_console_token_data(authToken, novaUrl,
-                                                   consoleToken);
-#endif
-
+    auto consoleTokenData = get_console_token_data(to_utf8string(authToken),
+                                                    to_utf8string(novaUrl),consoleToken);
     nova_console_info info;
 
-#ifdef _WIN32
-	info.host = utility::conversions::to_utf8string(consoleTokenData[U("console")][U("host")].as_string());
-#else
-    info.host = consoleTokenData[U("console")][U("host")].as_string();
-#endif
+    info.host = to_utf8string(consoleTokenData[U("console")][U("host")].as_string());
 
     auto portValue = consoleTokenData[U("console")][U("port")];
     if(portValue.is_string())
     {
-#ifdef _WIN32
-		istringstream(utility::conversions::to_utf8string(portValue.as_string())) >> info.port;
-#else
-        istringstream(portValue.as_string()) >> info.port;
-#endif
+        istringstream(to_utf8string(portValue.as_string())) >> info.port;
     }
     else
     {
@@ -191,11 +148,7 @@ nova_console_info nova_console_token_auth_impl::get_console_info(
 
     if(internalAccessPathValue.is_string())
     {
-#ifdef _WIN32
-		info.internal_access_path = utility::conversions::to_utf8string(internalAccessPathValue.as_string());
-#else
-        info.internal_access_path = internalAccessPathValue.as_string();
-#endif
+        info.internal_access_path = to_utf8string(internalAccessPathValue.as_string());
     }
 
     return info;

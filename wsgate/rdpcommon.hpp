@@ -34,20 +34,6 @@ extern "C" {
 #include "wsgate.hpp"
 #include "wshandler.hpp"
 
-// #define DBGLOG_POINTER_NEW
-// #define DBGLOG_POINTER_FREE
-// #define DBGLOG_POINTER_SET
-// #define DBGLOG_POINTER_SETNULL
-// #define DBGLOG_POINTER_SETDEFAULT
-// #define DBGLOG_BEGINPAINT
-// #define DBGLOG_ENDPAINT
-// #define DBGLOG_SETBOUNDS
-// #define DBGLOG_BITMAP
-// #define DBGLOG_OPAQUERECT
-// #define DBGLOG_MULTI_OPAQUERECT
-// #define DBGLOG_PATBLT
-// #define DBGLOG_SCRBLT
-
 typedef struct rdp_freerdp freerdp;
 typedef struct rdp_context rdpContext;
 typedef struct rdp_input rdpInput;
