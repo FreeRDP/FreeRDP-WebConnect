@@ -57,3 +57,39 @@ wsgate/setup/.dlldeps
 wsgate/setup/.setupdir
 wsgate/setup/.stripsetup
 wsgate/setup/setupdir
+
+# Windows
+*.vcxproj
+*.vcxproj.*
+*.vcproj
+*.vcproj.*
+*.sdf
+*.sln
+*.suo
+*.ncb
+*.opensdf
+Thumbs.db
+ipch
+Debug
+RelWithDebInfo
+*.lib
+*.exp
+*.pdb
+*.dll
+*.ilk
+*.resource.txt
+*.embed.manifest*
+*.intermediate.manifest*
+
+# CMake
+CMakeFiles/
+CMakeCache.txt
+config.h
+Makefile
+cmake_install.cmake
+
+# Other
+*~
+*.dir
+Release
+Win32

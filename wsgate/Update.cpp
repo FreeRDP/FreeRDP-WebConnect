@@ -53,8 +53,6 @@ namespace wsgate {
 
         rdp->update->RefreshRect = cbRefreshRect;
         rdp->update->SuppressOutput = cbSuppressOutput;
-        // rdp->update->SurfaceCommand = cbSurfaceCommand;
-        // rdp->update->SurfaceFrameMarker = cbSurfaceFrameMarker;
     }
 
     void Update::BeginPaint(rdpContext*) {
@@ -76,7 +74,6 @@ namespace wsgate {
     }
 
     void Update::SetBounds(rdpContext*, rdpBounds* bounds) {
-        // log::debug << __PRETTY_FUNCTION__ << endl;
         rdpBounds lB;
         uint32_t op = WSOP_SC_SETBOUNDS;
         if (bounds) {

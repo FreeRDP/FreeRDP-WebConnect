@@ -242,6 +242,17 @@
 #cmakedefine WIN32 1
 #cmakedefine _WIN32 1
 
+/*Defining the usleep on windows*/
+#ifdef _WIN32 
+#define usleep(x) Sleep(x/1000)
+#endif
+
+
+/*Defining the chdir on windows*/
+#ifdef _WIN32 
+#define chdir _chdir
+#endif
+
 /* Define to empty if `const' does not conform to ANSI C. */
 #cmakedefine const 1
 

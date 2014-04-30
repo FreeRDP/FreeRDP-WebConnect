@@ -357,11 +357,7 @@ namespace wsgate {
 
     void NTService::RunService() {
         while (m_bServiceRunning) {
-#ifdef _WIN32
-			Sleep(5);
-#else
             usleep(5000);
-#endif
         }
     }
 
