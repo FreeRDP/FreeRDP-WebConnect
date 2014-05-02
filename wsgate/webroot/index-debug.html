@@ -119,7 +119,7 @@
                     vkbd.toggle();
                 });
                 rdp.addEvent('touch4', function() {
-                    if (confirm('Really disconnect?')) {
+                    if (confirm('Are you sure you want to disconnect?')) {
                         rdp.Disconnect();
                     }
                 });
@@ -276,10 +276,12 @@
             }
 
             window.addEventListener("beforeunload", function() {
-                 var ans = confirm("Are you sure?");
-                 if (ans) {
-                      disconnect();
-                 }
+                if ($('maindialog').hasClass('invisible')){
+                    var ans = confirm("Are you sure you want to disconnect?");
+                    if (ans) {
+                        rdp.Disconnect();
+                    }
+                }
             }, false);
 
             window.addEvent('domready', function() {
