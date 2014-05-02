@@ -334,11 +334,27 @@ namespace wsgate {
             ResponseCode HandleRedirectRequest(HttpRequest *request, HttpResponse *response, string uri, string thisHost)
             {
                 string dest(boost::starts_with(uri, "/wsgate?") ? "wss" : "https");
-                dest.append("://").append(thisHost).append(uri);
-                response->SetHeader("Location", dest);
-                LogInfo(request->RemoteAddress(), uri, "301 Moved permanently");
+                //adding the sslPort to the dest Location
+                if (m_pVm->count("ssl.port"))
+                {
+                    stringstream sslPort;
+                    sslPort << (*m_pVm)["ssl.port"].as<uint16_t>();
 
-                return HTTPRESPONSECODE_301_MOVEDPERMANENTLY;
+                    //Replace the http port with the ssl one
+                    string thisSslHost = thisHost.substr(0, thisHost.find(":")) + ":" + sslPort.str();      
+
+                    //append the rest of the uri
+                    dest.append("://").append(thisSslHost).append(uri);
+                    response->SetHeader("Location", dest);
+                    LogInfo(request->RemoteAddress(), uri, "301 Moved permanently");
+                    return HTTPRESPONSECODE_301_MOVEDPERMANENTLY;
+                }
+                else
+                {
+                    LogInfo(request->RemoteAddress(), uri, "404 Not found");
+                    return HTTPRESPONSECODE_404_NOTFOUND;
+                }
+
             }
 
             /* =================================== HANDLE WSGATE REQUEST =================================== */
