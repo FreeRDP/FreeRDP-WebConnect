@@ -189,21 +189,15 @@ wsgate.RDP = new Class( {
         this._reset();
     },
     SendKey: function(comb) {
-	//Add here all the keys from the canvas
-        switch (comb){
-	    case 1:
-                code = 0x2a; //ctrl+alt+delete 
-		break;
-	    case 2:
+        //Add here all the keys from the canvas
+        switch (comb) {
+            case 1:
+                code = 0x2a; //ctrl+alt+delete
+                break;
+            case 2:
                 code = 0x2b; //shift+alt
-		break;
-	    case 3:
-                code = 0x2c; //ctrl + C
-		break;
-	    case 4:
-                code = 0x2e; //ctrl + V 
-		break;
-	};
+                break;
+        };
         if (this.sock.readyState == this.sock.OPEN) {
             this.log.debug('send  special combination', code);
             buf = new ArrayBuffer(12);

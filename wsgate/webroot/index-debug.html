@@ -119,7 +119,7 @@
                     vkbd.toggle();
                 });
                 rdp.addEvent('touch4', function() {
-                    if (confirm('Really disconnect?')) {
+                    if (confirm('Are you sure you want to disconnect?')) {
                         rdp.Disconnect();
                     }
                 });
@@ -238,12 +238,28 @@
                 $('screen').height = h-50;
                 $('screen').style["margin"] = "0 auto";
             }
+
+	    var sendDisconnect = function() {
+		if (confirm('Are you sure you want to disconnect ?')) {
+		    $('extracommands').setStyles({'visibility':'hidden'});
+		    rdp.Disconnect();
+		}
+            }
+
+            var sendCtrlAltDel = function() { rdp.SendKey(1); }
+
+            var sendShiftAlt = function() { rdp.SendKey(2); }
+
             function showDialog(show) {
                 if (show) {
                     ShowMouseHelper(false);
                     var dlg = $('maindialog');
                     var x = Math.round((window.getCoordinates().width - dlg.getCoordinates().width) / 2) + 'px';
                     var y = Math.round((window.getCoordinates().height - dlg.getCoordinates().height) / 2) + 'px';
+                    $('extracommands').setStyles(
+                    {
+                        'visibility':'hidden'
+                    });
                     DrawLogo();
                     dlg.setStyles({
                             'position': 'absolute',
@@ -257,30 +273,19 @@
                     {
                         'visibility':'visible'
                     });
-                    $('ctrlaltdelete').addEvent('click', function()
-                    {
-                        rdp.SendKey(1);
-                    });
-	            $('shiftalt').addEvent('click', function()
-                    {
-                        rdp.SendKey(2);
-                    });
-		    $('ctrlc').addEvent('click', function()
-		    {
-			rdp.SendKey(3);			
-		    });
-    		    $('ctrlv').addEvent('click', function()
-		    {
-			rdp.SendKey(4);
-		    });
+                    $('ctrlaltdelete').addEvent('click', sendCtrlAltDel);
+                    $('shiftalt').addEvent('click', sendShiftAlt);
+                    $('disconnect').addEvent('click', sendDisconnect);
                 }
             }
 
             window.addEventListener("beforeunload", function() {
-                 var ans = confirm("Are you sure?");
-                 if (ans) {
-                      disconnect();
-                 }
+                if ($('maindialog').hasClass('invisible')){
+                    var ans = confirm("Are you sure you want to disconnect?");
+                    if (ans) {
+                        rdp.Disconnect();
+                    }
+                }
             }, false);
 
             window.addEvent('domready', function() {
@@ -366,14 +371,8 @@
                     Shift+Alt
                 </li>
 
-                <li id="ctrlc">
-                    Ctrl+C
-                </li>
-
-                <li id="ctrlv">
-                    Ctrl+V
-                </li>
             </ul>
+            <button id="disconnect" type="button" style="float:right; margin-right:40px; margin-top:2px">Disconnect</button>
         </div>
         <canvas id="screen" width="5%" height="5%">
         <p class="error">Sorry, It looks as though your browser does not support the canvas tag.</p>

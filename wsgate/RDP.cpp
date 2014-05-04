@@ -481,16 +481,7 @@ namespace wsgate {
                                 tcode1 = RDP_SCANCODE_LMENU; 
                                 tcode2 = RDP_SCANCODE_LSHIFT;
                                 break;
-                            case 44:    //ctrl+C
-                                tcode1 = RDP_SCANCODE_LCONTROL; 
-                                tcode2 = RDP_SCANCODE_KEY_C;
-                                break;
-                            case 46:    //ctrl+V
-                                //using left control
-                                tcode1 = RDP_SCANCODE_LCONTROL; 
-                                tcode2 = RDP_SCANCODE_KEY_V;
-                                break;
-			                }
+                        }
                         //send down signal for the keys
                         freerdp_input_send_keyboard_event(m_rdpInput, KBD_FLAGS_DOWN, tcode1);
                         freerdp_input_send_keyboard_event(m_rdpInput, KBD_FLAGS_DOWN, tcode2);
