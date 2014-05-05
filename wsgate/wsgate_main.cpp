@@ -134,6 +134,7 @@ namespace wsgate {
                 JSON,
                 CSS,
                 OGG,
+                CUR,
                 BINARY
             } MimeType;
 
@@ -157,6 +158,8 @@ namespace wsgate {
                     return JSON;
                 if (ends_with(filename, ".css"))
                     return CSS;
+                if (ends_with(filename, ".cur"))
+                    return CUR;
                 if (ends_with(filename, ".ogg"))
                     return OGG;
                 return BINARY;
@@ -317,7 +320,7 @@ namespace wsgate {
                             }
                             string png = c.get<1>();
                             if (!png.empty()) {
-                                response->SetHeader("Content-Type", "image/png");
+                                response->SetHeader("Content-Type", "image/cur");
                                 response->SetLastModified(ct);
                                 response->SetBody(png.data(), png.length());
                                 LogInfo(request->RemoteAddress(), uri, "200 OK");
@@ -898,6 +901,9 @@ namespace wsgate {
                         break;
                     case OGG:
                         response->SetHeader("Content-Type", "audio/ogg");
+                        break;
+                    case CUR:
+                        response->SetHeader("Content-Type", "image/cur");
                         break;
                     case BINARY:
                         response->SetHeader("Content-Type", "application/octet-stream");
