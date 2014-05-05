@@ -48,38 +48,66 @@ find_path(WINPR_INCLUDE_DIR
 )
 
 if(WIN32 AND NOT CYGWIN)
-	if(MSVC)
-		SET(CMAKE_FIND_LIBRARY_PREFIXES "")
-		SET(CMAKE_FIND_LIBRARY_SUFFIXES ".lib")
-
-		find_library(LIB_WINPR_INPUT
-			NAMES
-			 winpr-input
-			${_WINPR_ROOT_HINTS_AND_PATHS}
-			PATH_SUFFIXES
-			"lib"
-			"VC"
-			"lib/winpr"
-		)
-
-	endif(MSVC)
+    if(MSVC)
+        SET(CMAKE_FIND_LIBRARY_PREFIXES "")
+        SET(CMAKE_FIND_LIBRARY_SUFFIXES ".lib")
+        #try to find the monolithic library
+        find_library(LIB_WINPR
+                     NAMES
+                     winpr
+                     ${_WINPR_ROOT_HINTS_AND_PATHS}
+                     PATH_SUFFIXES
+                     "lib"
+                     "VC"
+                     "lib/winpr"
+        )
+        #if no monlithic, try to find the regular ones
+        if (NOT LIB_WINPR)
+            find_library(LIB_WINPR_INPUT
+                         NAMES
+                         winpr-input
+                         ${_WINPR_ROOT_HINTS_AND_PATHS}
+                         PATH_SUFFIXES
+                         "lib"
+                         "VC"
+                         "lib/winpr"
+            )
+        endif(NOT LIB_WINPR)
+    endif(MSVC)
 elseif(UNIX)
-	SET(CMAKE_FIND_LIBRARY_PREFIXES "lib")
-	SET(CMAKE_FIND_LIBRARY_SUFFIXES ".so" ".a")
-	find_library(LIB_WINPR_INPUT
-			NAMES
-			 winpr-input
-			HINTS
-			 ${_WINPR_LIBDIR}
-			${_WINPR_ROOT_HINTS_AND_PATHS}
-			PATH_SUFFIXES
-			 lib
-			)
+    SET(CMAKE_FIND_LIBRARY_PREFIXES "lib")
+    SET(CMAKE_FIND_LIBRARY_SUFFIXES ".so" ".a")
+    #try to find the monolithic library
+    find_library(LIB_WINPR
+                 NAMES
+                 winpr
+                 ${_WINPR_ROOT_HINTS_AND_PATHS}
+                 PATH_SUFFIXES
+                 "lib"
+                 "VC"
+                 "lib/winpr"
+    )
+    #if no monlithic, try to find the regular ones
+    if (NOT LIB_WINPR)
+        find_library(LIB_WINPR_INPUT
+                     NAMES
+                     winpr-input
+                     HINTS
+                     ${_WINPR_LIBDIR}
+                     ${_WINPR_ROOT_HINTS_AND_PATHS}
+                     PATH_SUFFIXES
+                     lib
+        )
+    endif(NOT LIB_WINPR)
 endif(WIN32 AND NOT CYGWIN)
 
-mark_as_advanced(LIB_WINPR_INPUT)
-
-set(WINPR_LIBRARIES ${LIB_WINPR_INPUT})
+if(LIB_WINPR)
+    mark_as_advanced(LIB_WINPR)
+    set(WINPR_LIBRARIES ${LIB_WINPR})
+else(LIB_WINPR_INPUT)
+    mark_as_advanced(LIB_WINPR_INPUT)
+    set(WINPR_LIBRARIES ${LIB_WINPR_INPUT})
+endif(LIB_WINPR)
 
 # WINPR version is actually freerdp version
 if (WINPR_INCLUDE_DIR)
