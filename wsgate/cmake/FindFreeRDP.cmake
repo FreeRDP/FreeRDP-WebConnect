@@ -48,92 +48,121 @@ find_path(FREERDP_INCLUDE_DIR
 )
 
 if(WIN32 AND NOT CYGWIN)
-	if(MSVC)
-		SET(CMAKE_FIND_LIBRARY_PREFIXES "")
-		SET(CMAKE_FIND_LIBRARY_SUFFIXES ".lib")
-
-		find_library(LIB_FREERDP_CORE
-			NAMES
-			 freerdp-core
-			${_FREERDP_ROOT_HINTS_AND_PATHS}
-			PATH_SUFFIXES
-			"lib"
-			"VC"
-			"lib/freerdp"
-		)
-		find_library(LIB_FREERDP_CODEC
-			NAMES
-			 freerdp-codec
-			${_FREERDP_ROOT_HINTS_AND_PATHS}
-			PATH_SUFFIXES
-			"lib"
-			"VC"
-			"lib/freerdp"
-		)
-		find_library(LIB_FREERDP_GDI
-			NAMES
-			 freerdp-gdi
-			${_FREERDP_ROOT_HINTS_AND_PATHS}
-			PATH_SUFFIXES
-			"lib"
-			"VC"
-			"lib/freerdp"
-		)
-		find_library(LIB_FREERDP_CACHE
-			NAMES
-			 freerdp-cache
-			${_FREERDP_ROOT_HINTS_AND_PATHS}
-			PATH_SUFFIXES
-			"lib"
-			"VC"
-			"lib/freerdp"
-		)
-
-	endif(MSVC)
+    if(MSVC)
+        SET(CMAKE_FIND_LIBRARY_PREFIXES "")
+        SET(CMAKE_FIND_LIBRARY_SUFFIXES ".lib")
+        #try to find the monolithic library
+        find_library(LIB_FREERDP
+                     NAMES
+                     freerdp
+                     ${_FREERDP_ROOT_HINTS_AND_PATHS}
+                     PATH_SUFFIXES
+                     "lib"
+                     "VC"
+                     "lib/freerdp"
+        )
+        #if no monlithic, try to find the regular ones
+        if (NOT LIB_FREERDP)
+            find_library(LIB_FREERDP_CORE
+                         NAMES
+                         freerdp-core
+                         ${_FREERDP_ROOT_HINTS_AND_PATHS}
+                         PATH_SUFFIXES
+                         "lib"
+                         "VC"
+                         "lib/freerdp"
+            )
+            find_library(LIB_FREERDP_CODEC
+                         NAMES
+                         freerdp-codec
+                         ${_FREERDP_ROOT_HINTS_AND_PATHS}
+                         PATH_SUFFIXES
+                         "lib"
+                         "VC"
+                         "lib/freerdp"
+            )
+            find_library(LIB_FREERDP_GDI
+                         NAMES
+                         freerdp-gdi
+                         ${_FREERDP_ROOT_HINTS_AND_PATHS}
+                         PATH_SUFFIXES
+                         "lib"
+                         "VC"
+                         "lib/freerdp"
+            )
+            find_library(LIB_FREERDP_CACHE
+                         NAMES
+                         freerdp-cache
+                         ${_FREERDP_ROOT_HINTS_AND_PATHS}
+                         PATH_SUFFIXES
+                         "lib"
+                         "VC"
+                         "lib/freerdp"
+            )
+        endif(NOT LIB_FREERDP)
+    endif(MSVC)
 elseif(UNIX)
-	SET(CMAKE_FIND_LIBRARY_PREFIXES "lib")
-	SET(CMAKE_FIND_LIBRARY_SUFFIXES ".so" ".a")
-	find_library(LIB_FREERDP_CORE
-			NAMES
-			 freerdp-core
-			HINTS
-			 ${_FREERDP_LIBDIR}
-			${_FREERDP_ROOT_HINTS_AND_PATHS}
-			PATH_SUFFIXES
-			 lib
-			)
-	find_library(LIB_FREERDP_CODEC
-			NAMES
-			 freerdp-codec
-			HINTS
-			 ${_FREERDP_LIBDIR}
-			${_FREERDP_ROOT_HINTS_AND_PATHS}
-			PATH_SUFFIXES
-			 lib
-			)
-	find_library(LIB_FREERDP_GDI
-			NAMES
-			 freerdp-gdi
-			HINTS
-			 ${_FREERDP_LIBDIR}
-			${_FREERDP_ROOT_HINTS_AND_PATHS}
-			PATH_SUFFIXES
-			 lib
-			)
-	find_library(LIB_FREERDP_CACHE
-			NAMES
-			 freerdp-cache
-			HINTS
-			 ${_FREERDP_LIBDIR}
-			${_FREERDP_ROOT_HINTS_AND_PATHS}
-			PATH_SUFFIXES
-			 lib
-			)
+    SET(CMAKE_FIND_LIBRARY_PREFIXES "lib")
+    SET(CMAKE_FIND_LIBRARY_SUFFIXES ".so" ".a")
+    #try to find the monolithic library
+    find_library(LIB_FREERDP
+                 NAMES
+                 freerdp
+                 ${_FREERDP_ROOT_HINTS_AND_PATHS}
+                 PATH_SUFFIXES
+                 "lib"
+                 "VC"
+                 "lib/freerdp"
+    )
+    #if no monlithic, try to find the regular ones
+    if (NOT LIB_FREERDP)
+        find_library(LIB_FREERDP_CORE
+                     NAMES
+                     freerdp-core
+                     HINTS
+                     ${_FREERDP_LIBDIR}
+                     ${_FREERDP_ROOT_HINTS_AND_PATHS}
+                     PATH_SUFFIXES
+                     lib
+        )
+        find_library(LIB_FREERDP_CODEC
+                     NAMES
+                     freerdp-codec
+                     HINTS
+                     ${_FREERDP_LIBDIR}
+                     ${_FREERDP_ROOT_HINTS_AND_PATHS}
+                     PATH_SUFFIXES
+                     lib
+        )
+        find_library(LIB_FREERDP_GDI
+                     NAMES
+                     freerdp-gdi
+                     HINTS
+                     ${_FREERDP_LIBDIR}
+                     ${_FREERDP_ROOT_HINTS_AND_PATHS}
+                     PATH_SUFFIXES
+                     lib
+        )
+        find_library(LIB_FREERDP_CACHE
+                     NAMES
+                     freerdp-cache
+                     HINTS
+                     ${_FREERDP_LIBDIR}
+                     ${_FREERDP_ROOT_HINTS_AND_PATHS}
+                     PATH_SUFFIXES
+                     lib
+        )
+    endif(NOT LIB_FREERDP)
 endif(WIN32 AND NOT CYGWIN)
 
-mark_as_advanced(LIB_FREERDP_CORE LIB_FREERDP_CODEC LIB_FREERDP_GDI LIB_FREERDP_CACHE)
+if(LIB_FREERDP)
+    mark_as_advanced(LIB_FREERDP)
+    set(FREERDP_LIBRARIES ${LIB_FREERDP})
+else(NOT LIB_FREERDP)
+    mark_as_advanced(LIB_FREERDP_CORE LIB_FREERDP_CODEC LIB_FREERDP_GDI LIB_FREERDP_CACHE)
+    set(FREERDP_LIBRARIES ${LIB_FREERDP_CORE} ${LIB_FREERDP_CODEC} ${LIB_FREERDP_GDI} ${LIB_FREERDP_CACHE})
+endif(LIB_FREERDP)
 
-set(FREERDP_LIBRARIES ${LIB_FREERDP_CORE} ${LIB_FREERDP_CODEC} ${LIB_FREERDP_GDI} ${LIB_FREERDP_CACHE})
 
 if (FREERDP_INCLUDE_DIR)
 	if(_FREERDP_VERSION)

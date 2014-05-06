@@ -846,6 +846,10 @@ wsgate.RDP = new Class( {
      * Event handler for WebSocket RX events
      */
     onWSmsg: function(evt) {
+        //hide the loading image when the actual streaming starts
+        if ($('dvLoading').getStyle("visibility") !== "hidden") {
+            $('dvLoading').setStyles({ 'visibility': 'hidden' });
+        }
         switch (typeof(evt.data)) {
             // We use text messages for alerts and debugging ...
             case 'string':

@@ -85,6 +85,7 @@
                     + '&notls=' + ($('notls').checked ? '1' : '0')
                     + '&dtsize=' + $('screen').width + 'x' + $('screen').height
                     ;
+                $('dvLoading').setStyles({'visibility':'visible'});
 
                 rdp = new wsgate.RDP(wsUri, $('screen'), !RIMtablet, RIMtablet, vkbd);
 
@@ -260,6 +261,10 @@
                     {
                         'visibility':'hidden'
                     });
+                    $('dvLoading').setStyles(
+                    {
+                        'visibility':'hidden'
+                    });
                     DrawLogo();
                     dlg.setStyles({
                             'position': 'absolute',
@@ -377,6 +382,7 @@
         <canvas id="screen" width="5%" height="5%">
         <p class="error">Sorry, It looks as though your browser does not support the canvas tag.</p>
         </canvas>
+        <div id="dvLoading" style="position:fixed; left:45%; top:45%; visibility:hidden;"><img src="images/loading.gif"></div>
         <noscript><p class="error">Please enable JavaScript.</p></noscript>
         <table width="400px" id="maindialog" class="invisible">
 	    <tr><td>
@@ -404,10 +410,6 @@
                     							<option value="auto" %SELECTED_PERF0%>3389</option>
                     							<option %SELECTED_PERF1%>2179</option>
                     						</select>
-                    					</tr>
-                    					<tr>
-                    						<td class="key"><label for="pcb">PCB (vmID):</label></td>
-                    						<td><input id="rdppcb" type="text" name="pcb" value="%COOKIE_LASTPCB%" %DISABLED_PCB%/></td>
                     					</tr>
                                         <tr>
                                             <td class="key"><label for="user">User:</label></td>
@@ -447,6 +449,10 @@
                                             <td class="key"><label for="port">Port:</label></td>
                                             <td><input id="port" name="port" type="text" size="6" maxlen="5" value="%DEFAULT_PORT%" %DISABLED_PORT% /></td>
                                         </tr>-->
+					<tr>
+						<td class="key"><label for="pcb">PCB (vmID):</label></td>			
+						<td><input id="rdppcb" type="text" name="pcb" value="%COOKIE_LASTPCB%" %DISABLED_PCB%/></td>
+					</tr>
                                         <tr>
                                             <td class="key"><label for="perf">Performance:</label></td>
                                             <td>
