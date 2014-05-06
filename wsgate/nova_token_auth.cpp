@@ -102,7 +102,6 @@ json::value nova_console_token_auth_impl::get_console_token_data(
     http::uri_builder console_token_uri;
     console_token_uri.append(U("os-console-auth-tokens"));
     console_token_uri.append(to_string_t(consoleToken));
-    console_token_uri.append(U("action"));
 
     http::http_request request(http::methods::GET);
     request.set_request_uri(console_token_uri.to_string());
