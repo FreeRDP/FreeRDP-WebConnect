@@ -194,9 +194,6 @@ wsgate.RDP = new Class( {
             case 1:
                 code = 0x2a; //ctrl+alt+delete
                 break;
-            case 2:
-                code = 0x2b; //shift+alt
-                break;
         };
         if (this.sock.readyState == this.sock.OPEN) {
             this.log.debug('send  special combination', code);

@@ -249,8 +249,6 @@
 
             var sendCtrlAltDel = function() { rdp.SendKey(1); }
 
-            var sendShiftAlt = function() { rdp.SendKey(2); }
-
             function showDialog(show) {
                 if (show) {
                     ShowMouseHelper(false);
@@ -279,7 +277,6 @@
                         'visibility':'visible'
                     });
                     $('ctrlaltdelete').addEvent('click', sendCtrlAltDel);
-                    $('shiftalt').addEvent('click', sendShiftAlt);
                     $('disconnect').addEvent('click', sendDisconnect);
                 }
             }
@@ -370,10 +367,6 @@
 
                 <li id="ctrlaltdelete">
                     Ctrl+Alt+Delete
-                </li>
-
-                <li id="shiftalt">
-                    Shift+Alt
                 </li>
 
             </ul>

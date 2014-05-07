@@ -471,15 +471,12 @@ namespace wsgate {
                         const wsmsg *m = reinterpret_cast<const wsmsg *>(data.data());
                         log::debug << "Special combination sent: " << m->code << endl;
                         uint32_t tcode1, tcode2, tcode3  = 0;
+                        //keeping the switch logic for  further key combos
                         switch (m->code){
                             case 42:    //ctrl+alt+delete
                                 tcode1 = RDP_SCANCODE_LCONTROL;
                                 tcode2 = RDP_SCANCODE_LMENU;
                                 tcode3 = RDP_SCANCODE_DELETE;
-                                break;
-                            case 43:    //alt+shift
-                                tcode1 = RDP_SCANCODE_LMENU; 
-                                tcode2 = RDP_SCANCODE_LSHIFT;
                                 break;
                         }
                         //send down signal for the keys
