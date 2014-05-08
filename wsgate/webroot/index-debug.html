@@ -249,8 +249,6 @@
 
             var sendCtrlAltDel = function() { rdp.SendKey(1); }
 
-            var sendShiftAlt = function() { rdp.SendKey(2); }
-
             function showDialog(show) {
                 if (show) {
                     ShowMouseHelper(false);
@@ -279,7 +277,6 @@
                         'visibility':'visible'
                     });
                     $('ctrlaltdelete').addEvent('click', sendCtrlAltDel);
-                    $('shiftalt').addEvent('click', sendShiftAlt);
                     $('disconnect').addEvent('click', sendDisconnect);
                 }
             }
@@ -372,10 +369,6 @@
                     Ctrl+Alt+Delete
                 </li>
 
-                <li id="shiftalt">
-                    Shift+Alt
-                </li>
-
             </ul>
             <button id="disconnect" type="button" style="float:right; margin-right:40px; margin-top:2px">Disconnect</button>
         </div>
@@ -396,7 +389,7 @@
                     <div id="rdpdialog" class="dialog">
                         <h4 title="Main connection settings">General</h4>
                         <div>
-                            <form>
+                            <form onkeypress="if (event.keyCode == 13) { document.getElementById('rdpconnect').focus();document.getElementById('rdpconnect').click(); return event.preventDevault();}">
                                 <fieldset>
                                     <legend>Session parameters</legend>
                                     <table>
@@ -441,7 +434,7 @@
                         </div>
                         <h4 title="Advanced session parameters">Advanced</h4>
                         <div>
-                            <form>
+                            <form onsubmit="event.preventDefault(); return false;">
                                 <fieldset>
                                     <legend>Advanced session parameters</legend>
                                     <table>

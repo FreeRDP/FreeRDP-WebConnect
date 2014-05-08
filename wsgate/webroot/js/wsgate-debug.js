@@ -183,6 +183,9 @@ wsgate.RDP = new Class( {
         if (vkbd) {
             vkbd.addEvent('vkpress', this.onKv.bind(this));
         }
+        //browser identiying variables
+        this.msie = window.navigator.userAgent.indexOf('MSIE ');
+        this.trident = window.navigator.userAgent.indexOf('Trident/');
         this.parent(url);
     },
     Disconnect: function() {
@@ -193,9 +196,6 @@ wsgate.RDP = new Class( {
         switch (comb) {
             case 1:
                 code = 0x2a; //ctrl+alt+delete
-                break;
-            case 2:
-                code = 0x2b; //shift+alt
                 break;
         };
         if (this.sock.readyState == this.sock.OPEN) {
@@ -385,9 +385,11 @@ wsgate.RDP = new Class( {
                 // id, xhot, yhot
                 hdr = new Uint32Array(data, 4, 3);
                 if (this.cssC) {
-                    this.cursors[hdr[0]] = 'url(/cur/'+this.sid+'/'+hdr[0]+') '+hdr[1]+' '+hdr[2]+',none';
+                    this.cursors[hdr[0]] = (this.msie > 0 || this.trident > 0) ? 'url(/cur/' + this.sid + '/' + hdr[0] + '), none' : //IE is not suporting given hot spots
+                                            'url(/cur/' + this.sid + '/' + hdr[0] + ') ' + hdr[1] + ' ' + hdr[2] + ',none'; 
                 } else {
-                    this.cursors[hdr[0]] = {u: '/cur/'+this.sid+'/'+hdr[0], x: hdr[1], y: hdr[2]};
+                    this.cursors[hdr[0]] = (this.msie > 0 || this.trident > 0) ? { u: '/cur/' + this.sid + '/' + hdr[0] } :
+                                            { u: '/cur/' + this.sid + '/' + hdr[0], x: hdr[1], y: hdr[2] };
                 }
                 break;
             case 9:
@@ -674,8 +676,8 @@ wsgate.RDP = new Class( {
     onMm: function(evt) {
         var buf, a, x, y;
         evt.preventDefault();
-        x = evt.event.layerX;
-        y = evt.event.layerY;
+        x = (this.msie > 0 || this.trident > 0) ? evt.event.layerX - evt.event.currentTarget.offsetLeft : evt.event.layerX;
+        y = (this.msie > 0 || this.trident > 0) ? evt.event.layerY - evt.event.currentTarget.offsetTop : evt.event.layerY;
         if (!this.cssC) {
             this.mX = x;
             this.mY = y;
@@ -703,8 +705,8 @@ wsgate.RDP = new Class( {
                 this.fireEvent('touch3');
                 return;
             }
-            x = evt.event.layerX;
-            y = evt.event.layerY;
+            x = (this.msie > 0 || this.trident > 0) ? evt.event.layerX - evt.event.currentTarget.offsetLeft : evt.event.layerX;
+            y = (this.msie > 0 || this.trident > 0) ? evt.event.layerY - evt.event.currentTarget.offsetTop : evt.event.layerY;
             which = this._mB(evt);
             this.log.debug('mD b: ', which, ' x: ', x, ' y: ', y);
             if (this.sock.readyState == this.sock.OPEN) {
@@ -725,8 +727,8 @@ wsgate.RDP = new Class( {
         var buf, a, x, y, which;
         if (this.Tcool) {
             evt.preventDefault();
-            x = x || evt.event.layerX;
-            y = y || evt.event.layerY;
+            x = (this.msie > 0 || this.trident > 0) ? evt.event.layerX - evt.event.currentTarget.offsetLeft : evt.event.layerX;
+            y = (this.msie > 0 || this.trident > 0) ? evt.event.layerY - evt.event.currentTarget.offsetTop : evt.event.layerY;
             which = this._mB(evt);
             this.log.debug('mU b: ', which, ' x: ', x, ' y: ', y);
             if (this.aMF) {
@@ -749,8 +751,8 @@ wsgate.RDP = new Class( {
     onMw: function(evt) {
         var buf, a, x, y;
         evt.preventDefault();
-        x = evt.event.layerX;
-        y = evt.event.layerY;
+        x = (this.msie > 0 || this.trident > 0) ? evt.event.layerX - evt.event.currentTarget.offsetLeft : evt.event.layerX;
+        y = (this.msie > 0 || this.trident > 0) ? evt.event.layerY - evt.event.currentTarget.offsetTop : evt.event.layerY;
         // this.log.debug('mW d: ', evt.wheel, ' x: ', x, ' y: ', y);
         if (this.sock.readyState == this.sock.OPEN) {
             buf = new ArrayBuffer(16);

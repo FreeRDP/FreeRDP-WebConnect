@@ -471,15 +471,12 @@ namespace wsgate {
                         const wsmsg *m = reinterpret_cast<const wsmsg *>(data.data());
                         log::debug << "Special combination sent: " << m->code << endl;
                         uint32_t tcode1, tcode2, tcode3  = 0;
+                        //keeping the switch logic for  further key combos
                         switch (m->code){
                             case 42:    //ctrl+alt+delete
                                 tcode1 = RDP_SCANCODE_LCONTROL;
                                 tcode2 = RDP_SCANCODE_LMENU;
                                 tcode3 = RDP_SCANCODE_DELETE;
-                                break;
-                            case 43:    //alt+shift
-                                tcode1 = RDP_SCANCODE_LMENU; 
-                                tcode2 = RDP_SCANCODE_LSHIFT;
                                 break;
                         }
                         //send down signal for the keys
@@ -817,9 +814,64 @@ namespace wsgate {
                     pointer->xorMaskData, pointer->andMaskData,
                     pointer->width, pointer->height, pointer->xorBpp, hclrconv);
         }
+
         Png png;
+        std::string png_string = png.GenerateFromARGB(pointer->width, pointer->height, pixels);
+
+        struct {
+            unsigned char resL;     //2 bytes reserved must always be 0
+            unsigned char resH;
+            unsigned char imgTypeL; //2 bytes image type. 1 = ICO, 2 = CUR
+            unsigned char imgTypeH;
+            unsigned char nbImgL;   //2 bytes number of images
+            unsigned char nbImgH;
+            unsigned char width;    //1 byte image width in pixels
+            unsigned char height;   //1 byte image height in pixels
+            unsigned char nbColors; //1 bytenumber of colors. 0 if not using a color pallete
+            unsigned char res;      //1 byte reserved, should be 0
+            unsigned char xPosL;    //2 bytes of hot spot x (for ICO, color planes, 0 or 1)
+            unsigned char xPosH;
+            unsigned char yPosL;    //2 bytes of hot spot y (for ICO bits per pixel)
+            unsigned char yPosH;
+            unsigned char sizeLL;   //4 bytes of image size
+            unsigned char sizeLH;
+            unsigned char sizeHL;
+            unsigned char sizeHH;
+            unsigned char offsetLL; //4 bytes of offset of the data
+            unsigned char offsetLH;
+            unsigned char offsetHL;
+            unsigned char offsetHH;
+        } curHeader = {
+            0x00,
+            0x00,
+            0x02,
+            0x00,
+            0x01,
+            0x00,
+            pointer->width,
+            pointer->height,
+            0x00,
+            0x00,
+            pointer->xPos,
+            pointer->xPos >> 8,
+            pointer->yPos,
+            pointer->yPos >>8,
+            png_string.length(), png_string.length() >> 8, png_string.length() >> 16, png_string.length() >> 24,
+            0x16,
+            0x00,
+            0x00,
+            0x00
+        };
+
+        std::string curImage;
+        //put the .cur header first
+        curImage.assign(reinterpret_cast<const char *>(&curHeader), sizeof(curHeader));
+        //add the image as a PNG format
+        curImage.append(png_string.c_str(), png_string.length());
+
         m_cursorMap[p->id] =
-            cursor(time(NULL), png.GenerateFromARGB(pointer->width, pointer->height, pixels));
+            cursor(time(NULL), curImage);
+
         delete []pixels;
         struct {
             uint32_t op;
