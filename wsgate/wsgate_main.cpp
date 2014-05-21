@@ -455,26 +455,6 @@ namespace wsgate {
                     setcookie["value"] = (m_bOverrideRdpUser ? "<predefined>" : rdpuser);
                     response->SetCookie(setcookie);
                 }
-                if (m_bOverrideRdpPass) {
-                    // Don't expose real RDP password to browser
-                    setcookie["name"] = "lastpass";
-                    setcookie["value"] = base64_encode(
-                            reinterpret_cast<const unsigned char *>("SomthingUseless"), 15);
-                    response->SetCookie(setcookie);
-                } else {
-                    if (rdppass.empty()) {
-                        delcookie["name"] = "lastpass";
-                        delcookie["value"] = base64_encode(
-                                reinterpret_cast<const unsigned char *>("%20"), 3);
-                        response->SetCookie(delcookie);
-                    } else {
-                        setcookie["name"] = "lastpass";
-                        setcookie["value"] = base64_encode(
-                                reinterpret_cast<const unsigned char *>(rdppass.c_str()),
-                                rdppass.length());
-                        response->SetCookie(setcookie);
-                    }
-                }
             }
 
             ResponseCode HandleWsgateRequest(HttpRequest *request, HttpResponse *response, std::string uri, std::string thisHost)
