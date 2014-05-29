@@ -329,6 +329,7 @@
                         if(querystring.length > 2)
                         {
                             showDialog(false);
+                            $('disconnect').setStyles({'visibility':'hidden'});
                             var urlParams;
                             (window.onpopstate = function () {
                                 var match,
