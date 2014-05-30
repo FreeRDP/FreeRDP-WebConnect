@@ -404,6 +404,7 @@ namespace wsgate {
                 // LAN
                 m_rdpSettings->PerformanceFlags = PERF_FLAG_NONE;
                 m_rdpSettings->ConnectionType = CONNECTION_TYPE_LAN;
+                m_rdpSettings->AllowFontSmoothing = TRUE;
                 break;
             case 1:
                 // Broadband
