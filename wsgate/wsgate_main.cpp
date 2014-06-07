@@ -412,7 +412,7 @@ namespace wsgate {
                 return 0;
             }
 
-            void ManageCookies(HttpRequest *request, HttpResponse *response, string rdphost, string rdppcb, string rdpuser, string rdppass, string thisHost)
+            void ManageCookies(HttpRequest *request, HttpResponse *response, string rdphost, string rdppcb, string rdpuser, string thisHost)
             {
                 CookieParameters setcookie;
                 setcookie["path"] = "/";
@@ -467,10 +467,12 @@ namespace wsgate {
                 int rdpport;
                 string rdppass;
                 WsRdpParams params;
+                bool setCookie = true;
 
                 if(boost::starts_with(uri, "/wsgate?token="))
                 {
                     // OpenStack console authentication
+                    setCookie = false;
                     try
                     {
                         log::info << "Starting OpenStack token authentication" << endl;
@@ -599,9 +601,12 @@ namespace wsgate {
                     log::info << "caught exception!" << endl;
                 }
 
-                //to wrap around a condition statement for disabling cookies
-                ManageCookies(request, response, rdphost, rdppcb, rdpuser, rdppass, thisHost);
-
+                //Use cookies only as standalone app
+                if (setCookie)
+                    ManageCookies(request, response, rdphost, rdppcb, rdpuser, thisHost);
+                else
+                    //openstack - wipe out any cookies
+                    ManageCookies(request, response, "", "", "", thisHost);
                 response->RemoveHeader("Content-Type");
                 response->RemoveHeader("Content-Length");
                 response->RemoveHeader("Last-Modified");

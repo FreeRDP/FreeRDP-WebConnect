@@ -404,6 +404,7 @@ namespace wsgate {
                 // LAN
                 m_rdpSettings->PerformanceFlags = PERF_FLAG_NONE;
                 m_rdpSettings->ConnectionType = CONNECTION_TYPE_LAN;
+                m_rdpSettings->AllowFontSmoothing = TRUE;
                 break;
             case 1:
                 // Broadband
@@ -449,7 +450,8 @@ namespace wsgate {
             m_bThreadLoop = false;
             if (STATE_CONNECTED == m_State) {
                 m_State = STATE_CLOSED;
-                return (freerdp_disconnect(m_freerdp) != 0);
+                if (!freerdp_disconnect(m_freerdp))
+                    return false;
             }
             pthread_join(m_worker, NULL);
         }
