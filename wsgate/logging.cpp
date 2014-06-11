@@ -106,27 +106,7 @@ namespace wsgate {
         : m_hES(NULL)
           , m_CurrentMask(mask)
     {
-        char modpath[1024];
-        uint32_t modlen = ::GetModuleFileNameA(NULL, modpath, sizeof(modpath));
-        HKEY hKeyEvtLogApp = NULL;
-        if (0 == ::RegOpenKeyExA(HKEY_LOCAL_MACHINE,
-                    "SYSTEM\\CurrentControlSet\\Services\\EventLog\\Application",
-                    0, KEY_WRITE, &hKeyEvtLogApp))
-        {
-            HKEY hKey = NULL;
-            if (0 == ::RegCreateKeyExA(hKeyEvtLogApp, ident, 0, NULL, 0, KEY_WRITE, NULL, &hKey, NULL)) {
-                // Add the Event ID message-file name to the 'EventMessageFile' subkey.
-                ::RegSetValueExA(hKey, "EventMessageFile", 0, REG_EXPAND_SZ,
-                        reinterpret_cast<const BYTE *>(&modpath), modlen);
-                const uint32_t dwData = EVENTLOG_ERROR_TYPE|EVENTLOG_WARNING_TYPE|
-                    EVENTLOG_INFORMATION_TYPE;
-                ::RegSetValueExA(hKey, "TypesSupported", 0, REG_DWORD,
-                        reinterpret_cast<const BYTE*>(&dwData), sizeof(uint32_t));
-                ::RegCloseKey(hKey);
-            }
-            ::RegCloseKey(hKeyEvtLogApp);
-            m_hES = ::RegisterEventSourceA(NULL, ident);
-        }
+        m_hES = ::RegisterEventSourceA(NULL, ident);
     }
 
     WinLog::~WinLog() {
@@ -138,8 +118,6 @@ namespace wsgate {
             const char *p = msg.c_str();
             switch (level) {
                 case LOG_DEBUG:
-                    OutputDebugStringA(p);
-                    break;
                 case LOG_INFO:
                 case LOG_NOTICE:
                     ::ReportEventA(m_hES, EVENTLOG_SUCCESS,
