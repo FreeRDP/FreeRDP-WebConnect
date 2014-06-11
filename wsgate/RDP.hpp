@@ -73,7 +73,7 @@ namespace wsgate {
              * @param params Additional parameters for the RDP session.
              * @return true on success.
              */
-            bool Connect(std::string host, std::string user, std::string domain,
+            bool Connect(std::string host, std::string pcb, std::string user, std::string domain,
                     std::string pass, const WsRdpParams &params);
             /**
              * Actively terminates a session.
@@ -109,13 +109,13 @@ namespace wsgate {
              * @param flags The flags as defined by the FreeRDP API.
              * @param code The scan code as defined by the FreeRDP API.
              */
-            void SendInputKeyboardEvent(uint16_t flags, uint16_t code);
+            void SendInputKeyboardEvent(uint32_t flags, uint32_t code, BOOL down);
             /**
              * Wraps the corresponding FreeRDP API call.
              * @param flags The flags as defined by the FreeRDP API.
              * @param code The character code as defined by the FreeRDP API.
              */
-            void SendInputUnicodeKeyboardEvent(uint16_t flags, uint16_t code);
+            void SendInputUnicodeKeyboardEvent(uint32_t flags, uint32_t code);
             /**
              * Wraps the corresponding FreeRDP API call.
              * @param flags The flags as defined by the FreeRDP API.
@@ -136,12 +136,12 @@ namespace wsgate {
             void ThreadFunc();
             void addError(const std::string &msg);
 
-            void ContextNew(freerdp *inst, rdpContext *ctx);
+            int ContextNew(freerdp *inst, rdpContext *ctx);
             void ContextFree(freerdp *inst, rdpContext *ctx);
-            boolean PreConnect(freerdp *inst);
-            boolean PostConnect(freerdp *inst);
-            boolean Authenticate(freerdp *inst, char** user, char** pass, char** domain);
-            boolean VerifyCertificate(freerdp *inst, char* subject, char* issuer, char* fprint);
+            BOOL PreConnect(freerdp *inst);
+            BOOL PostConnect(freerdp *inst);
+            BOOL Authenticate(freerdp *inst, char** user, char** pass, char** domain);
+            BOOL VerifyCertificate(freerdp *inst, char* subject, char* issuer, char* fprint);
             int SendChannelData(freerdp *inst, int chId, uint8_t* data, int size);
             int ReceiveChannelData(freerdp* inst, int chId, uint8_t* data, int size,
                     int flags, int total_size);
@@ -171,12 +171,12 @@ namespace wsgate {
             // Callbacks from C pthreads - Must be static in order t be assigned to C fnPtrs.
             static void *cbThreadFunc(void *ctx);
             // Callbacks from C - Must be static in order t be assigned to C fnPtrs.
-            static void cbContextNew(freerdp *inst, rdpContext *ctx);
+            static int cbContextNew(freerdp *inst, rdpContext *ctx);
             static void cbContextFree(freerdp *inst, rdpContext *ctx);
-            static boolean cbPreConnect(freerdp *inst);
-            static boolean cbPostConnect(freerdp *inst);
-            static boolean cbAuthenticate(freerdp *inst, char** user, char** pass, char** domain);
-            static boolean cbVerifyCertificate(freerdp *inst, char* subject, char* issuer,
+            static BOOL cbPreConnect(freerdp *inst);
+            static BOOL cbPostConnect(freerdp *inst);
+            static BOOL cbAuthenticate(freerdp *inst, char** user, char** pass, char** domain);
+            static BOOL cbVerifyCertificate(freerdp *inst, char* subject, char* issuer,
                     char* fprint);
             static int cbSendChannelData(freerdp *inst, int chId, uint8_t* data, int size);
             static int cbReceiveChannelData(freerdp* inst, int chId, uint8_t* data, int size,

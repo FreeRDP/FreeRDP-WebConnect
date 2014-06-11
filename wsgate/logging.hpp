@@ -29,8 +29,7 @@ namespace wsgate {
     /**
      * A logging class, mapping syslog(3) functionality to C++ on Unix
      * systems. On Windows systems, the logging is performed via the
-     * application event log (all log levels, except LOG_DEBUG) and via
-     * OutputDebugString (for log level LOG_DEBUG).
+     * application event log.
      * For every log level, a corresponding ostream exists.
      */
     class logger {

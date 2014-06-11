@@ -1,21 +1,24 @@
 <!DOCTYPE html>
 <html>
     <head>
+	<link href='http://fonts.googleapis.com/css?family=Quicksand' rel='stylesheet' type='text/css'>
         <meta charset="utf-8" />
         <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1" />
         <title>FreeRDP WebConnect: offline</title>
         <meta name="robots" content="nofollow" />
-        <meta name="description" content="A HTM5 based RDP client">
+        <meta name="description" content="A HTML5 based RDP client">
         <meta name="viewport" content="width=device-width height=device-height user-scalable=no">
         <meta name="cursor-event-mode" content="native">
         <meta name="touch-event-mode" content="pure-with-mouse-conversion">
         <link rel="stylesheet" href="css/style%JSDEBUG%.css">
         <link rel="stylesheet" href="css/vkb%JSDEBUG%.css">
+        <link rel="icon" href="favicon.ico" type="image/x-icon" />
         <script src="js/modernizr%JSDEBUG%.js"></script>
         <script src="js/mootools%JSDEBUG%.js"></script>
         <script src="js/simpletabs%JSDEBUG%.js"></script>
         <script src="js/wsgate%JSDEBUG%.js"></script>
         <script src="js/vkb%JSDEBUG%.js"></script>
+        <!--<script language="javascript" type="text/javascript" src="js/rdpevents%JSDEBUG%.js"></script>-->
         <script language="javascript" type="text/javascript">
             var wsBase = "%WSURI%";
             var RIMtablet = navigator.appVersion && (-1 != navigator.appVersion.indexOf('RIM Tablet'));
@@ -26,9 +29,51 @@
             var inDrag = false;
             var rdp = null;
             var vkbd = null;
+
+            var externalConnection = false;
+
+            function RDPGet(uri, title) {
+                var wsUri = wsBase + uri;
+
+                rdp = new wsgate.RDP(wsUri, $('screen'), !RIMtablet, RIMtablet, vkbd);
+
+                rdp.addEvent('alert', function(msg) {
+                    alert(msg);
+                    });
+                rdp.addEvent('connected', function() {
+                        document.title = title;
+                        button = $("rdpconnect");
+                        button.removeEvents();
+                        window.removeEvent('resize', OnDesktopSize);
+                        button.value = 'Disconnect';
+                        button.addEvent('click', rdp.Disconnect.bind(rdp));
+                        });
+                rdp.addEvent('disconnected', function() {
+                        showDialog(true);
+                        button = $("rdpconnect");
+                        button.removeEvents();
+                        button.value = 'Connect';
+                        button.addEvent('click', RDPrun);
+                        OnDesktopSize();
+                        window.addEvent('resize', OnDesktopSize);
+                        });
+                rdp.addEvent('mouserelease', ResetRdpMouseFlags);
+                rdp.addEvent('touch2', function() {
+                    ShowMouseHelper($('mousehelper').hasClass('invisible'));
+                });
+
+                rdp.addEvent('touch3', function() {
+                    vkbd.toggle();
+                });
+
+                showDialog(false);
+                rdp.Run();
+            }
+
             function RDPrun() {
                 var wsUri = wsBase
                     + '?host=' + encodeURIComponent($('rdphost').value.trim())
+                    + '&pcb='  + encodeURIComponent($('rdppcb').value.trim())
                     + '&user=' + encodeURIComponent($('rdpuser').value.trim())
                     + '&pass=' + encodeURIComponent($('rdppass').value.toBase64())
                     + '&perf=' + $('perf').value.trim()
@@ -41,7 +86,10 @@
                     + '&notls=' + ($('notls').checked ? '1' : '0')
                     + '&dtsize=' + $('screen').width + 'x' + $('screen').height
                     ;
+                $('dvLoading').setStyles({'visibility':'visible'});
+
                 rdp = new wsgate.RDP(wsUri, $('screen'), !RIMtablet, RIMtablet, vkbd);
+
                 rdp.addEvent('alert', function(msg) {
                         alert(msg);
                         });
@@ -51,8 +99,9 @@
                         button = $("rdpconnect");
                         button.removeEvents();
                         window.removeEvent('resize', OnDesktopSize);
-                        /* button.value = 'Disconnect';
-                        button.addEvent('click', rdp.Disconnect.bind(rdp)); */
+                        button.value = 'Disconnect';
+                        button.addEvent('click', rdp.Disconnect.bind(rdp));
+                        window.addEvent("beforeunload", rdp.Disconnect.bind(rdp));
 
                         });
                 rdp.addEvent('disconnected', function() {
@@ -72,13 +121,15 @@
                     vkbd.toggle();
                 });
                 rdp.addEvent('touch4', function() {
-                    if (confirm('Really disconnect?')) {
+                    if (confirm('Are you sure you want to disconnect?')) {
                         rdp.Disconnect();
                     }
                 });
+
                 showDialog(false);
                 rdp.Run();
             }
+
             function SetRdpMouseFlags() {
                 var mf = {
                     'r': $('rclick').checked,
@@ -119,6 +170,12 @@
                     $('cclick').removeEvents();
                 }
             }
+
+            function OnDesktopSize() {
+               ResizeCanvas($('dtsize').value);
+               DrawLogo();
+            }
+
             function DragStart(evt) {
                 var mh = $('mousehelper');
                 if (!mh.hasClass('invisible')) {
@@ -149,15 +206,19 @@
                     }
                 }
             }
+
             function DrawLogo() {
-                    var logo = new Element('img', {'src': 'FreeRDP_Logo.png'});
+                    var logo = new Element('img', {'src': 'empty_on_purpose'});
                     logo.addEvent('load', function() {
-                            var iw = this.width;
-                            var ih = this.height;
+                var scaleWCoeficient = 0.5;
+                var scaleHCoeficient = 0.5;
+                            var iw = this.width * scaleWCoeficient;
+                            var ih = this.height * scaleHCoeficient;
                             var scale = ($('screen').height - 20) / ih;
                             $('screen').getContext('2d').drawImage(this, 10, 10, Math.round(iw * scale), Math.round(ih * scale));
                     }.bind(logo));
             }
+
             function ResizeCanvas(sz) {
                 var w, h;
                 if (sz == 'auto') {
@@ -175,19 +236,34 @@
                     var w = sza[0];
                     var h = sza[1];
                 }
-                $('screen').width = w;
-                $('screen').height = h;
+                $('screen').width = w-50;
+                $('screen').height = h-50;
+                $('screen').style["margin"] = "0 auto";
             }
-            function OnDesktopSize() {
-                ResizeCanvas($('dtsize').value);
-                DrawLogo();
+
+	    var sendDisconnect = function() {
+		if (confirm('Are you sure you want to disconnect ?')) {
+		    $('extracommands').setStyles({'visibility':'hidden'});
+		    rdp.Disconnect();
+		}
             }
+
+            var sendCtrlAltDel = function() { rdp.SendKey(1); }
+
             function showDialog(show) {
                 if (show) {
                     ShowMouseHelper(false);
                     var dlg = $('maindialog');
                     var x = Math.round((window.getCoordinates().width - dlg.getCoordinates().width) / 2) + 'px';
                     var y = Math.round((window.getCoordinates().height - dlg.getCoordinates().height) / 2) + 'px';
+                    $('extracommands').setStyles(
+                    {
+                        'visibility':'hidden'
+                    });
+                    $('dvLoading').setStyles(
+                    {
+                        'visibility':'hidden'
+                    });
                     DrawLogo();
                     dlg.setStyles({
                             'position': 'absolute',
@@ -197,9 +273,28 @@
                             }).removeClass('invisible');
                 } else {
                     $('maindialog').addClass('invisible');
+                    $('extracommands').setStyles(
+                    {
+                        'visibility':'visible'
+                    });
+                    $('ctrlaltdelete').addEvent('click', sendCtrlAltDel);
+                    $('disconnect').addEvent('click', sendDisconnect);
                 }
             }
+
+            window.addEventListener("beforeunload", function() {
+                if ($('maindialog').hasClass('invisible')){
+                    var ans = confirm("Are you sure you want to disconnect?");
+                    if (ans) {
+                        rdp.Disconnect();
+                    }
+                }
+            }, false);
+
             window.addEvent('domready', function() {
+
+                    var querystring = window.location.href.slice(window.location.href.indexOf('?'))
+
                     $('dtsize').addEvent('change', OnDesktopSize);
                     var tabs = new SimpleTabs('rdpdialog',{selector:'h4'});
                     OnDesktopSize();
@@ -221,9 +316,39 @@
                         (Browser.chrome && (Browser.version >= 17)) ||
                         (Browser.safari && (Browser.version >= 6)) ||
                         (Browser.ie && (Browser.version >= 10.0));
+                    if(externalConnection == true)
+                    {
+                        RDPrun();
+                        vkbd = new wsgate.vkbd({
+                            version:false,
+                            sizeswitch:false,
+                            numpadtoggle:false
+                        });
+                    }
                     if (wsOK) {
-                        $('rdpconnect').addEvent('click', RDPrun);
-                        showDialog(true);
+                        if(querystring.length > 2)
+                        {
+                            showDialog(false);
+                            $('disconnect').setStyles({'visibility':'hidden'});
+                            var urlParams;
+                            (window.onpopstate = function () {
+                                var match,
+                                    pl     = /\+/g,  // Regex for replacing addition symbol with a space
+                                    search = /([^&=]+)=?([^&]*)/g,
+                                    decode = function (s) { return decodeURIComponent(s.replace(pl, " ")); },
+                                    query  = window.location.search.substring(1);
+
+                                urlParams = {};
+                                while (match = search.exec(query))
+                                   urlParams[decode(match[1])] = decode(match[2]);
+                            })();
+                            RDPGet(querystring, urlParams["title"]);
+                        }
+                        else
+                        {
+                            $('rdpconnect').addEvent('click', RDPrun);
+                            showDialog(true);
+                        }
                         vkbd = new wsgate.vkbd({
                             version:false,
                             sizeswitch:false,
@@ -237,18 +362,36 @@
             });
         </script>
     </head>
-    <body>
-        <canvas id="screen" width="640px" height="480px">
+    <body id="wrapper">
+        <div id="extracommands" style="height:28px; background-color:#f1f1f1; padding-left:25px; cursor:default; visibility:hidden;">
+            Send keys:
+            <ul>
+
+                <li id="ctrlaltdelete">
+                    Ctrl+Alt+Delete
+                </li>
+
+            </ul>
+            <button id="disconnect" type="button" style="float:right; margin-right:40px; margin-top:2px">Disconnect</button>
+        </div>
+        <canvas id="screen" width="5%" height="5%">
         <p class="error">Sorry, It looks as though your browser does not support the canvas tag.</p>
         </canvas>
+        <div id="dvLoading" style="position:fixed; left:45%; top:45%; visibility:hidden;"><img src="images/loading.gif"></div>
         <noscript><p class="error">Please enable JavaScript.</p></noscript>
         <table width="400px" id="maindialog" class="invisible">
+	    <tr><td>
+		<div style="margin-left:auto; margin-right:auto; width:60%; position:relative;">
+		<a href="http://www.cloudbase.it">
+		<img src='http://cloudbase.it/wp-content/uploads/2012/10/CBSL_web_logo3.png' style="margin-left:auto; margin-right:auto;">
+		</a></div></img>
+            </td></tr>
             <tr>
                 <td>
                     <div id="rdpdialog" class="dialog">
                         <h4 title="Main connection settings">General</h4>
                         <div>
-                            <form>
+                            <form onkeypress="if (event.keyCode == 13) { document.getElementById('rdpconnect').focus();document.getElementById('rdpconnect').click(); return event.preventDevault();}">
                                 <fieldset>
                                     <legend>Session parameters</legend>
                                     <table>
@@ -256,6 +399,13 @@
                                             <td class="key"><label for="host">Hostname:</label></td>
                                             <td><input id="rdphost" type="text" name="host" value="%COOKIE_LASTHOST%" %DISABLED_HOST%/></td>
                                         </tr>
+                    					<tr>
+                    					    <td class="key"><label for="port">Port:</label></td>
+                    					    <td><select id="port" name="port" %DISABLED_PORT%>
+                    							<option value="auto" %SELECTED_PERF0%>3389</option>
+                    							<option %SELECTED_PERF1%>2179</option>
+                    						</select>
+                    					</tr>
                                         <tr>
                                             <td class="key"><label for="user">User:</label></td>
                                             <td><input id="rdpuser" type="text" name="user" value="%COOKIE_LASTUSER%" %DISABLED_USER% /></td>
@@ -286,14 +436,18 @@
                         </div>
                         <h4 title="Advanced session parameters">Advanced</h4>
                         <div>
-                            <form>
+                            <form onsubmit="event.preventDefault(); return false;">
                                 <fieldset>
                                     <legend>Advanced session parameters</legend>
                                     <table>
-                                        <tr>
+                                        <!--<tr>
                                             <td class="key"><label for="port">Port:</label></td>
                                             <td><input id="port" name="port" type="text" size="6" maxlen="5" value="%DEFAULT_PORT%" %DISABLED_PORT% /></td>
-                                        </tr>
+                                        </tr>-->
+					<tr>
+						<td class="key"><label for="pcb">PCB (vmID):</label></td>			
+						<td><input id="rdppcb" type="text" name="pcb" value="%COOKIE_LASTPCB%" %DISABLED_PCB%/></td>
+					</tr>
                                         <tr>
                                             <td class="key"><label for="perf">Performance:</label></td>
                                             <td>
@@ -388,4 +542,4 @@
             </tr>
         </table>
     </body>
-</html> 
+</html>

@@ -79,8 +79,10 @@
 #include "wsendpoint.hpp"
 #include "wsgate.hpp"
 #include "myrawsocket.hpp"
+#include "nova_token_auth.hpp"
 
 #ifdef _WIN32
+#include <direct.h>
 # define WIN32_LEAN_AND_MEAN
 # include <windows.h>
 # include <shlobj.h>
@@ -103,8 +105,10 @@ namespace pt = boost::posix_time;
 using boost::filesystem::path;
 
 namespace wsgate {
-
     static const char * const ws_magic = "258EAFA5-E914-47DA-95CA-C5AB0DC85B11";
+
+    //disable two connections to the same host
+    std::map<string, bool> activeConnections;
 
     int nFormValue(HttpRequest *request, const string & name, int defval) {
         string tmp(request->FormValues(name).m_sBody);
@@ -130,6 +134,7 @@ namespace wsgate {
                 JSON,
                 CSS,
                 OGG,
+                CUR,
                 BINARY
             } MimeType;
 
@@ -153,6 +158,8 @@ namespace wsgate {
                     return JSON;
                 if (ends_with(filename, ".css"))
                     return CSS;
+                if (ends_with(filename, ".cur"))
+                    return CUR;
                 if (ends_with(filename, ".ogg"))
                     return OGG;
                 return BINARY;
@@ -232,81 +239,20 @@ namespace wsgate {
                 return ret;
             }
 
-            // generates a page for each http request
-            ResponseCode HandleRequest(HttpRequest *request, HttpResponse *response)
+            void CheckForPredefined(string& rdpHost, string& rdpUser, string& rdpPass)
             {
-                if (REQUESTMETHOD_GET != request->Method()) {
-                    // We currently need to support GET requests only.
-                    return HTTPRESPONSECODE_400_BADREQUEST;
-                }
+                if (m_bOverrideRdpHost)
+                    rdpHost.assign(m_sRdpOverrideHost);
 
-                string uri(request->Uri());
-                string thisHost(m_sHostname.empty() ? request->Headers("Host") : m_sHostname);
+                if (m_bOverrideRdpUser)
+                    rdpUser.assign(m_sRdpOverrideUser);
 
-                if (boost::starts_with(uri, "/robots.txt")) {
-                    response->SetHeader("Content-Type", "text/plain");
-                    response->SetBody("User-agent: *\nDisallow: /\n", 26);
-                    return HTTPRESPONSECODE_200_OK;
-                }
+                if (m_bOverrideRdpPass)
+                    rdpPass.assign(m_sRdpOverridePass);
+            }
 
-                if (m_bRedirect && (!request->Secure())) {
-                    string dest(boost::starts_with(uri, "/wsgate?") ? "wss" : "https");
-                    dest.append("://").append(thisHost).append(uri);
-                    response->SetHeader("Location", dest);
-                    log::info << "Request from " << request->RemoteAddress()
-                        << ": " << uri << " => 301 Moved permanently" << endl;
-                    return HTTPRESPONSECODE_301_MOVEDPERMANENTLY;
-                }
-
-                // Request-URI for cursor image: /cur/0123456789ABCDEF/1
-                if (boost::starts_with(uri, "/cur/")) {
-                    string idpart(uri.substr(5));
-                    vector<string> parts;
-                    boost::split(parts, idpart, is_any_of("/"));
-                    SessionMap::iterator it = m_SessionMap.find(parts[0]);
-                    if (it != m_SessionMap.end()) {
-                        uint32_t cid = 0;
-                        try {
-                            cid = boost::lexical_cast<uint32_t>(parts[1]);
-                        } catch (const boost::bad_lexical_cast & e) { cid = 0; }
-                        if (cid) {
-                            RDP::cursor c = it->second->GetCursor(cid);
-                            time_t ct = c.get<0>();
-                            if (0 != ct) {
-                                if (notModified(request, response, ct)) {
-                                    return HTTPRESPONSECODE_304_NOT_MODIFIED;
-                                }
-                                string png = c.get<1>();
-                                if (!png.empty()) {
-                                    response->SetHeader("Content-Type", "image/png");
-                                    response->SetLastModified(ct);
-                                    response->SetBody(png.data(), png.length());
-                                    log::info << "Request from " << request->RemoteAddress()
-                                        << ": " << uri << " => 200 OK" << endl;
-                                    return HTTPRESPONSECODE_200_OK;
-                                }
-                            }
-                        }
-                    }
-                    log::warn << "Request from " << request->RemoteAddress()
-                        << ": " << uri << " => 404 Not found" << endl;
-                    return HTTPRESPONSECODE_404_NOTFOUND;
-                }
-                if (boost::starts_with(uri, "/wsgate?")) {
-                    string dtsize(request->FormValues("dtsize").m_sBody);
-                    string rdphost(request->FormValues("host").m_sBody);
-                    string rdpuser(request->FormValues("user").m_sBody);
-                    string rdppass(base64_decode(request->FormValues("pass").m_sBody));
-
-                    if (m_bOverrideRdpHost) {
-                        rdphost.assign(m_sRdpOverrideHost);
-                    }
-                    if (m_bOverrideRdpUser) {
-                        rdpuser.assign(m_sRdpOverrideUser);
-                    }
-                    if (m_bOverrideRdpPass) {
-                        rdppass.assign(m_sRdpOverridePass);
-                    }
+            bool ConnectionIsAllowed(string rdphost)
+            {
                     bool denied = true;
                     vector<boost::regex>::iterator ri;
                     if (m_bOrderDenyAllow) {
@@ -337,176 +283,392 @@ namespace wsgate {
                             }
                         }
                     }
-                    if (denied) {
-                        log::warn << "Connect from " << request->RemoteAddress()
-                            << " to " << rdphost << " denied by access rules" << endl;
-                        return HTTPRESPONSECODE_403_FORBIDDEN;
-                    }
+                    return true;
+            }
 
-                    WsRdpParams params = {
-                        m_bOverrideRdpPort ? m_RdpOverrideParams.port : nFormValue(request, "port", 3389),
-                        1024,
-                        768,
-                        m_bOverrideRdpPerf ? m_RdpOverrideParams.perf : nFormValue(request, "perf", 0),
-                        m_bOverrideRdpFntlm ? m_RdpOverrideParams.fntlm : nFormValue(request, "fntlm", 0),
-                        m_bOverrideRdpNotls ? m_RdpOverrideParams.notls : nFormValue(request, "notls", 0),
-                        m_bOverrideRdpNonla ? m_RdpOverrideParams.nonla : nFormValue(request, "nonla", 0),
-                        m_bOverrideRdpNowallp ? m_RdpOverrideParams.nowallp : nFormValue(request, "nowallp", 0),
-                        m_bOverrideRdpNowdrag ? m_RdpOverrideParams.nowdrag : nFormValue(request, "nowdrag", 0),
-                        m_bOverrideRdpNomani ? m_RdpOverrideParams.nomani : nFormValue(request, "nomani", 0),
-                        m_bOverrideRdpNotheme ? m_RdpOverrideParams.notheme : nFormValue(request, "notheme", 0),
-                    };
+            void LogInfo(std::basic_string<char> remoteAdress, string uri, const char response[])
+            {
+                log::info << "Request FROM: " << remoteAdress << endl;
+                log::info << "To URI: " << uri << " => " << response << endl;
+            }
 
-                    if (!dtsize.empty()) {
-                        try {
-                            vector<string> wh;
-                            boost::split(wh, dtsize, is_any_of("x"));
-                            if (wh.size() == 2) {
-                                params.width = boost::lexical_cast<int>(wh[0]);
-                                params.height = boost::lexical_cast<int>(wh[1]);
+            ResponseCode HandleRobotsRequest(HttpRequest *request, HttpResponse *response, string uri, string thisHost)
+            {
+                response->SetHeader("Content-Type", "text/plain");
+                response->SetBody("User-agent: *\nDisallow: /\n", 26);
+                return HTTPRESPONSECODE_200_OK;
+            }
+
+            /* =================================== CURSOR HANDLING =================================== */
+            ResponseCode HandleCursorRequest(HttpRequest *request, HttpResponse *response, string uri, string thisHost)
+            {
+                string idpart(uri.substr(5));
+                vector<string> parts;
+                boost::split(parts, idpart, is_any_of("/"));
+                SessionMap::iterator it = m_SessionMap.find(parts[0]);
+                if (it != m_SessionMap.end()) {
+                    uint32_t cid = 0;
+                    try {
+                        cid = boost::lexical_cast<uint32_t>(parts[1]);
+                    } catch (const boost::bad_lexical_cast & e) { cid = 0; }
+                    if (cid) {
+                        RDP::cursor c = it->second->GetCursor(cid);
+                        time_t ct = c.get<0>();
+                        if (0 != ct) {
+                            if (notModified(request, response, ct)) {
+                                return HTTPRESPONSECODE_304_NOT_MODIFIED;
                             }
-                        } catch (const exception &e) {
-                            params.width = 1024;
-                            params.height = 768;
+                            string png = c.get<1>();
+                            if (!png.empty()) {
+                                response->SetHeader("Content-Type", "image/cur");
+                                response->SetLastModified(ct);
+                                response->SetBody(png.data(), png.length());
+                                LogInfo(request->RemoteAddress(), uri, "200 OK");
+                                return HTTPRESPONSECODE_200_OK;
+                            }
                         }
                     }
-                    response->SetBody("", 0);
-                    if (0 != request->HttpVersion().compare("1.1")) {
-                        log::warn << "Request from " << request->RemoteAddress()
-                            << ": " << uri << " => 400 (Not HTTP 1.1)" << endl;
-                        return HTTPRESPONSECODE_400_BADREQUEST;
-                    }
-                    string wshost(to_lower_copy(request->Headers("Host")));
-                    string wsconn(to_lower_copy(request->Headers("Connection")));
-                    string wsupg(to_lower_copy(request->Headers("Upgrade")));
-                    string wsver(request->Headers("Sec-WebSocket-Version"));
-                    string wskey(request->Headers("Sec-WebSocket-Key"));
-                    string wsproto(request->Headers("Sec-WebSocket-Protocol"));
-                    string wsext(request->Headers("Sec-WebSocket-Extension"));
-                    if (!MultivalHeaderContains(wsconn, "upgrade")) {
-                        log::warn << "Request from " << request->RemoteAddress()
-                            << ": " << uri << " => 400 (No upgrade header)" << endl;
-                        return HTTPRESPONSECODE_400_BADREQUEST;
-                    }
-                    if (!MultivalHeaderContains(wsupg, "websocket")) {
-                        log::warn << "Request from " << request->RemoteAddress()
-                            << ": " << uri << " => 400 (Upgrade header does not contain websocket tag)" << endl;
-                        return HTTPRESPONSECODE_400_BADREQUEST;
-                    }
-                    if (0 != wshost.compare(thisHost)) {
-                        log::warn << "Request from " << request->RemoteAddress()
-                            << ": " << uri << " => 400 (Host header does not match)" << endl;
-                        return HTTPRESPONSECODE_400_BADREQUEST;
-                    }
-                    string wskey_decoded(base64_decode(wskey));
-                    if (16 != wskey_decoded.length()) {
-                        log::warn << "Request from " << request->RemoteAddress()
-                            << ": " << uri << " => 400 (Invalid WebSocket key)" << endl;
-                        return HTTPRESPONSECODE_400_BADREQUEST;
-                    }
-                    SHA1 sha1;
-                    uint32_t digest[5];
-                    sha1 << wskey.c_str() << ws_magic;
-                    if (!sha1.Result(digest)) {
-                        log::warn << "Request from " << request->RemoteAddress()
-                            << ": " << uri << " => 500 (Digest calculation failed)" << endl;
-                        return HTTPRESPONSECODE_500_INTERNALSERVERERROR;
-                    }
-                    // Handle endianess
-                    for (int i = 0; i < 5; ++i) {
-                        digest[i] = htonl(digest[i]);
-                    }
+                }
+                LogInfo(request->RemoteAddress(), uri, "404 Not Found");
+                return HTTPRESPONSECODE_404_NOTFOUND;
+            }
 
-                    if (!MultivalHeaderContains(wsver, "13")) {
-                        response->SetHeader("Sec-WebSocket-Version", "13");
-                        log::warn << "Request from " << request->RemoteAddress()
-                            << ": " << uri << " => 426 (Protocol version not 13)" << endl;
-                        return HTTPRESPONSECODE_426_UPGRADE_REQUIRED;
-                    }
+            /* =================================== REDIRECT REQUEST =================================== */
+            ResponseCode HandleRedirectRequest(HttpRequest *request, HttpResponse *response, string uri, string thisHost)
+            {
+                string dest(boost::starts_with(uri, "/wsgate?") ? "wss" : "https");
+                //adding the sslPort to the dest Location
+                if (m_pVm->count("ssl.port"))
+                {
+                    stringstream sslPort;
+                    sslPort << (*m_pVm)["ssl.port"].as<uint16_t>();
 
-                    MyRawSocketHandler *sh = dynamic_cast<MyRawSocketHandler*>(GetRawSocketHandler());
-                    if (!sh) {
-                        throw tracing::runtime_error("No raw socket handler available");
+                    //Replace the http port with the ssl one
+                    string thisSslHost = thisHost.substr(0, thisHost.find(":")) + ":" + sslPort.str();      
+
+                    //append the rest of the uri
+                    dest.append("://").append(thisSslHost).append(uri);
+                    response->SetHeader("Location", dest);
+                    LogInfo(request->RemoteAddress(), uri, "301 Moved permanently");
+                    return HTTPRESPONSECODE_301_MOVEDPERMANENTLY;
+                }
+                else
+                {
+                    LogInfo(request->RemoteAddress(), uri, "404 Not found");
+                    return HTTPRESPONSECODE_404_NOTFOUND;
+                }
+
+            }
+
+            /* =================================== HANDLE WSGATE REQUEST =================================== */
+            int CheckIfWSocketRequest(HttpRequest *request, HttpResponse *response, string uri, string thisHost)
+            {
+                if (0 != request->HttpVersion().compare("1.1"))
+                {
+                    LogInfo(request->RemoteAddress(), uri, "400 (Not HTTP 1.1)");
+                    return 400;
+                }
+
+                string wshost(to_lower_copy(request->Headers("Host")));
+                string wsconn(to_lower_copy(request->Headers("Connection")));
+                string wsupg(to_lower_copy(request->Headers("Upgrade")));
+                string wsver(request->Headers("Sec-WebSocket-Version"));
+                string wskey(request->Headers("Sec-WebSocket-Key"));
+
+                string wsproto(request->Headers("Sec-WebSocket-Protocol"));
+                string wsext(request->Headers("Sec-WebSocket-Extension"));
+
+                if (!MultivalHeaderContains(wsconn, "upgrade"))
+                {
+                    LogInfo(request->RemoteAddress(), uri, "400 (No upgrade header)");
+
+                    return 400;
+                }
+                if (!MultivalHeaderContains(wsupg, "websocket"))
+                {
+                    LogInfo(request->RemoteAddress(), uri, "400 (Upgrade header does not contain websocket tag)");
+                    return 400;
+                }
+                if (0 != wshost.compare(thisHost))
+                {
+                    LogInfo(request->RemoteAddress(), uri, "400 (Host header does not match)");
+                    return 400;
+                }
+                string wskey_decoded(base64_decode(wskey));
+
+                if (16 != wskey_decoded.length())
+                {
+                    LogInfo(request->RemoteAddress(), uri, "400 (Invalid WebSocket key)");
+                    return 400;
+                }
+
+                if (!MultivalHeaderContains(wsver, "13"))
+                {
+                    response->SetHeader("Sec-WebSocket-Version", "13");
+                    LogInfo(request->RemoteAddress(), uri, "426 (Protocol version not 13)");
+                    return 426;
+                }
+
+                return 0;
+            }
+
+            void ManageCookies(HttpRequest *request, HttpResponse *response, string rdphost, string rdppcb, string rdpuser, string thisHost)
+            {
+                CookieParameters setcookie;
+                setcookie["path"] = "/";
+                setcookie["host"] = thisHost;
+                setcookie["max-age"] = "864000";
+                if (request->Secure()) {
+                    setcookie["secure"] = "";
+                }
+                CookieParameters delcookie;
+                delcookie["path"] = "/";
+                delcookie["host"] = thisHost;
+                delcookie["max-age"] = "0";
+                if (request->Secure()) {
+                    delcookie["secure"] = "";
+                }
+                if(rdppcb.empty()) {
+                    delcookie["name"] = "lastpcb";
+                    delcookie["value"] = "%20";
+                    response->SetCookie(delcookie);
+                } else {
+                    setcookie["name"] = "lastpcb";
+                    setcookie["value"] = (rdppcb);
+                    response->SetCookie(setcookie);
+                }
+                if (rdphost.empty()) {
+                    delcookie["name"] = "lasthost";
+                    delcookie["value"] = "%20";
+                    response->SetCookie(delcookie);
+                } else {
+                    setcookie["name"] = "lasthost";
+                    setcookie["value"] = (m_bOverrideRdpHost ? "<predefined>" : rdphost);
+                    response->SetCookie(setcookie);
+                }
+                if (rdpuser.empty()) {
+                    delcookie["name"] = "lastuser";
+                    delcookie["value"] = "%20";
+                    response->SetCookie(delcookie);
+                } else {
+                    setcookie["name"] = "lastuser";
+                    setcookie["value"] = (m_bOverrideRdpUser ? "<predefined>" : rdpuser);
+                    response->SetCookie(setcookie);
+                }
+            }
+
+            ResponseCode HandleWsgateRequest(HttpRequest *request, HttpResponse *response, std::string uri, std::string thisHost)
+            {
+                //FreeRDP Params
+                string dtsize;
+                string rdphost;
+                string rdppcb;
+                string rdpuser;
+                int rdpport;
+                string rdppass;
+                WsRdpParams params;
+                bool setCookie = true;
+
+                if(boost::starts_with(uri, "/wsgate?token="))
+                {
+                    // OpenStack console authentication
+                    setCookie = false;
+                    try
+                    {
+                        log::info << "Starting OpenStack token authentication" << endl;
+
+                        string tokenId = request->FormValues("token").m_sBody;
+
+                        nova_console_token_auth* token_auth = nova_console_token_auth_factory::get_instance();
+
+                        nova_console_info info = token_auth->get_console_info(m_sOpenStackAuthUrl, m_sOpenStackUsername,
+                                                                              m_sOpenStackPassword, m_sOpenStackTenantName,
+                                                                              tokenId);
+
+                        log::info << "Host: " << info.host << " Port: " << info.port
+                                  << " Internal access path: " << info.internal_access_path
+                                  << endl;
+
+                        rdphost = info.host;
+                        rdpport = info.port;
+                        rdppcb = info.internal_access_path;
+
+                        rdpuser = m_sHyperVHostUsername;
+                        rdppass = m_sHyperVHostPassword;
                     }
-                    response->EnableIdleTimeout(false);
-                    response->EnableKeepAlive(true);
-                    if (!sh->Prepare(request->Connection(), rdphost, rdpuser, rdppass, params)) {
-                        log::warn << "Request from " << request->RemoteAddress()
-                            << ": " << uri << " => 503 (RDP backend not available)" << endl;
+                    catch(exception& ex)
+                    {
+                        log::err << "OpenStack token authentication failed: " << ex.what() << endl;
+                        return HTTPRESPONSECODE_400_BADREQUEST;
+                    }
+                }
+                else
+                {
+                    dtsize  = request->FormValues("dtsize").m_sBody;
+                    rdphost = request->FormValues("host").m_sBody;
+                    rdppcb  = request->FormValues("pcb").m_sBody;
+                    rdpuser = request->FormValues("user").m_sBody;
+                    istringstream(request->FormValues("port").m_sBody) >> rdpport;
+                    rdppass = base64_decode(request->FormValues("pass").m_sBody);
+                }
+
+                params =
+                {
+                    rdpport,
+                    1024,
+                    768,
+                    m_bOverrideRdpPerf ? m_RdpOverrideParams.perf : nFormValue(request, "perf", 0),
+                    m_bOverrideRdpFntlm ? m_RdpOverrideParams.fntlm : nFormValue(request, "fntlm", 0),
+                    m_bOverrideRdpNotls ? m_RdpOverrideParams.notls : nFormValue(request, "notls", 0),
+                    m_bOverrideRdpNonla ? m_RdpOverrideParams.nonla : nFormValue(request, "nonla", 0),
+                    m_bOverrideRdpNowallp ? m_RdpOverrideParams.nowallp : nFormValue(request, "nowallp", 0),
+                    m_bOverrideRdpNowdrag ? m_RdpOverrideParams.nowdrag : nFormValue(request, "nowdrag", 0),
+                    m_bOverrideRdpNomani ? m_RdpOverrideParams.nomani : nFormValue(request, "nomani", 0),
+                    m_bOverrideRdpNotheme ? m_RdpOverrideParams.notheme : nFormValue(request, "notheme", 0),
+                };
+
+                CheckForPredefined(rdphost, rdpuser, rdppass);
+
+                if( !ConnectionIsAllowed(rdphost) ){
+                    LogInfo(request->RemoteAddress(), rdphost, "403 Denied by access rules");
+                    return HTTPRESPONSECODE_403_FORBIDDEN;
+                }
+
+                if (!dtsize.empty()) {
+                    try {
+                        vector<string> wh;
+                        boost::split(wh, dtsize, is_any_of("x"));
+                        if (wh.size() == 2) {
+                            params.width = boost::lexical_cast<int>(wh[0]);
+                            params.height = boost::lexical_cast<int>(wh[1]);
+                        }
+                    } catch (const exception &e) {
+                        params.width = 1024;
+                        params.height = 768;
+                    }
+                }
+                response->SetBody("", 0);
+
+                int wsocketCheck = CheckIfWSocketRequest(request, response, uri, thisHost);
+                if(wsocketCheck != 0)
+                {
+                    //using a switch in case of new errors being thrown from the wsocket check
+                    switch(wsocketCheck)
+                    {
+                        case 400:
+                        {
+                            return HTTPRESPONSECODE_400_BADREQUEST;
+                        };
+                        case 426:
+                        {
+                            return HTTPRESPONSECODE_426_UPGRADE_REQUIRED;
+                        };
+                    }
+                }
+
+                string wskey(request->Headers("Sec-WebSocket-Key"));
+                SHA1 sha1;
+                uint32_t digest[5];
+                sha1 << wskey.c_str() << ws_magic;
+                if (!sha1.Result(digest))
+                {
+                    LogInfo(request->RemoteAddress(), uri, "500 (Digest calculation failed)");
+                    return HTTPRESPONSECODE_500_INTERNALSERVERERROR;
+                }
+                // Handle endianess
+                for (int i = 0; i < 5; ++i)
+                {
+                    digest[i] = htonl(digest[i]);
+                }
+                MyRawSocketHandler *sh = dynamic_cast<MyRawSocketHandler*>(GetRawSocketHandler());
+                if (!sh)
+                {
+                    throw tracing::runtime_error("No raw socket handler available");
+                }
+                response->EnableIdleTimeout(false);
+                response->EnableKeepAlive(true);
+                try
+                {
+                    if (!sh->Prepare(request->Connection(), rdphost, rdppcb, rdpuser, rdppass, params))
+                    {
+                        LogInfo(request->RemoteAddress(), uri, "503 (RDP backend not available)");
                         response->EnableIdleTimeout(true);
                         return HTTPRESPONSECODE_503_SERVICEUNAVAILABLE;
                     }
-
-                    CookieParameters setcookie;
-                    setcookie["path"] = "/";
-                    setcookie["host"] = thisHost;
-                    setcookie["max-age"] = "864000";
-                    if (request->Secure()) {
-                        setcookie["secure"] = "";
-                    }
-                    CookieParameters delcookie;
-                    delcookie["path"] = "/";
-                    delcookie["host"] = thisHost;
-                    delcookie["max-age"] = "0";
-                    if (request->Secure()) {
-                        delcookie["secure"] = "";
-                    }
-
-                    if (rdphost.empty()) {
-                        delcookie["name"] = "lasthost";
-                        delcookie["value"] = "%20";
-                        response->SetCookie(delcookie);
-                    } else {
-                        setcookie["name"] = "lasthost";
-                        setcookie["value"] = (m_bOverrideRdpHost ? "<predefined>" : rdphost);
-                        response->SetCookie(setcookie);
-                    }
-                    if (rdpuser.empty()) {
-                        delcookie["name"] = "lastuser";
-                        delcookie["value"] = "%20";
-                        response->SetCookie(delcookie);
-                    } else {
-                        setcookie["name"] = "lastuser";
-                        setcookie["value"] = (m_bOverrideRdpUser ? "<predefined>" : rdpuser);
-                        response->SetCookie(setcookie);
-                    }
-                    if (m_bOverrideRdpPass) {
-                        // Don't expose real RDP password to browser
-                        setcookie["name"] = "lastpass";
-                        setcookie["value"] = base64_encode(
-                                reinterpret_cast<const unsigned char *>("SomthingUseless"), 15);
-                        response->SetCookie(setcookie);
-                    } else {
-                        if (rdppass.empty()) {
-                            delcookie["name"] = "lastpass";
-                            delcookie["value"] = base64_encode(
-                                    reinterpret_cast<const unsigned char *>("%20"), 3);
-                            response->SetCookie(delcookie);
-                        } else {
-                            setcookie["name"] = "lastpass";
-                            setcookie["value"] = base64_encode(
-                                    reinterpret_cast<const unsigned char *>(rdppass.c_str()),
-                                    rdppass.length());
-                            response->SetCookie(setcookie);
-                        }
-                    }
-
-                    response->RemoveHeader("Content-Type");
-                    response->RemoveHeader("Content-Length");
-                    response->RemoveHeader("Last-Modified");
-                    response->RemoveHeader("Cache-Control");
-
-                    if (0 < wsproto.length()) {
-                        response->SetHeader("Sec-WebSocket-Protocol", wsproto);
-                    }
-                    response->SetHeader("Upgrade", "websocket");
-                    response->SetHeader("Connection", "Upgrade");
-                    response->SetHeader("Sec-WebSocket-Accept",
-                            base64_encode(reinterpret_cast<const unsigned char *>(digest), 20));
-                    log::info << "Request from " << request->RemoteAddress()
-                        << ": " << uri << " => 101" << endl;
-                    return HTTPRESPONSECODE_101_SWITCHING_PROTOCOLS;
                 }
+                catch(...)
+                {
+                    log::info << "caught exception!" << endl;
+                }
+
+                //Use cookies only as standalone app
+                if (setCookie)
+                    ManageCookies(request, response, rdphost, rdppcb, rdpuser, thisHost);
+                else
+                    //openstack - wipe out any cookies
+                    ManageCookies(request, response, "", "", "", thisHost);
+                response->RemoveHeader("Content-Type");
+                response->RemoveHeader("Content-Length");
+                response->RemoveHeader("Last-Modified");
+                response->RemoveHeader("Cache-Control");
+
+                string wsproto(request->Headers("Sec-WebSocket-Protocol"));
+                if (0 < wsproto.length())
+                {
+                    response->SetHeader("Sec-WebSocket-Protocol", wsproto);
+                }
+                response->SetHeader("Upgrade", "websocket");
+                response->SetHeader("Connection", "Upgrade");
+                response->SetHeader("Sec-WebSocket-Accept", base64_encode(reinterpret_cast<const unsigned char *>(digest), 20));
+
+                LogInfo(request->RemoteAddress(), uri, "101");
+                return HTTPRESPONSECODE_101_SWITCHING_PROTOCOLS;
+            }
+
+            // generates a page for each http request
+            ResponseCode HandleRequest(HttpRequest *request, HttpResponse *response)
+            {
+                //Connection Params
+                string uri = request->Uri();
+                string thisHost = m_sHostname.empty() ? request->Headers("Host") : m_sHostname;
+
+                //add new behaviour note:
+                //those requests that have the same beggining have to be placed with an if else condition
+
+                if(request->Method() != REQUESTMETHOD_GET)
+                    return HTTPRESPONSECODE_400_BADREQUEST;
+
+                if (m_bRedirect && (!request->Secure()))
+                {
+                    return HandleRedirectRequest(request, response, uri, thisHost);
+                }
+
+                if(boost::starts_with(uri, "/robots.txt"))
+                {
+                    return HandleRobotsRequest(request, response, uri, thisHost);
+                }
+                if(boost::starts_with(uri, "/cur/"))
+                {
+                    return HandleCursorRequest(request, response, uri, thisHost);
+                }
+
+                if(boost::starts_with(uri, "/wsgate?"))
+                {
+                    return HandleWsgateRequest(request, response, uri, thisHost);
+                }
+
+                if(boost::starts_with(uri, "/connect?"))
+                {
+                    //handle a direct connection via queryString here
+                    return HTTPRESPONSECODE_200_OK;
+                }
+                return HandleHTTPRequest(request, response);
+            }
+
+            ResponseCode HandleHTTPRequest(HttpRequest *request, HttpResponse *response, bool tokenAuth = false)
+            {
+                string uri(request->Uri());
+                string thisHost(m_sHostname.empty() ? request->Headers("Host") : m_sHostname);
 
                 // Regular (non WebSockets) request
                 bool bDynDebug = m_bDebug;
@@ -517,26 +679,31 @@ namespace wsgate {
                     }
                 }
                 if (0 != thisHost.compare(request->Headers("Host"))) {
-                    log::warn << "Request from " << request->RemoteAddress()
-                        << ": " << uri << " => 404 Not found" << endl;
+                    LogInfo(request->RemoteAddress(), uri, "404 Not found");
                     return HTTPRESPONSECODE_404_NOTFOUND;
                 }
+
+
                 path p(m_sDocumentRoot);
                 p /= uri;
                 if (ends_with(uri, "/")) {
                     p /= (bDynDebug ? "/index-debug.html" : "/index.html");
                 }
                 p.normalize();
+                bool externalRequest = false;
 
                 if (!exists(p)) {
-                    log::warn << "Request from " << request->RemoteAddress()
-                        << ": " << uri << " => 404 Not found" << endl;
-                    return HTTPRESPONSECODE_404_NOTFOUND;
+                    p = m_sDocumentRoot;
+                    p /= "index.html";
                 }
+
                 if (!is_regular_file(p)) {
+                    LogInfo(request->RemoteAddress(), uri, "403 Forbidden");
                     log::warn << "Request from " << request->RemoteAddress()
                         << ": " << uri << " => 403 Forbidden" << endl;
-                    return HTTPRESPONSECODE_403_FORBIDDEN;
+
+                    p = m_sDocumentRoot;
+                    p /= "index.html";
                 }
 
                 // Handle If-modified-sice request header
@@ -545,8 +712,6 @@ namespace wsgate {
                     return HTTPRESPONSECODE_304_NOT_MODIFIED;
                 }
                 response->SetLastModified(mtime);
-                response->SetHeader("X-Frame-Options", "sameorigin");
-                response->SetHeader("X-Content-Type-Options", "nosniff");
 
                 string body;
                 StaticCache::iterator ci = m_StaticCache.find(p);
@@ -578,30 +743,62 @@ namespace wsgate {
                 MimeType mt = simpleMime(to_lower_copy(basename));
                 if (HTML == mt) {
                     ostringstream oss;
-                    oss << (request->Secure() ? "wss://" : "ws://")
-                        << thisHost << ":"
-                        << request->LocalPort() << "/wsgate";
+
+                    oss << (request->Secure() ? "wss://" : "ws://") << thisHost << "/wsgate";
+
                     replace_all(body, "%WSURI%", oss.str());
                     replace_all(body, "%JSDEBUG%", (bDynDebug ? "-debug" : ""));
                     string tmp;
-                    tmp.assign(m_bOverrideRdpUser ? "<predefined>" : request->Cookies("lastuser"));
-                    replace_all(body, "%COOKIE_LASTUSER%", tmp);
-                    tmp.assign(m_bOverrideRdpUser ? "disabled=\"disabled\"" : "");
-                    replace_all(body, "%DISABLED_USER%", tmp);
-                    tmp.assign(m_bOverrideRdpPass ? "SomthingUseless" : base64_decode(request->Cookies("lastpass")));
-                    replace_all(body, "%COOKIE_LASTPASS%", tmp);
-                    tmp.assign(m_bOverrideRdpPass ? "disabled=\"disabled\"" : "");
-                    replace_all(body, "%DISABLED_PASS%", tmp);
-                    tmp.assign(m_bOverrideRdpHost ? "<predefined>" : request->Cookies("lasthost"));
-                    replace_all(body, "%COOKIE_LASTHOST%", tmp);
-                    tmp.assign(m_bOverrideRdpHost ? "disabled=\"disabled\"" : "");
-                    replace_all(body, "%DISABLED_HOST%", tmp);
-                    tmp.assign(m_bOverrideRdpPort ? boost::lexical_cast<string>(m_RdpOverrideParams.port) : "3389");
-                    replace_all(body, "%DEFAULT_PORT%", tmp);
-                    tmp.assign(m_bOverrideRdpPort ? "disabled=\"disabled\"" : "");
-                    replace_all(body, "%DISABLED_PORT%", tmp);
+                    if(externalRequest)
+                    {
+                        string dtsize(request->FormValues("dtsize").m_sBody);
+                        string port(request->FormValues("port").m_sBody);
+
+                        replace_all(body, "%COOKIE_LASTUSER%", request->FormValues("user").m_sBody);
+                        replace_all(body, "%COOKIE_LASTPASS%",  base64_decode(request->FormValues("pass").m_sBody)); // Passw0rd
+                        replace_all(body, "%COOKIE_LASTHOST%", request->FormValues("host").m_sBody);
+                        replace_all(body, "%COOKIE_LASTPCB%", request->FormValues("pcb").m_sBody);
+                        replace_all(body, "var externalConnection = false;", "var externalConnection = true;");
+                    }
+                    else
+                    {
+                        tmp.assign(m_bOverrideRdpUser ? "<predefined>" : request->Cookies("lastuser"));
+                        replace_all(body, "%COOKIE_LASTUSER%", tmp);
+                        tmp.assign(m_bOverrideRdpUser ? "disabled=\"disabled\"" : "");
+                        replace_all(body, "%DISABLED_USER%", tmp);
+                        tmp.assign(m_bOverrideRdpPass ? "SomthingUseless" : base64_decode(request->Cookies("lastpass")));
+                        replace_all(body, "%COOKIE_LASTPASS%", tmp);
+                        tmp.assign(m_bOverrideRdpPass ? "disabled=\"disabled\"" : "");
+                        replace_all(body, "%DISABLED_PASS%", tmp);
+
+                        tmp.assign(m_bOverrideRdpHost ? "<predefined>" : request->Cookies("lasthost"));
+                        replace_all(body, "%COOKIE_LASTHOST%", tmp);
+                        tmp.assign(m_bOverrideRdpHost ? "disabled=\"disabled\"" : "");
+                        replace_all(body, "%DISABLED_HOST%", tmp);
+
+                        tmp.assign(request->Cookies("lastpcb"));
+                        replace_all(body, "%COOKIE_LASTPCB%", tmp);
+                        tmp.assign("");
+                        replace_all(body, "%DISABLED_PCB%", tmp);
+                    }
+
                     tmp.assign(VERSION).append(".").append(GITREV);
                     replace_all(body, "%VERSION%", tmp);
+
+                    //The new Port Selector
+                    if(m_bOverrideRdpPort) {
+                        replace_all(body, "%DISABLED_PORT%", "disabled=\"disabled\"");
+                        replace_all(body, "%SELECTED_PORT0%", (0 == m_RdpOverrideParams.port) ? "selected" : "");
+                        replace_all(body, "%SELECTED_PORT1%", (1 == m_RdpOverrideParams.port) ? "selected" : "");
+                        replace_all(body, "%SELECTED_PORT2%", (2 == m_RdpOverrideParams.port) ? "selected" : "");
+                    } else {
+                        replace_all(body, "%DISABLED_PORT%", "");
+                        replace_all(body, "%SELECTED_PORT0%", "");
+                        replace_all(body, "%SELECTED_PORT1%", "");
+                        replace_all(body, "%SELECTED_PORT2%", "");
+                    }
+
+                    //The Desktop Resolution
                     if (m_bOverrideRdpPerf) {
                         replace_all(body, "%DISABLED_PERF%", "disabled=\"disabled\"");
                         replace_all(body, "%SELECTED_PERF0%", (0 == m_RdpOverrideParams.perf) ? "selected" : "");
@@ -613,6 +810,8 @@ namespace wsgate {
                         replace_all(body, "%SELECTED_PERF1%", "");
                         replace_all(body, "%SELECTED_PERF2%", "");
                     }
+
+
                     if (m_bOverrideRdpFntlm) {
                         replace_all(body, "%DISABLED_FNTLM%", "disabled=\"disabled\"");
                         replace_all(body, "%SELECTED_FNTLM0%", (0 == m_RdpOverrideParams.fntlm) ? "selected" : "");
@@ -688,13 +887,16 @@ namespace wsgate {
                     case OGG:
                         response->SetHeader("Content-Type", "audio/ogg");
                         break;
+                    case CUR:
+                        response->SetHeader("Content-Type", "image/cur");
+                        break;
                     case BINARY:
                         response->SetHeader("Content-Type", "application/octet-stream");
                         break;
                 }
                 response->SetBody(body.data(), body.length());
-                log::info << "Request from " << request->RemoteAddress()
-                    << ": " << uri << " => 200 OK" << endl;
+
+                LogInfo(request->RemoteAddress(), uri, "200 OK");
                 return HTTPRESPONSECODE_200_OK;
             }
 
@@ -760,6 +962,12 @@ namespace wsgate {
                     ("rdpoverride.nonla", po::value<string>(), "Predefined RDP flag: Disable NLA")
                     ("rdpoverride.forcentlm", po::value<int>(), "Predefined RDP flag: Force NTLM")
                     ("rdpoverride.size", po::value<string>(), "Predefined RDP desktop size")
+                    ("openstack.authurl", po::value<string>(), "OpenStack authentication URL")
+                    ("openstack.username", po::value<string>(), "OpenStack username")
+                    ("openstack.password", po::value<string>(), "OpenStack password")
+                    ("openstack.tenantname", po::value<string>(), "OpenStack tenant name")
+                    ("hyperv.hostusername", po::value<string>(), "Hyper-V username")
+                    ("hyperv.hostpassword", po::value<string>(), "Hyper-V user's password")
                     ;
 
                 m_pVm = new po::variables_map();
@@ -843,12 +1051,18 @@ namespace wsgate {
                         } else {
                             m_bOverrideRdpPass = false;
                         }
+
                         if (m_pVm->count("rdpoverride.port")) {
-                            m_RdpOverrideParams.port = (*m_pVm)["rdpoverride.port"].as<uint16_t>();
+                            int n = (*m_pVm)["rdpoverride.port"].as<int>();
+                            if ((0 > n) || (2 < n)) {
+                                throw tracing::invalid_argument("Invalid port value.");
+                            }
+                            m_RdpOverrideParams.port = n;
                             m_bOverrideRdpPort = true;
                         } else {
                             m_bOverrideRdpPort = false;
                         }
+
                         if (m_pVm->count("rdpoverride.performance")) {
                             int n = (*m_pVm)["rdpoverride.performance"].as<int>();
                             if ((0 > n) || (2 < n)) {
@@ -910,6 +1124,36 @@ namespace wsgate {
                         } else {
                             m_sHostname.clear();
                         }
+                        if (m_pVm->count("openstack.authurl")) {
+                            m_sOpenStackAuthUrl.assign((*m_pVm)["openstack.authurl"].as<string>());
+                        } else {
+                            m_sOpenStackAuthUrl.clear();
+                        }
+                        if (m_pVm->count("openstack.username")) {
+                            m_sOpenStackUsername.assign((*m_pVm)["openstack.username"].as<string>());
+                        } else {
+                            m_sOpenStackUsername.clear();
+                        }
+                        if (m_pVm->count("openstack.password")) {
+                            m_sOpenStackPassword.assign((*m_pVm)["openstack.password"].as<string>());
+                        } else {
+                            m_sOpenStackPassword.clear();
+                        }
+                        if (m_pVm->count("openstack.tenantname")) {
+                            m_sOpenStackTenantName.assign((*m_pVm)["openstack.tenantname"].as<string>());
+                        } else {
+                            m_sOpenStackTenantName.clear();
+                        }
+                        if (m_pVm->count("hyperv.hostusername")) {
+                            m_sHyperVHostUsername.assign((*m_pVm)["hyperv.hostusername"].as<string>());
+                        } else {
+                            m_sHyperVHostUsername.clear();
+                        }
+                        if (m_pVm->count("hyperv.hostpassword")) {
+                            m_sHyperVHostPassword.assign((*m_pVm)["hyperv.hostpassword"].as<string>());
+                        } else {
+                            m_sHyperVHostPassword.clear();
+                        }
                     } catch (const tracing::invalid_argument & e) {
                         cerr << e.what() << endl;
                         wsgate::log::err << e.what() << endl;
@@ -926,7 +1170,8 @@ namespace wsgate {
 
         private:
 
-            bool notModified(HttpRequest *request, HttpResponse *response, time_t mtime) {
+            bool notModified(HttpRequest *request, HttpResponse *response, time_t mtime)
+            {
                 string ifms(request->Headers("if-modified-since"));
                 if (!ifms.empty()) {
                     pt::ptime file_time(pt::from_time_t(mtime));
@@ -1084,6 +1329,12 @@ namespace wsgate {
             bool m_bDaemon;
             bool m_bRedirect;
             StaticCache m_StaticCache;
+            string m_sOpenStackAuthUrl;
+            string m_sOpenStackUsername;
+            string m_sOpenStackPassword;
+            string m_sOpenStackTenantName;
+            string m_sHyperVHostUsername;
+            string m_sHyperVHostPassword;
     };
 
 #ifndef _WIN32
@@ -1175,7 +1426,6 @@ namespace wsgate {
                 log::debug << "GOT Pong: '" << data << "'" << endl;
             }
             virtual void do_response(const std::string & data) {
-                // log::debug << "Send WS response, size: " << data.length() << endl;
                 ehs_autoptr<GenericResponse> r(new GenericResponse(0, m_econn));
                 r->SetBody(data.data(), data.length());
                 m_ehs->AddResponse(ehs_move(r));
@@ -1224,11 +1474,12 @@ namespace wsgate {
         }
     }
 
-    bool MyRawSocketHandler::Prepare(EHSConnection *conn, const string host,
+    bool MyRawSocketHandler::Prepare(EHSConnection *conn, const string host, const string pcb,
             const string user, const string pass, const WsRdpParams &params)
     {
         log::debug << "RDP Host:               '" << host << "'" << endl;
-        log::debug << "RDP Port:               '" << params.port << "'" << endl;
+        log::debug << "RDP Pcb:               '" << pcb << "'" << endl;
+        log::info << "RDP Port:               '" << params.port << "'" << endl;
         log::debug << "RDP User:               '" << user << "'" << endl;
         log::debug << "RDP Password:           '" << pass << "'" << endl;
         log::debug << "RDP Desktop size:       " << params.width << "x" << params.height << endl;
@@ -1241,12 +1492,22 @@ namespace wsgate {
         log::debug << "RDP Disable NLA:        " << params.nonla << endl;
         log::debug << "RDP NTLM auth:          " << params.fntlm << endl;
 
-        handler_ptr h(new MyWsHandler(conn, m_parent, this));
-        conn_ptr c(new wspp::wsendpoint(h.get()));
-        rdp_ptr r(new RDP(h.get()));
-        m_cmap[conn] = conn_tuple(c, h, r);
-        r->Connect(host, user, string() /*domain*/, pass, params);
-        m_parent->RegisterRdpSession(r);
+
+        try
+        {
+            handler_ptr h(new MyWsHandler(conn, m_parent, this));
+            conn_ptr c(new wspp::wsendpoint(h.get()));
+            rdp_ptr r(new RDP(h.get()));
+            m_cmap[conn] = conn_tuple(c, h, r);
+
+            r->Connect(host, pcb, user, string() /*domain*/, pass, params);
+            m_parent->RegisterRdpSession(r);
+        }
+        catch(...)
+        {
+            log::info << "Attemtped double connection to the same machine" << endl;
+            return false;
+        }
         return true;
     }
 
@@ -1296,8 +1557,7 @@ int main (int argc, char **argv)
 #ifndef _WIN32
         ("foreground,f", "Run in foreground.")
 #endif
-        ("config,c", po::value<string>()->default_value(DEFAULTCFG), "Specify config file")
-        ;
+        ("config,c", po::value<string>()->default_value(DEFAULTCFG), "Specify config file");
 
     po::variables_map vm;
     try {
@@ -1509,15 +1769,20 @@ int main (int argc, char **argv)
         } else {
             wsgate::kbdio kbd;
             cout << "Press q to terminate ..." << endl;
-            while (!(srv.ShouldTerminate()  || (psrv && psrv->ShouldTerminate()) || g_signaled || kbd.qpressed())) {
-                if (sleepInLoop) {
-                    usleep(1000);
-                } else {
-                    srv.HandleData(1000);
-                    if (NULL != psrv) {
-                        psrv->HandleData(1000);
-                    }
-                }
+            while (!(srv.ShouldTerminate()  || (psrv && psrv->ShouldTerminate()) || g_signaled || kbd.qpressed()))
+            	{
+                if (sleepInLoop)
+					{
+						usleep(1000);
+					}
+                else
+					{
+						srv.HandleData(1000);
+						if (NULL != psrv)
+							{
+								psrv->HandleData(1000);
+							}
+					}
             }
         }
         wsgate::log::info << "terminating" << endl;

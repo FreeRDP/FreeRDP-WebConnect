@@ -163,7 +163,7 @@ wsgate.RDP = new Class( {
         this.mY = 0;
         this.chx = 10;
         this.chy = 10;
-        this.modkeys = [8, 16, 17, 18, 20, 144, 145];
+        this.modkeys = [144, ];
         this.cursors = new Array();
         this.sid = null;
         this.open = false;
@@ -183,10 +183,30 @@ wsgate.RDP = new Class( {
         if (vkbd) {
             vkbd.addEvent('vkpress', this.onKv.bind(this));
         }
+        //browser identiying variables
+        this.msie = window.navigator.userAgent.indexOf('MSIE ');
+        this.trident = window.navigator.userAgent.indexOf('Trident/');
         this.parent(url);
     },
     Disconnect: function() {
         this._reset();
+    },
+    SendKey: function(comb) {
+        //Add here all the keys from the canvas
+        switch (comb) {
+            case 1:
+                code = 0x2a; //ctrl+alt+delete
+                break;
+        };
+        if (this.sock.readyState == this.sock.OPEN) {
+            this.log.debug('send  special combination', code);
+            buf = new ArrayBuffer(12);
+            a = new Uint32Array(buf);
+            a[0] = 3; // WSOP_CS_SPECIALCOMB
+	    a[1] = code;
+            this.sock.send(buf);
+
+	};
     },
     /**
      * Position cursor image
@@ -295,7 +315,7 @@ wsgate.RDP = new Class( {
                 // left, top, right, bottom
                 hdr = new Int32Array(data, 4, 4);
                 this._cR(hdr[0], hdr[1], hdr[2] - hdr[0], hdr[3] - hdr[1], true);
-                break; 
+                break;
             case 5:
                 // PatBlt
                 if (28 == data.byteLength) {
@@ -317,7 +337,7 @@ wsgate.RDP = new Class( {
                 } else {
                     this.log.warn('PatBlt: Patterned brush not yet implemented');
                 }
-                break; 
+                break;
             case 6:
                 // Multi Opaque rect
                 // color, nrects
@@ -334,7 +354,7 @@ wsgate.RDP = new Class( {
                     // this._fR(rects[offs], rects[offs+1], rects[offs+2], rects[offs+3], c);
                     offs += 4;
                 }
-                break; 
+                break;
             case 7:
                 // ScrBlt
                 // rop3, x, y, w, h, sx, sy
@@ -359,15 +379,17 @@ wsgate.RDP = new Class( {
                 } else {
                     this.log.warn('ScrBlt: width and/or height is zero');
                 }
-                break; 
+                break;
             case 8:
                 // PTR_NEW
                 // id, xhot, yhot
                 hdr = new Uint32Array(data, 4, 3);
                 if (this.cssC) {
-                    this.cursors[hdr[0]] = 'url(/cur/'+this.sid+'/'+hdr[0]+') '+hdr[1]+' '+hdr[2]+',none';
+                    this.cursors[hdr[0]] = (this.msie > 0 || this.trident > 0) ? 'url(/cur/' + this.sid + '/' + hdr[0] + '), none' : //IE is not suporting given hot spots
+                                            'url(/cur/' + this.sid + '/' + hdr[0] + ') ' + hdr[1] + ' ' + hdr[2] + ',none'; 
                 } else {
-                    this.cursors[hdr[0]] = {u: '/cur/'+this.sid+'/'+hdr[0], x: hdr[1], y: hdr[2]};
+                    this.cursors[hdr[0]] = (this.msie > 0 || this.trident > 0) ? { u: '/cur/' + this.sid + '/' + hdr[0] } :
+                                            { u: '/cur/' + this.sid + '/' + hdr[0], x: hdr[1], y: hdr[2] };
                 }
                 break;
             case 9:
@@ -654,8 +676,8 @@ wsgate.RDP = new Class( {
     onMm: function(evt) {
         var buf, a, x, y;
         evt.preventDefault();
-        x = evt.event.layerX;
-        y = evt.event.layerY;
+        x = (this.msie > 0 || this.trident > 0) ? evt.event.layerX - evt.event.currentTarget.offsetLeft : evt.event.layerX;
+        y = (this.msie > 0 || this.trident > 0) ? evt.event.layerY - evt.event.currentTarget.offsetTop : evt.event.layerY;
         if (!this.cssC) {
             this.mX = x;
             this.mY = y;
@@ -683,8 +705,8 @@ wsgate.RDP = new Class( {
                 this.fireEvent('touch3');
                 return;
             }
-            x = evt.event.layerX;
-            y = evt.event.layerY;
+            x = (this.msie > 0 || this.trident > 0) ? evt.event.layerX - evt.event.currentTarget.offsetLeft : evt.event.layerX;
+            y = (this.msie > 0 || this.trident > 0) ? evt.event.layerY - evt.event.currentTarget.offsetTop : evt.event.layerY;
             which = this._mB(evt);
             this.log.debug('mD b: ', which, ' x: ', x, ' y: ', y);
             if (this.sock.readyState == this.sock.OPEN) {
@@ -705,8 +727,8 @@ wsgate.RDP = new Class( {
         var buf, a, x, y, which;
         if (this.Tcool) {
             evt.preventDefault();
-            x = x || evt.event.layerX;
-            y = y || evt.event.layerY;
+            x = (this.msie > 0 || this.trident > 0) ? evt.event.layerX - evt.event.currentTarget.offsetLeft : evt.event.layerX;
+            y = (this.msie > 0 || this.trident > 0) ? evt.event.layerY - evt.event.currentTarget.offsetTop : evt.event.layerY;
             which = this._mB(evt);
             this.log.debug('mU b: ', which, ' x: ', x, ' y: ', y);
             if (this.aMF) {
@@ -729,8 +751,8 @@ wsgate.RDP = new Class( {
     onMw: function(evt) {
         var buf, a, x, y;
         evt.preventDefault();
-        x = evt.event.layerX;
-        y = evt.event.layerY;
+        x = (this.msie > 0 || this.trident > 0) ? evt.event.layerX - evt.event.currentTarget.offsetLeft : evt.event.layerX;
+        y = (this.msie > 0 || this.trident > 0) ? evt.event.layerY - evt.event.currentTarget.offsetTop : evt.event.layerY;
         // this.log.debug('mW d: ', evt.wheel, ' x: ', x, ' y: ', y);
         if (this.sock.readyState == this.sock.OPEN) {
             buf = new ArrayBuffer(16);
@@ -742,22 +764,36 @@ wsgate.RDP = new Class( {
             this.sock.send(buf);
         }
     },
+
+    /**
+     * Event handler for sending array of keys to be pressed
+     */
+    sendKeys: function(codes) {
+        var myStringArray = ["Hello","World"];
+        for (var i = 0; i < codes.length; i++) {
+            alert(codes[i]);
+            if(this.sock.readyState == this.sock.OPEN) {
+                buf = new ArrayBuffer(12);
+
+            }
+        }
+    },
+
     /**
      * Event handler for key down events
      */
     onKd: function(evt) {
         var a, buf;
-        if (this.modkeys.contains(evt.code)) {
-            evt.preventDefault();
-            // this.log.debug('kD code: ', evt.code, ' ', evt);
-            if (this.sock.readyState == this.sock.OPEN) {
-                buf = new ArrayBuffer(12);
-                a = new Uint32Array(buf);
-                a[0] = 1; // WSOP_CS_KUPDOWN
-                a[1] = 1; // down
-                a[2] = evt.code;
-                this.sock.send(buf);
-            }
+        this.log.debug('kD code: ', evt.code, ' ', evt);
+        evt.preventDefault();
+        // this.log.debug('kD code: ', evt.code, ' ', evt);
+        if (this.sock.readyState == this.sock.OPEN) {
+            buf = new ArrayBuffer(12);
+            a = new Uint32Array(buf);
+            a[0] = 1; // WSOP_CS_KUPDOWN
+            a[1] = 1; // down
+            a[2] = evt.code;
+            this.sock.send(buf);
         }
     },
     /**
@@ -765,17 +801,15 @@ wsgate.RDP = new Class( {
      */
     onKu: function(evt) {
         var a, buf;
-        if (this.modkeys.contains(evt.code)) {
-            evt.preventDefault();
-            // this.log.debug('kU code: ', evt.code);
-            if (this.sock.readyState == this.sock.OPEN) {
-                buf = new ArrayBuffer(12);
-                a = new Uint32Array(buf);
-                a[0] = 1; // WSOP_CS_KUPDOWN
-                a[1] = 0; // up
-                a[2] = evt.code;
-                this.sock.send(buf);
-            }
+        evt.preventDefault();
+        this.log.debug('ku code: ', evt.code, ' ', evt);
+        if (this.sock.readyState == this.sock.OPEN) {
+            buf = new ArrayBuffer(12);
+            a = new Uint32Array(buf);
+            a[0] = 1; // WSOP_CS_KUPDOWN
+            a[1] = 0; // up
+            a[2] = evt.code;
+            this.sock.send(buf);
         }
     },
     /**
@@ -805,27 +839,19 @@ wsgate.RDP = new Class( {
     },
     /**
      * Event handler for key pressed events
+     Obsv: not used anymore. Will be removed after checking it's dependants. 
      */
     onKp: function(evt) {
-        var a, buf;
-        evt.preventDefault();
-        if (this.modkeys.contains(evt.code)) {
-            return;
-        }
-        if (this.sock.readyState == this.sock.OPEN) {
-            // this.log.debug('kP code: ', evt.code);
-            buf = new ArrayBuffer(12);
-            a = new Uint32Array(buf);
-            a[0] = 2; // WSOP_CS_KPRESS
-            a[1] = (evt.shift ? 1 : 0)|(evt.control ? 2 : 0)|(evt.alt ? 4 : 0)|(evt.meta ? 8 : 0);
-            a[2] = evt.code;
-            this.sock.send(buf);
-        }
+	    return;
     },
     /**
      * Event handler for WebSocket RX events
      */
     onWSmsg: function(evt) {
+        //hide the loading image when the actual streaming starts
+        if ($('dvLoading').getStyle("visibility") !== "hidden") {
+            $('dvLoading').setStyles({ 'visibility': 'hidden' });
+        }
         switch (typeof(evt.data)) {
             // We use text messages for alerts and debugging ...
             case 'string':
@@ -903,15 +929,15 @@ wsgate.RDP = new Class( {
      * Event handler for WebSocket disconnect events
      */
     onWSclose: function(evt) {
-        if (Browser.name == 'chrome') {
+        /*if (Browser.name == 'chrome') {
             // Current chrome is buggy in that it does not
             // fire WebSockets error events, so we use the
             // wasClean flag in the close event.
             if ((!evt.wasClean) && (!this.open)) {
                 this.fireEvent('alert', 'Could not connect to WebSockets gateway');
             }
-        }
-        this.open = false;
+        }*/
+        //this.open = false;
         this._reset();
         this.fireEvent('disconnected');
     },

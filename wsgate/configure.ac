@@ -100,6 +100,8 @@ AC_CHECK_LIB(bfd, bfd_openr, [BFDLIB1="-lbfd"])
 AC_CHECK_LIB(iberty, cplus_demangle, [BFDLIB2="-liberty"])
 havessl=$ac_cv_lib_ssl_SSL_library_init$ac_cv_lib_crypto_ERR_free_strings
 
+WSGATE_LDADD="$WSGATE_LDADD -lcasablanca"
+
 AC_MSG_CHECKING([whether to build with SSL support])
 withval=AUTO
 AC_ARG_WITH([ssl],AS_HELP_STRING([--with-ssl],[compile with SSL support (requires OpenSSL)]))
@@ -285,12 +287,14 @@ void mv(std::unique_ptr<foo>p) { int v = p->bar; }]],
 AC_LANG_POP
 AC_SUBST([USE_UNIQUE_PTR])
 
-CPPFLAGS="-I/usr/include/ehs $CPPFLAGS"
+CFLAGS="$CFLAGS -I/usr/local/include -I/usr/local/include/ehs -I/usr/local/include/freerdp -I/usr/local/casablanca"
+CXXFLAGS="$CXXFLAGS -std=c++11 -I/usr/local/include -I/usr/local/include/ehs -I/usr/local/include/freerdp -I/usr/include/casablanca"
+CPPFLAGS="$CPPFLAGS -I/usr/local/include -I/usr/local/include/ehs -I/usr/local/include/freerdp -I/usr/include/casablanca"
+LDFLAGS="$LDFLAGS -L/usr/lib -L/usr/lib64 -L/usr/local/lib -L/usr/local/lib64 -L/usr/local/lib/x86_64-linux-gnu -Wl,--rpath -Wl,/usr/lib64 -Wl,--rpath -Wl,/usr/lib -Wl,--rpath -Wl,/usr/local/lib64 -Wl,--rpath -Wl,/usr/local/lib -Wl,--rpath -Wl,/usr/local/lib/x86_64-linux-gnu"
+
 AC_LANG_PUSH([C++])
 AC_CHECK_LIB(ehs,getEHSconfig,[WSGATE_LDADD="$WSGATE_LDADD -lehs"],,$BOOST_REGEX_LIBS)
-AC_CHECK_HEADERS([ehs.h])
-AC_LANG_POP
-
+AC_CHECK_HEADERS([ehs.h]) AC_LANG_POP
 if test "$ac_cv_lib_ehs_getEHSconfig$ac_cv_header_ehs_h" != "yesyes" ; then
     AC_MSG_ERROR([Mandatory EHS development package not found])
 fi
@@ -308,8 +312,8 @@ AC_CHECK_LIB([freerdp-codec],[freerdp_color_convert_var],
 AC_CHECK_LIB([freerdp-gdi],[gdi_init],
     [WSGATE_LDADD="$WSGATE_LDADD -lfreerdp-gdi"],
     [AC_MSG_ERROR([You need freerdp from GIT!])])
-AC_CHECK_LIB([freerdp-locale],[freerdp_keyboard_get_rdp_scancode_from_virtual_key_code],
-    [WSGATE_LDADD="$WSGATE_LDADD -lfreerdp-locale"],
+AC_CHECK_LIB([winpr-input],[GetVirtualScanCodeFromVirtualKeyCode],
+    [WSGATE_LDADD="$WSGATE_LDADD -lwinpr-input"],
     [AC_MSG_ERROR([You need freerdp from GIT!])])
 AC_CHECK_LIB([freerdp-cache],[pointer_cache_register_callbacks],
     [WSGATE_LDADD="$WSGATE_LDADD -lfreerdp-cache"],
