@@ -250,22 +250,24 @@ make || exit 8
 make test || exit 9
 if [[ $sudo_present -eq 1 ]]; then
 	echo 'sudo available. Please enter your password to install casablanca: '
-	sudo cp Binaries/libcpprest.so /usr/lib || exit 9
-	sudo ldconfig || exit 9
-	sudo mkdir -p /usr/include/casablanca || exit 9
-	sudo cp -r ../../Release/include/* /usr/include/casablanca || exit 9
+	sudo cp Binaries/libcpprest.so /usr/lib || exit 10
+	sudo ldconfig || exit 10
+	sudo mkdir -p /usr/include/casablanca || exit 10
+	sudo cp -r ../../Release/include/* /usr/include/casablanca || exit 10
 else
 	echo 'sudo command unavailable. Please enter root password to install casablanca'
-	su -c cp Binaries/libcpprest.so /usr/lib$BITNESS || exit 9
-	su -c ldconfig || exit 9
-	su -c mkdir -p /usr/include/casablanca || exit 9
-	su -c cp -r ../../Release/include/* /usr/include/casablanca || exit 9
+	su -c cp Binaries/libcpprest.so /usr/lib$BITNESS || exit 10
+	su -c ldconfig || exit 10
+	su -c mkdir -p /usr/include/casablanca || exit 10
+	su -c cp -r ../../Release/include/* /usr/include/casablanca || exit 10
 fi
 echo '---- Going back to webconnect ----'
 popd
 cd wsgate/ || exit 99
-make -f Makefile.am || exit 10
-./configure || exit 10
+mkdir -p build || exit 99
+cd build || exit 99
+cmake .. || exit 11
 echo '---- Building webconnect ----'
-make || exit 10
+make || exit 11
+echo "---- Built wsgate successfully in $PWD ----"
 echo '---- Finished successfully ----'
