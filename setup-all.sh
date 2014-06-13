@@ -49,8 +49,9 @@ function cleanup()
 # 6 = failed to build FreeRDP package
 # 7 = failed to install FreeRDP package
 # 8 = failed to build casablanca package
-# 9 = failed to install casablanca package
-# 10 = failed to build FreeRDP-WebConnect package
+# 9 = failed to test casablanca build
+# 10 = failed to install casablanca package
+# 11 = failed to build FreeRDP-WebConnect package
 # 99 = failed to execute some shell command
 
 # trap handler: print location of last error and process it further
@@ -72,19 +73,25 @@ function exit_handler()
 			3) 	echo 'Unable to install dependencies. Try to manually install packages listed in install_prereqs.sh according to your distribution.'
 				echo 'After that, run the script without the --install-deps flag'
 				;;
-			4) 	echo 'Unable to build ehs package. Cleaning up and exiting...'
+			4) 	echo 'Unable to build ehs package. Exiting...'
 				#cleanup
 				;;
-			5) 	echo "Unable to install ehs package into $HOME/local. Cleaning up and exiting..."
+			5) 	echo "Unable to install ehs package into /usr/local. Exiting..."
 				#cleanup
 				;;
-			6) 	echo 'Unable to build FreeRDP package. Cleaning up and exiting...'
+			6) 	echo 'Unable to build FreeRDP package. Exiting...'
 				#cleanup
 				;;
-			7)	echo "Unable to install FreeRDP package into $HOME/local. Cleaning up and exiting..."
+			7)	echo "Unable to install FreeRDP package into /usr/local. Exiting..."
 				#cleanup
 				;;
-			8)	echo "Unable to build FreeRDP-WebConnect. Cleaning up and exiting..."
+			8)	echo "Unable to build casablanca package. Exiting..."
+				;;
+			9)	echo "Testing the casablanca build failed. Exiting... "
+				;;
+			10)	echo "Unable to install casablanca package into /usr/local. Exiting..."
+				;;
+			11)	echo "Unable to build FreeRDP-WebConnect. Exiting..."
 				#cleanup
 				;;
 			99) echo 'Internal error. Make sure you have an internet connection and that nothing is interfering with this script before running again (broken/rooted system or something deleting parts of the file-tree in mid-process).'
@@ -150,8 +157,8 @@ if [[ $install_deps -eq 1 ]]; then
 		fi
 	else
 	# Try sudo command. If sudo not present, try to su - to root.
-		command -v sudo >/dev/null 2>&1 && sudo_present=1
-		if [[ sudo_present -eq 1 ]]; then
+		command -v sudo >/dev/null 2>&1 && $sudo_present=1
+		if [[ $sudo_present -eq 1 ]]; then
 			echo 'sudo available. Please enter your password: '
 			if [[ $delete_packages -eq 1 ]]; then
 				sudo ./install_prereqs.sh -y
@@ -200,7 +207,7 @@ make -f Makefile.am || exit 4
 echo '---- Starting ehs build ----'
 make || exit 4
 echo '---- Finished building ehs ----'
-if [[ sudo_present -eq 1 ]]; then
+if [[ $sudo_present -eq 1 ]]; then
 	echo 'sudo available. Please enter your password to install ehs: '
 	sudo make install || exit 5
 else
@@ -216,7 +223,7 @@ mkdir -p build && cd build && cmake -DCMAKE_INSTALL_PREFIX=/usr/local .. || exit
 echo '---- Building freerdp ----'
 make || exit 6
 echo '---- Finished building freerdp ----'
-if [[ sudo_present -eq 1 ]]; then
+if [[ $sudo_present -eq 1 ]]; then
 	echo 'sudo available. Please enter your password to install freerdp: '
 	sudo make install || exit 7
 	if [ -d /etc/ld.so.conf.d ]; then
@@ -237,20 +244,22 @@ echo '---- Finished installing freerdp ----'
 cd ../.. || exit 99
 echo '---- Checking out casablanca master ----'
 git clone https://git01.codeplex.com/casablanca  || { echo 'Unable to download casablanca from codeplex'; exit 99; }
-cd casablanca/Release || exit 99
-make release || exit 8
-if [[ sudo_present -eq 1 ]]; then
+cd casablanca/Binaries/Release$BITNESS/ || exit 99
+cmake -DCMAKE_INSTALL_PREFIX=/usr/local -DCMAKE_BUILD_TYPE=Release ../../Release || exit 8
+make || exit 8
+make test || exit 9
+if [[ $sudo_present -eq 1 ]]; then
 	echo 'sudo available. Please enter your password to install casablanca: '
-	sudo cp ../Binaries/Release$BITNESS/libcasablanca.so /usr/lib || exit 9
+	sudo cp Binaries/libcasablanca.so /usr/lib || exit 9
 	sudo ldconfig || exit 9
 	sudo mkdir -p /usr/include/casablanca || exit 9
-	sudo cp -r include/* /usr/include/casablanca || exit 9
+	sudo cp -r ../../Release/include/* /usr/include/casablanca || exit 9
 else
 	echo 'sudo command unavailable. Please enter root password to install casablanca'
-	su -c cp ../Binaries/Release$BITNESS/libcasablanca.so /usr/lib$BITNESS || exit 9
+	su -c cp Binaries/libcasablanca.so /usr/lib$BITNESS || exit 9
 	su -c ldconfig || exit 9
 	su -c mkdir -p /usr/include/casablanca || exit 9
-	su -c cp -r include/* /usr/include/casablanca || exit 9
+	su -c cp -r ../../Release/include/* /usr/include/casablanca || exit 9
 fi
 echo '---- Going back to webconnect ----'
 popd
