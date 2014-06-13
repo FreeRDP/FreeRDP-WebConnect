@@ -157,7 +157,7 @@ if [[ $install_deps -eq 1 ]]; then
 		fi
 	else
 	# Try sudo command. If sudo not present, try to su - to root.
-		command -v sudo >/dev/null 2>&1 && $sudo_present=1
+		command -v sudo >/dev/null 2>&1 && sudo_present=1
 		if [[ $sudo_present -eq 1 ]]; then
 			echo 'sudo available. Please enter your password: '
 			if [[ $delete_packages -eq 1 ]]; then
@@ -250,13 +250,13 @@ make || exit 8
 make test || exit 9
 if [[ $sudo_present -eq 1 ]]; then
 	echo 'sudo available. Please enter your password to install casablanca: '
-	sudo cp Binaries/libcasablanca.so /usr/lib || exit 9
+	sudo cp Binaries/libcpprest.so /usr/lib || exit 9
 	sudo ldconfig || exit 9
 	sudo mkdir -p /usr/include/casablanca || exit 9
 	sudo cp -r ../../Release/include/* /usr/include/casablanca || exit 9
 else
 	echo 'sudo command unavailable. Please enter root password to install casablanca'
-	su -c cp Binaries/libcasablanca.so /usr/lib$BITNESS || exit 9
+	su -c cp Binaries/libcpprest.so /usr/lib$BITNESS || exit 9
 	su -c ldconfig || exit 9
 	su -c mkdir -p /usr/include/casablanca || exit 9
 	su -c cp -r ../../Release/include/* /usr/include/casablanca || exit 9

@@ -22,6 +22,7 @@ DISTRO=`grep -ihs "buntu\|SUSE\|Fedora\|Debian\|CentOS" /etc/{issue,*release,*ve
 case $DISTRO in
 	*buntu*12*)
 		echo 'Ubuntu 12.04 detected. Installing required packages...'
+		apt-get update
 		apt-get install -y python-software-properties
 		echo | add-apt-repository ppa:ubuntu-toolchain-r/test  
 		apt-get update  
