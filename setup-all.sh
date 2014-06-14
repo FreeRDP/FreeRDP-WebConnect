@@ -76,20 +76,20 @@ function exit_handler()
 			4) 	echo 'Unable to build ehs package. Exiting...'
 				#cleanup
 				;;
-			5) 	echo "Unable to install ehs package into /usr/local. Exiting..."
+			5) 	echo "Unable to install ehs package into /usr. Exiting..."
 				#cleanup
 				;;
 			6) 	echo 'Unable to build FreeRDP package. Exiting...'
 				#cleanup
 				;;
-			7)	echo "Unable to install FreeRDP package into /usr/local. Exiting..."
+			7)	echo "Unable to install FreeRDP package into /usr. Exiting..."
 				#cleanup
 				;;
 			8)	echo "Unable to build casablanca package. Exiting..."
 				;;
 			9)	echo "Testing the casablanca build failed. Exiting... "
 				;;
-			10)	echo "Unable to install casablanca package into /usr/local. Exiting..."
+			10)	echo "Unable to install casablanca package into /usr. Exiting..."
 				;;
 			11)	echo "Unable to build FreeRDP-WebConnect. Exiting..."
 				#cleanup
@@ -227,7 +227,7 @@ if [[ $sudo_present -eq 1 ]]; then
 	sudo make install || exit 7
 	if [ -d /etc/ld.so.conf.d ]; then
 		sudo touch /etc/ld.so.conf.d/freerdp.conf
-		sudo echo '/usr/local/lib/x86_64-linux-gnu' > /etc/ld.so.conf.d/freerdp.conf
+		sudo echo '/usr/lib/x86_64-linux-gnu' > /etc/ld.so.conf.d/freerdp.conf
 		sudo ldconfig
 	fi
 else
@@ -235,7 +235,7 @@ else
 	su -c make install || exit 7
 	if [ -d /etc/ld.so.conf.d ]; then
 		su -c touch /etc/ld.so.conf.d/freerdp.conf
-		su -c echo '/usr/local/lib/x86_64-linux-gnu' > /etc/ld.so.conf.d/freerdp.conf
+		su -c echo '/usr/lib/x86_64-linux-gnu' > /etc/ld.so.conf.d/freerdp.conf
 		su -c ldconfig
 	fi
 fi
@@ -244,7 +244,7 @@ cd ../.. || exit 99
 echo '---- Checking out casablanca master ----'
 git clone https://git01.codeplex.com/casablanca  || { echo 'Unable to download casablanca from codeplex'; exit 99; }
 cd casablanca/Binaries/Release$BITNESS/ || exit 99
-cmake -DCMAKE_INSTALL_PREFIX=/usr/local -DCMAKE_BUILD_TYPE=Release ../../Release || exit 8
+cmake -DCMAKE_INSTALL_PREFIX=/usr -DCMAKE_BUILD_TYPE=Release ../../Release || exit 8
 make || exit 8
 make test || exit 9
 if [[ $sudo_present -eq 1 ]]; then
