@@ -140,6 +140,9 @@ if [[ $delete_packages -eq 1 && $install_deps -ne 1 ]]; then
 	echo 'Warning: You do not need to specify the -d|--delete-packages flag if you do not specify the -i|--install-deps flag.'
 fi
 
+# Try sudo command. If sudo not present, try to su - to root.
+command -v sudo >/dev/null 2>&1 && sudo_present=1
+
 # Install_deps set
 if [[ $install_deps -eq 1 ]]; then
 	echo 'Preparing to install package dependencies'
@@ -156,8 +159,6 @@ if [[ $install_deps -eq 1 ]]; then
 			exit 3
 		fi
 	else
-	# Try sudo command. If sudo not present, try to su - to root.
-		command -v sudo >/dev/null 2>&1 && sudo_present=1
 		if [[ $sudo_present -eq 1 ]]; then
 			echo 'sudo available. Please enter your password: '
 			if [[ $delete_packages -eq 1 ]]; then
