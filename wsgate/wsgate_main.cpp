@@ -25,7 +25,7 @@
 # include <winsock2.h>
 #endif
 
-#include <ehs.h>
+#include <ehs/ehs.h>
 #include <vector>
 #include <sstream>
 #include <iostream>
