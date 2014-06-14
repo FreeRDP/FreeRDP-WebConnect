@@ -200,11 +200,10 @@ pushd $HOME || exit 99
 mkdir -p prereqs || exit 99
 cd prereqs || exit 99
 echo '---- Checking out ehs trunk code ----'
-svn checkout svn://svn.code.sf.net/p/ehs/code/trunk ehs-code || { echo 'Unable to download ehs from svn'; exit 99; }
-cd ehs-code || exit 99
-make -f Makefile.am || exit 4
-./configure --with-ssl || exit 4
+git clone https://github.com/cloudbase/EHS.git || { echo 'Unable to download ehs from github'; exit 99; }
+cd EHS || exit 99
 echo '---- Starting ehs build ----'
+mkdir -p build && cd build && cmake -DCMAKE_INSTALL_PREFIX=/usr .. || exit 4
 make || exit 4
 echo '---- Finished building ehs ----'
 if [[ $sudo_present -eq 1 ]]; then
@@ -215,11 +214,11 @@ else
 	su -c make install
 fi
 echo '---- Finished installing ehs ----'
-cd .. || exit 99
+cd ../.. || exit 99
 echo '---- Checking out freerdp master ----'
 git clone https://github.com/FreeRDP/FreeRDP.git || { echo 'Unable to download FreeRDP from github'; exit 99; }
 cd FreeRDP || exit 99
-mkdir -p build && cd build && cmake -DCMAKE_INSTALL_PREFIX=/usr/local .. || exit 6
+mkdir -p build && cd build && cmake -DCMAKE_INSTALL_PREFIX=/usr .. || exit 6
 echo '---- Building freerdp ----'
 make || exit 6
 echo '---- Finished building freerdp ----'
