@@ -251,7 +251,7 @@ endif()
 
 CHECK_INCLUDE_FILE(arpa/inet.h HAVE_ARPA_INET_H)
 CHECK_INCLUDE_FILE(dlfcn.h HAVE_DLFCN_H)
-CHECK_INCLUDE_FILE(fcntl.h AVE_FCNTL_H)
+CHECK_INCLUDE_FILE(fcntl.h HAVE_FCNTL_H)
 CHECK_INCLUDE_FILE(netinet/in.h HAVE_NETINET_IN_H)
 CHECK_INCLUDE_FILE(signal.h HAVE_SIGNAL_H)
 CHECK_INCLUDE_FILE(stdlib.h HAVE_STDLIB_H )
@@ -316,15 +316,8 @@ set(LIBS ${LIBS} ${CMAKE_THREAD_LIBS_INIT})
 
 # find zlib. required by png
 find_package(ZLIB REQUIRED)
-include_directories(${ZLIB_INCLUDE_DIR})
+include_directories(${ZLIB_INCLUDE_DIRS})
 set(LIBS ${LIBS} ${ZLIB_LIBRARIES})
-
-# find png using my 
-find_package(MyPNG REQUIRED)
-message("PNG INCLUDE PATH: ${PNG_INCLUDE_DIR}")
-include_directories(${PNG_INCLUDE_DIR})
-# add png to libs list
-set(LIBS ${LIBS} ${PNG_LIBRARIES})
 
 # find openssl 
 find_package(OpenSSL REQUIRED)
@@ -342,6 +335,13 @@ find_file(HAVE_OPENSSL_ERR_H
 
 # add openssl to libs list
 set(LIBS ${LIBS} ${OPENSSL_LIBRARIES})
+
+# find png using my 
+find_package(MyPNG REQUIRED)
+message("PNG INCLUDE PATH: ${PNG_INCLUDE_DIR}")
+include_directories(${PNG_INCLUDE_DIR})
+# add png to libs list
+set(LIBS ${LIBS} ${PNG_LIBRARIES})
 
 # find freerdp
 find_package(FreeRDP REQUIRED)
