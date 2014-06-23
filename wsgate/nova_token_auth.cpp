@@ -44,6 +44,8 @@ private:
                                             std::string novaUrl,
                                             std::string consoleToken);
 
+    utility::string_t get_nova_url(web::json::value token_data);
+
 public:
     virtual nova_console_info get_console_info(std::string osAuthUrl,
                                                std::string osUserName,
@@ -112,6 +114,13 @@ json::value nova_console_token_auth_impl::get_console_token_data(
     return execute_request_and_get_json_value(client, request);
 }
 
+utility::string_t nova_console_token_auth_impl::get_nova_url(web::json::value token_data)
+{
+    for (auto serviceCatalog : token_data[U("access")][U("serviceCatalog")].as_array())
+        if (serviceCatalog[U("name")].as_string() == U("nova"))
+            return serviceCatalog[U("endpoints")][0][U("adminURL")].as_string();
+}
+
 nova_console_info nova_console_token_auth_impl::get_console_info(
     std::string osAuthUrl, std::string osUserName,
     std::string osPassword, std::string osTenantName,
@@ -120,14 +129,15 @@ nova_console_info nova_console_token_auth_impl::get_console_info(
     auto token_data = get_auth_token_data(osAuthUrl, osUserName,
                                           osPassword, osTenantName);
 
-    auto novaUrl = token_data[U("access")][U("serviceCatalog")][0]
-                             [U("endpoints")][0]
-                             [U("adminURL")].as_string();
+    auto novaUrl = get_nova_url(token_data);
 
     auto authToken = token_data[U("access")][U("token")]
-                               [U("id")].as_string();
+        [U("id")].as_string();
+
     auto consoleTokenData = get_console_token_data(to_utf8string(authToken),
-                                                    to_utf8string(novaUrl),consoleToken);
+        to_utf8string(novaUrl),
+        consoleToken);
+
     nova_console_info info;
 
     info.host = to_utf8string(consoleTokenData[U("console")][U("host")].as_string());
