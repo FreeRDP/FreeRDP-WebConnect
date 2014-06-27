@@ -60,7 +60,7 @@ case $DISTRO in
 	Red\sHat\sEnterprise\sLinux\sServer*6*|CentOS*6*)
 		echo 'CentOS detected. Installing required packages...'
 		yum install -y gcc-c++ svn subversion-svn2cl openssl-devel \
-		libpng-devel elfutils-devel
+		libpng-devel elfutils-devel glib2-devel
 		# check if cmake is already installed
 		yum list installed | grep -i cmake
 		if [ $? -eq 0 ]; then

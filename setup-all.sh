@@ -211,6 +211,11 @@ fi
 echo "---- Fetching webconnect dependencies ehs and FreeRDP into $HOME/prereqs ----"
 pushd $HOME || exit 99
 
+# CERN devtoolset-2 on CentOS / RHEL / SL
+if [ -d "/opt/rh/devtoolset-2/root/usr/bin" ]; then
+	export PATH=/opt/rh/devtoolset-2/root/usr/bin:$PATH
+fi
+
 # Downloading ehs and FreeRDP source code in $HOME/prereqs
 mkdir -p prereqs || exit 99
 cd prereqs || exit 99
@@ -218,7 +223,7 @@ echo '---- Checking out ehs trunk code ----'
 git_clone_pull EHS https://github.com/cloudbase/EHS.git || { echo 'Unable to download ehs from github'; exit 99; }
 cd EHS || exit 99
 echo '---- Starting ehs build ----'
-mkdir -p build && cd build && cmake -DCMAKE_INSTALL_PREFIX=/usr .. || exit 4
+mkdir -p build && cd build && cmake -DCMAKE_INSTALL_PREFIX=/usr .. && make || exit 4
 make || exit 4
 echo '---- Finished building ehs ----'
 if [[ $sudo_present -eq 1 ]]; then
