@@ -41,11 +41,11 @@ function cleanup()
 
 function git_clone_pull()
 {
-	local PATH=$1
+	local REPO_PATH=$1
 	local REPO_URL=$2
-        if [ -d "$PATH" ]; then
+        if [ -d "$REPO_PATH" ]; then
 		pushd .
-		cd $PATH
+		cd $REPO_PATH
 		git pull
 		popd
 	else
