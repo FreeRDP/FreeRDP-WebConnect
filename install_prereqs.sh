@@ -130,7 +130,7 @@ case $DISTRO in
 
 		wget -O /etc/yum.repos.d/slc6-devtoolset.repo http://linuxsoft.cern.ch/cern/devtoolset/slc6-devtoolset.repo
 		rpm --import http://www.scientificlinux.org/documentation/gpg/RPM-GPG-KEY-cern
-		yum install -y devtoolset-2
+		yum install -y devtoolset-2-gcc-c++ devtoolset-2-libstdc++-devel devtoolset-2-binutils
 		export PATH=/opt/rh/devtoolset-2/root/usr/bin:$PATH
 
 		# Download install an updated Boost version
