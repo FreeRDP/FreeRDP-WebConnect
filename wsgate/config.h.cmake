@@ -258,9 +258,9 @@
 
 /* Define to `__inline__' or `__inline' if that's what the C compiler
    calls it, or to nothing if 'inline' is not supported under any name.  */
-#ifndef __cplusplus 1
+#ifndef __cplusplus
 #cmakedefine inline 1
-#endif 1
+#endif
 
 /* Define to `int' if <sys/types.h> does not define. */
 #cmakedefine pid_t 1
