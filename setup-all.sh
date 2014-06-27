@@ -39,6 +39,20 @@ function cleanup()
 	fi
 }
 
+function git_clone_pull()
+{
+	local PATH=$1
+	local REPO_URL=$2
+        if [ -d "$PATH" ]; then
+		pushd .
+		cd $PATH
+		git pull
+		popd
+	else
+		git clone $REPO_URL
+	fi
+}
+
 # Exit status:
 # 0 = Success
 # 1 = improper command-line arguments
@@ -201,7 +215,7 @@ pushd $HOME || exit 99
 mkdir -p prereqs || exit 99
 cd prereqs || exit 99
 echo '---- Checking out ehs trunk code ----'
-git clone https://github.com/cloudbase/EHS.git || { echo 'Unable to download ehs from github'; exit 99; }
+git_clone_pull EHS https://github.com/cloudbase/EHS.git || { echo 'Unable to download ehs from github'; exit 99; }
 cd EHS || exit 99
 echo '---- Starting ehs build ----'
 mkdir -p build && cd build && cmake -DCMAKE_INSTALL_PREFIX=/usr .. || exit 4
@@ -217,7 +231,7 @@ fi
 echo '---- Finished installing ehs ----'
 cd ../.. || exit 99
 echo '---- Checking out freerdp master ----'
-git clone https://github.com/FreeRDP/FreeRDP.git || { echo 'Unable to download FreeRDP from github'; exit 99; }
+git_clone_pull FreeRDP https://github.com/FreeRDP/FreeRDP.git || { echo 'Unable to download FreeRDP from github'; exit 99; }
 cd FreeRDP || exit 99
 mkdir -p build && cd build && cmake -DCMAKE_INSTALL_PREFIX=/usr .. || exit 6
 echo '---- Building freerdp ----'
@@ -243,7 +257,7 @@ fi
 echo '---- Finished installing freerdp ----'
 cd ../.. || exit 99
 echo '---- Checking out casablanca master ----'
-git clone https://git01.codeplex.com/casablanca  || { echo 'Unable to download casablanca from codeplex'; exit 99; }
+git_clone_pull casablanca https://git01.codeplex.com/casablanca  || { echo 'Unable to download casablanca from codeplex'; exit 99; }
 cd casablanca/Binaries/Release$BITNESS/ || exit 99
 cmake -DCMAKE_INSTALL_PREFIX=/usr -DCMAKE_BUILD_TYPE=Release ../../Release || exit 8
 make || exit 8
