@@ -110,6 +110,8 @@ using boost::filesystem::path;
 namespace wsgate {
     static const char * const ws_magic = "258EAFA5-E914-47DA-95CA-C5AB0DC85B11";
 
+	string UrlDecode(const std::string& in);
+
     //disable two connections to the same host
     std::map<string, bool> activeConnections;
 
@@ -507,12 +509,12 @@ namespace wsgate {
                 }
                 else
                 {
-                    dtsize  = request->FormValues("dtsize").m_sBody;
-                    rdphost = request->FormValues("host").m_sBody;
-                    rdppcb  = request->FormValues("pcb").m_sBody;
-                    rdpuser = request->FormValues("user").m_sBody;
+                    dtsize  = UrlDecode(request->FormValues("dtsize").m_sBody);
+					rdphost = UrlDecode(request->FormValues("host").m_sBody);
+					rdppcb = UrlDecode(request->FormValues("pcb").m_sBody);
+					rdpuser = UrlDecode(request->FormValues("user").m_sBody);
                     istringstream(request->FormValues("port").m_sBody) >> rdpport;
-                    rdppass = base64_decode(request->FormValues("pass").m_sBody);
+                    rdppass = base64_decode(UrlDecode(request->FormValues("pass").m_sBody));
                 }
 
                 params =
@@ -1477,13 +1479,73 @@ namespace wsgate {
         }
     }
 
+	static string UrlDecode(const std::string& in)
+	{
+		std::string out;
+		out.clear();
+		out.reserve(in.size());
+		for (std::size_t i = 0; i < in.size(); ++i)
+		{
+			if (in[i] == '%')
+			{
+				if (i + 3 <= in.size())
+				{
+					int value = 0;
+					std::istringstream is(in.substr(i + 1, 2));
+					if (is >> std::hex >> value)
+					{
+						out += static_cast<char>(value);
+						i += 2;
+					}
+					else
+					{
+						return false;
+					}
+				}
+				else
+				{
+					return false;
+				}
+			}
+			else if (in[i] == '+')
+			{
+				out += ' ';
+			}
+			else
+			{
+				out += in[i];
+			}
+		}
+		return out;
+	}
+
     bool MyRawSocketHandler::Prepare(EHSConnection *conn, const string host, const string pcb,
-            const string user, const string pass, const WsRdpParams &params)
+            const string account, const string pass, const WsRdpParams &params)
     {
+		size_t pos = account.find('\\');
+
+		string user;
+		string domain;
+
+		if (pos != string::npos) {
+			domain = account.substr(0, pos);
+			user = account.substr(pos + 1);
+		} else {
+			pos = account.find('@');
+			if (pos != string::npos) {
+				user = account.substr(0, pos);
+				domain = account.substr(pos + 1);
+			} else {
+				user = account;
+				domain = string();
+			}
+		}
+
         log::debug << "RDP Host:               '" << host << "'" << endl;
-        log::debug << "RDP Pcb:               '" << pcb << "'" << endl;
-        log::info << "RDP Port:               '" << params.port << "'" << endl;
+        log::debug << "RDP Pcb:                '" << pcb << "'" << endl;
+        log::info  << "RDP Port:               '" << params.port << "'" << endl;
         log::debug << "RDP User:               '" << user << "'" << endl;
+		log::debug << "RDP Domain:             '" << domain << "'" << endl;
         log::debug << "RDP Password:           '" << pass << "'" << endl;
         log::debug << "RDP Desktop size:       " << params.width << "x" << params.height << endl;
         log::debug << "RDP Performance:        " << params.perf << endl;
@@ -1503,7 +1565,7 @@ namespace wsgate {
             rdp_ptr r(new RDP(h.get()));
             m_cmap[conn] = conn_tuple(c, h, r);
 
-            r->Connect(host, pcb, user, string() /*domain*/, pass, params);
+            r->Connect(host, pcb, user, domain, pass, params);
             m_parent->RegisterRdpSession(r);
         }
         catch(...)
