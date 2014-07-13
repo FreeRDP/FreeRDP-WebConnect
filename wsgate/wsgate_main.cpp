@@ -42,6 +42,8 @@
 #include <boost/date_time/posix_time/posix_time.hpp>
 #include <boost/tuple/tuple.hpp>
 #include <boost/regex.hpp>
+#include <cpprest/uri.h>
+#include <cpprest/asyncrt_utils.h>
 
 #ifdef HAVE_SIGNAL_H
 # include <signal.h>
@@ -106,6 +108,7 @@ namespace po = boost::program_options;
 namespace fs = boost::filesystem;
 namespace pt = boost::posix_time;
 using boost::filesystem::path;
+using namespace utility::conversions;
 
 namespace wsgate {
     static const char * const ws_magic = "258EAFA5-E914-47DA-95CA-C5AB0DC85B11";
@@ -122,6 +125,32 @@ namespace wsgate {
             } catch (const boost::bad_lexical_cast & e) {  ret = defval; }
         }
         return ret;
+    }
+
+    void SplitUserDomain(const string& fullUsername, string& username, string& domain)
+    {
+        std::vector<string> strs;
+        boost::split(strs, fullUsername, boost::is_any_of("\\"));
+        if (strs.size() > 1)
+        {
+            username = strs[1];
+            domain = strs[0];
+        }
+        else
+        {
+            strs.clear();
+            boost::split(strs, fullUsername, boost::is_any_of("@"));
+            if (strs.size() > 1)
+            {
+                username = strs[0];
+                domain = strs[1];
+            }
+            else
+            {
+                username = fullUsername;
+                domain = "";
+            }
+        }
     }
 
     // subclass of EHS that defines a custom HTTP response.
@@ -508,9 +537,9 @@ namespace wsgate {
                 else
                 {
                     dtsize  = request->FormValues("dtsize").m_sBody;
-                    rdphost = request->FormValues("host").m_sBody;
+                    rdphost = to_utf8string(web::uri::decode(to_string_t(request->FormValues("host").m_sBody)));
                     rdppcb  = request->FormValues("pcb").m_sBody;
-                    rdpuser = request->FormValues("user").m_sBody;
+                    rdpuser = to_utf8string(web::uri::decode(to_string_t(request->FormValues("user").m_sBody)));
                     istringstream(request->FormValues("port").m_sBody) >> rdpport;
                     rdppass = base64_decode(request->FormValues("pass").m_sBody);
                 }
@@ -1503,7 +1532,11 @@ namespace wsgate {
             rdp_ptr r(new RDP(h.get()));
             m_cmap[conn] = conn_tuple(c, h, r);
 
-            r->Connect(host, pcb, user, string() /*domain*/, pass, params);
+            string username;
+            string domain;
+            SplitUserDomain(user, username, domain);
+
+            r->Connect(host, pcb, username, domain, pass, params);
             m_parent->RegisterRdpSession(r);
         }
         catch(...)
