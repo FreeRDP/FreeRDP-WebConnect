@@ -18,10 +18,11 @@ else
 fi
 
 #Get distro (snipper take from alsa-info.sh)
-DISTRO=`grep -ihs "buntu\|SUSE\|Fedora\|Debian\|CentOS" /etc/{issue,*release,*version}`
+DISTRO=`grep -ihs "buntu\|SUSE\|Fedora\|Debian\|CentOS\|Red Hat Enterprise Linux Server" /etc/{issue,*release,*version}`
 case $DISTRO in
 	*buntu*12*)
 		echo 'Ubuntu 12.04 detected. Installing required packages...'
+		apt-get update
 		apt-get install -y python-software-properties
 		echo | add-apt-repository ppa:ubuntu-toolchain-r/test  
 		apt-get update  
@@ -56,10 +57,10 @@ case $DISTRO in
 		echo 'git, svn-devel, autotools, gcc, g++, boost, openssl-devel and libpng-devel. For tracing to work, libdwarf is also required'
 		exit 1
 		;;
-	CentOS*6*)
+	Red\sHat\sEnterprise\sLinux\sServer*6*|CentOS*6*)
 		echo 'CentOS detected. Installing required packages...'
-		yum install -y gcc-c++ svn subversion-svn2cl openssl-devel boost-devel \
-		libpng-devel elfutils-devel
+		yum install -y gcc-c++ svn subversion-svn2cl openssl-devel \
+		libpng-devel elfutils-devel glib2-devel
 		# check if cmake is already installed
 		yum list installed | grep -i cmake
 		if [ $? -eq 0 ]; then
@@ -79,17 +80,21 @@ case $DISTRO in
 				yum -y remove cmake
 				response_install='y'
 			fi
+		else
+			response_install='y'
 		fi
 		
 		if [[ $response_install == 'y' || $force_all == 1 ]]; then
-			echo 'Getting cmake rpm (CentOS has old cmake version)'
-			if [[ $(uname -m) == 'x86_64' ]]; then
-				wget http://pkgs.repoforge.org/cmake/cmake-2.8.8-1.el6.rfx.x86_64.rpm && yum install -y cmake-2.8.8-1.el6.rfx.x86_64.rpm
-				rm -f cmake-2.8.8-1.el6.rfx.x86_64.rpm
-			else
-				wget http://pkgs.repoforge.org/cmake/cmake-2.8.8-1.el6.rfx.i686.rpm && yum install -y cmake-2.8.8-1.el6.rfx.i686.rpm
-				rm -f cmake-2.8.8-1.el6.rfx.i686.rpm
+			# Installing CMake from sources
+			if [ ! -d "cmake-3.0.0" ]; then
+				wget http://www.cmake.org/files/v3.0/cmake-3.0.0.tar.gz
+				tar zxvf cmake-3.0.0.tar.gz
 			fi
+			pushd .
+			cd cmake-3.0.0
+			./configure
+			make install
+			popd
 		fi
 		
 		# check for autoconf
@@ -110,6 +115,8 @@ case $DISTRO in
 				yum -y remove autoconf
 				response_install='y'
 			fi
+		else
+			response_install='y'
 		fi
 		
 		if [[ $response_install == 'y' || $force_all == 1 ]]; then
@@ -118,6 +125,32 @@ case $DISTRO in
 		
 		# autoconf is a prereq of automake
 		yum install -y automake libtool
+
+		# Install CERN's devtoolset-2
+
+		wget -O /etc/yum.repos.d/slc6-devtoolset.repo http://linuxsoft.cern.ch/cern/devtoolset/slc6-devtoolset.repo
+		rpm --import http://www.scientificlinux.org/documentation/gpg/RPM-GPG-KEY-cern
+		yum install -y devtoolset-2-gcc-c++ devtoolset-2-libstdc++-devel devtoolset-2-binutils
+		export PATH=/opt/rh/devtoolset-2/root/usr/bin:$PATH
+
+		# Download install an updated Boost version
+		if [ ! -d "boost_1_55_0" ]; then
+			wget http://downloads.sourceforge.net/project/boost/boost/1.55.0/boost_1_55_0.tar.gz
+			tar zxvf boost_1_55_0.tar.gz
+		fi
+
+		rpm -q boost-devel > /dev/null
+		if [ $? -eq 0 ]; then
+			# TODO: ask to uninstall boost-devel if present
+			rpm -e boost-devel
+		fi
+
+		pushd .
+		cd boost_1_55_0
+		./bootstrap.sh
+		./b2 install
+		popd
+
 		;;
 	CentOS*5*)
 		echo 'CentOS 5 not yet supported! Please install prereqs by hand:'

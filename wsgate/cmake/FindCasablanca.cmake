@@ -110,7 +110,7 @@ elseif(UNIX)
 	SET(CMAKE_FIND_LIBRARY_SUFFIXES ".so" ".a")
 	find_library(LIB_CASABLANCA
 			NAMES
-			 casablanca
+			 cpprest
 			HINTS
 			 ${_CASABLANCA_LIBDIR}
 			${_CASABLANCA_ROOT_HINTS_AND_PATHS}

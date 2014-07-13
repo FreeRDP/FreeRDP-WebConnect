@@ -25,7 +25,7 @@
 # include <winsock2.h>
 #endif
 
-#include <ehs.h>
+#include <ehs/ehs.h>
 #include <vector>
 #include <sstream>
 #include <iostream>
@@ -56,6 +56,9 @@
 #endif
 #ifdef HAVE_FCNTL_H
 # include <fcntl.h>
+#endif
+#ifdef HAVE_UNISTD_H
+ #include <unistd.h>
 #endif
 #ifdef HAVE_SYS_SOCKET_H
 # include <sys/socket.h>

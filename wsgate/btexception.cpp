@@ -141,7 +141,7 @@ static int init_backtrace()
 
 #ifdef USE_DWARF
 # include <inttypes.h>
-# include <libdwfl.h>
+# include <elfutils/libdwfl.h>
 # include <dwarf.h>
 
 static char *debuginfo_path = NULL;
