@@ -374,18 +374,16 @@ namespace wsgate {
             throw tracing::runtime_error("worker thread has terminated");
         }
 
-         m_rdpSettings->ServerPort = 3389;
+        m_rdpSettings->ServerPort = params.port;
 
         if(pcb != "")
         {
             m_rdpSettings->SendPreconnectionPdu = TRUE;
             m_rdpSettings->PreconnectionBlob = strdup(pcb.c_str());
-            m_rdpSettings->ServerPort=2179;
         }
 
         m_rdpSettings->DesktopWidth = params.width;
         m_rdpSettings->DesktopHeight = params.height;
-
 
         m_rdpSettings->IgnoreCertificate = TRUE;
         m_rdpSettings->NegotiateSecurityLayer = FALSE;

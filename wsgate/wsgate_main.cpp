@@ -820,15 +820,12 @@ namespace wsgate {
                     //The new Port Selector
                     if(m_bOverrideRdpPort) {
                         replace_all(body, "%DISABLED_PORT%", "disabled=\"disabled\"");
-                        replace_all(body, "%SELECTED_PORT0%", (0 == m_RdpOverrideParams.port) ? "selected" : "");
-                        replace_all(body, "%SELECTED_PORT1%", (1 == m_RdpOverrideParams.port) ? "selected" : "");
-                        replace_all(body, "%SELECTED_PORT2%", (2 == m_RdpOverrideParams.port) ? "selected" : "");
                     } else {
                         replace_all(body, "%DISABLED_PORT%", "");
-                        replace_all(body, "%SELECTED_PORT0%", "");
-                        replace_all(body, "%SELECTED_PORT1%", "");
-                        replace_all(body, "%SELECTED_PORT2%", "");
                     }
+
+                    tmp.assign(m_bOverrideRdpPort ? boost::lexical_cast<string>(m_RdpOverrideParams.port) : "3389");
+                    replace_all(body, "%DEFAULT_PORT%", tmp);
 
                     //The Desktop Resolution
                     if (m_bOverrideRdpPerf) {

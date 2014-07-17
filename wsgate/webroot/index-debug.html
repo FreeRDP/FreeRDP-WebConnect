@@ -73,6 +73,7 @@
             function RDPrun() {
                 var wsUri = wsBase
                     + '?host=' + encodeURIComponent($('rdphost').value.trim())
+                    + '&port=' + encodeURIComponent($('rdpport').value.trim())
                     + '&pcb='  + encodeURIComponent($('rdppcb').value.trim())
                     + '&user=' + encodeURIComponent($('rdpuser').value.trim())
                     + '&pass=' + encodeURIComponent($('rdppass').value.toBase64())
@@ -330,7 +331,7 @@
                         {
                             showDialog(false);
                             if (querystring.indexOf('token=')>=0){
-                                $('disconnect').setStyles({'visibility':'hidden'});       
+                                $('disconnect').setStyles({'visibility':'hidden'});
                             }
                             var urlParams;
                             (window.onpopstate = function () {
@@ -401,13 +402,6 @@
                                             <td class="key"><label for="host">Hostname:</label></td>
                                             <td><input id="rdphost" type="text" name="host" value="%COOKIE_LASTHOST%" %DISABLED_HOST%/></td>
                                         </tr>
-                    					<tr>
-                    					    <td class="key"><label for="port">Port:</label></td>
-                    					    <td><select id="port" name="port" %DISABLED_PORT%>
-                    							<option value="auto" %SELECTED_PERF0%>3389</option>
-                    							<option %SELECTED_PERF1%>2179</option>
-                    						</select>
-                    					</tr>
                                         <tr>
                                             <td class="key"><label for="user">User:</label></td>
                                             <td><input id="rdpuser" type="text" name="user" value="%COOKIE_LASTUSER%" %DISABLED_USER% /></td>
@@ -442,12 +436,12 @@
                                 <fieldset>
                                     <legend>Advanced session parameters</legend>
                                     <table>
-                                        <!--<tr>
+                                        <tr>
                                             <td class="key"><label for="port">Port:</label></td>
-                                            <td><input id="port" name="port" type="text" size="6" maxlen="5" value="%DEFAULT_PORT%" %DISABLED_PORT% /></td>
-                                        </tr>-->
+                                            <td><input id="rdpport" name="port" type="text" size="6" maxlen="5" value="%DEFAULT_PORT%" %DISABLED_PORT% /></td>
+                                        </tr>
 					<tr>
-						<td class="key"><label for="pcb">PCB (vmID):</label></td>			
+						<td class="key"><label for="pcb">PCB (vmID):</label></td>
 						<td><input id="rdppcb" type="text" name="pcb" value="%COOKIE_LASTPCB%" %DISABLED_PCB%/></td>
 					</tr>
                                         <tr>
