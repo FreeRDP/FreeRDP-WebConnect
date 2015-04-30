@@ -458,6 +458,8 @@ namespace wsgate {
 
     void RDP::OnWsMessage(const string & data)
     {
+		this->checkResolution();
+
         if ((STATE_CONNECTED == m_State) && (data.length() >= 4)) {
             const uint32_t *op = reinterpret_cast<const uint32_t *>(data.data());
             switch (*op) {
@@ -1137,5 +1139,25 @@ namespace wsgate {
             self->Pointer_SetDefault(context);
         }
     }
+	
+	//private
+	void RDP::checkResolution(){
+		bool changed = false;
+		//is there any change?
+		if (this->desktopX - m_rdpContext->settings->DesktopWidth ||
+			this->desktopY - m_rdpContext->settings->DesktopHeight)
+			changed = true;
+		this->desktopX = m_rdpContext->settings->DesktopWidth;
+		this->desktopY = m_rdpContext->settings->DesktopHeight;
+		if (changed){
+			//send the change
+			string sendMsg = "R:";
+			sendMsg.append(std::to_string(this->desktopX));
+			sendMsg.append("x");
+			sendMsg.append(std::to_string(this->desktopY));
 
+			m_wshandler->send_text(sendMsg);
+		}
+	}
 }
+
