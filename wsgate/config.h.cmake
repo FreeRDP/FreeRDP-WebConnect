@@ -237,7 +237,7 @@
 #cmakedefine _UNICODE 1
 
 /* Minimum Windows version (XP) */
-#cmakedefine _WIN32_WINNT @_WIN32_WINNT@
+/* #cmakedefine _WIN32_WINNT @_WIN32_WINNT@ */
 
 #cmakedefine WIN32 1
 #cmakedefine _WIN32 1
