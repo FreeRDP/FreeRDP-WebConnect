@@ -99,11 +99,6 @@ namespace wsgate {
             cursor GetCursor(uint32_t cid);
 
         private:
-			/**
-			 * checks if the resolution changed
-			 * and send a message through WS to change the canvas size
-			 */
-			void checkResolution();
             /**
              * Wraps the corresponding FreeRDP API call.
              * @param flags The flags as defined by the FreeRDP API.
@@ -172,10 +167,6 @@ namespace wsgate {
             uint32_t m_lastError;
             uint32_t m_ptrId;
             CursorMap m_cursorMap;
-
-			//resolution of the desktop
-			UINT32 desktopX;
-			UINT32 desktopY;
 
             // Callbacks from C pthreads - Must be static in order t be assigned to C fnPtrs.
             static void *cbThreadFunc(void *ctx);

@@ -882,6 +882,8 @@ wsgate.RDP = new Class( {
 		    	    resolution=evt.data.substr(2).split('x');
 			    $('screen').width=resolution[0];
 			    $('screen').height=resolution[1];
+			    this.bstore.width=resolution[0];
+			    this.bstore.height=resolution[1];
 			    break;
                 }
                 break;
