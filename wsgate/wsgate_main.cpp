@@ -1510,7 +1510,6 @@ namespace wsgate {
         log::debug << "RDP Pcb:               '" << pcb << "'" << endl;
         log::info << "RDP Port:               '" << params.port << "'" << endl;
         log::debug << "RDP User:               '" << user << "'" << endl;
-        log::debug << "RDP Password:           '" << pass << "'" << endl;
         log::debug << "RDP Desktop size:       " << params.width << "x" << params.height << endl;
         log::debug << "RDP Performance:        " << params.perf << endl;
         log::debug << "RDP No wallpaper:       " << params.nowallp << endl;

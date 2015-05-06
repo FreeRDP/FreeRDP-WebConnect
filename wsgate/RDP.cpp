@@ -1137,5 +1137,5 @@ namespace wsgate {
             self->Pointer_SetDefault(context);
         }
     }
-
 }
+

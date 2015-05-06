@@ -96,8 +96,15 @@ namespace wsgate {
         log::debug << __PRETTY_FUNCTION__ << endl;
     }
 
-    void Update::DesktopResize(rdpContext*) {
+    void Update::DesktopResize(rdpContext* m_rdpContext) {
         log::debug << __PRETTY_FUNCTION__ << endl;
+
+		string sendMsg = "R:";
+		sendMsg.append(std::to_string(m_rdpContext->settings->DesktopWidth));
+		sendMsg.append("x");
+		sendMsg.append(std::to_string(m_rdpContext->settings->DesktopHeight));
+
+		m_wshandler->send_text(sendMsg);
     }
 
     void Update::BitmapUpdate(rdpContext*, BITMAP_UPDATE* bitmap) {
