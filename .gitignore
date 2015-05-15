@@ -57,6 +57,7 @@ wsgate/setup/.dlldeps
 wsgate/setup/.setupdir
 wsgate/setup/.stripsetup
 wsgate/setup/setupdir
+wsgate/build/
 
 # Windows
 *.vcxproj
