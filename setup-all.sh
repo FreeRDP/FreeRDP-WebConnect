@@ -38,18 +38,31 @@ function cleanup()
 		rm -rf $HOME/local/include/winpr
 	fi
 }
-
+function change_branch()
+{
+	local REPO_PATH=$1
+	local BRANCH=$2
+	if [ ! -z "$BRANCH" ]; then
+		local current=`pwd`
+		cd $REPO_PATH
+		git checkout $BRANCH
+		cd $current
+	fi
+}
 function git_clone_pull()
 {
 	local REPO_PATH=$1
 	local REPO_URL=$2
+	local BRANCH=$3
         if [ -d "$REPO_PATH" ]; then
 		pushd .
 		cd $REPO_PATH
 		git pull
+		change_branch $REPO_PATH $BRANCH
 		popd
 	else
 		git clone $REPO_URL
+		change_branch $REPO_PATH $BRANCH
 	fi
 }
 
@@ -224,7 +237,6 @@ git_clone_pull EHS https://github.com/cloudbase/EHS.git || { echo 'Unable to dow
 cd EHS || exit 99
 echo '---- Starting ehs build ----'
 mkdir -p build && cd build && cmake -DCMAKE_INSTALL_PREFIX=/usr .. && make || exit 4
-make || exit 4
 echo '---- Finished building ehs ----'
 if [[ $sudo_present -eq 1 ]]; then
 	echo 'sudo available. Please enter your password to install ehs: '
@@ -236,8 +248,9 @@ fi
 echo '---- Finished installing ehs ----'
 cd ../.. || exit 99
 echo '---- Checking out freerdp master ----'
-git_clone_pull FreeRDP https://github.com/FreeRDP/FreeRDP.git || { echo 'Unable to download FreeRDP from github'; exit 99; }
+git_clone_pull FreeRDP https://github.com/FreeRDP/FreeRDP.git stable-1.1 || { echo 'Unable to download FreeRDP'; exit 99; }
 cd FreeRDP || exit 99
+echo '---- Start installing freerdp ----'
 mkdir -p build && cd build && cmake -DCMAKE_INSTALL_PREFIX=/usr .. || exit 6
 echo '---- Building freerdp ----'
 make || exit 6
@@ -247,7 +260,8 @@ if [[ $sudo_present -eq 1 ]]; then
 	sudo make install || exit 7
 	if [ -d /etc/ld.so.conf.d ]; then
 		sudo touch /etc/ld.so.conf.d/freerdp.conf
-		sudo echo '/usr/lib/x86_64-linux-gnu' > /etc/ld.so.conf.d/freerdp.conf
+		echo '/usr/lib/x86_64-linux-gnu' > ./freerdp.conf
+		sudo mv ./freerdp.conf /etc/ld.so.conf.d/
 		sudo ldconfig
 	fi
 else
@@ -255,30 +269,31 @@ else
 	su -c make install || exit 7
 	if [ -d /etc/ld.so.conf.d ]; then
 		su -c touch /etc/ld.so.conf.d/freerdp.conf
-		su -c echo '/usr/lib/x86_64-linux-gnu' > /etc/ld.so.conf.d/freerdp.conf
+		echo '/usr/lib/x86_64-linux-gnu' > ./freerdp.conf
+		su -c mv ./freerdp.conf /etc/ld.so.conf.d/
 		su -c ldconfig
 	fi
 fi
 echo '---- Finished installing freerdp ----'
 cd ../.. || exit 99
 echo '---- Checking out casablanca master ----'
-git_clone_pull casablanca https://git01.codeplex.com/casablanca  || { echo 'Unable to download casablanca from codeplex'; exit 99; }
-cd casablanca/Binaries/Release$BITNESS/ || exit 99
-cmake -DCMAKE_INSTALL_PREFIX=/usr -DCMAKE_BUILD_TYPE=Release ../../Release || exit 8
+git_clone_pull casablanca https://git.codeplex.com/casablanca  || { echo 'Unable to download casablanca from codeplex'; exit 99; }
+cd casablanca/Release || exit 99
+cmake -DCMAKE_INSTALL_PREFIX=/usr -DCMAKE_BUILD_TYPE=Release . || exit 8
 make || exit 8
-make test || exit 9
+#make test || exit 9
 if [[ $sudo_present -eq 1 ]]; then
 	echo 'sudo available. Please enter your password to install casablanca: '
 	sudo cp Binaries/libcpprest.so /usr/lib || exit 10
 	sudo ldconfig || exit 10
 	sudo mkdir -p /usr/include/casablanca || exit 10
-	sudo cp -r ../../Release/include/* /usr/include/casablanca || exit 10
+	sudo cp -r ../Release/include/* /usr/include/casablanca || exit 10
 else
 	echo 'sudo command unavailable. Please enter root password to install casablanca'
 	su -c cp Binaries/libcpprest.so /usr/lib$BITNESS || exit 10
 	su -c ldconfig || exit 10
 	su -c mkdir -p /usr/include/casablanca || exit 10
-	su -c cp -r ../../Release/include/* /usr/include/casablanca || exit 10
+	su -c cp -r ../Release/include/* /usr/include/casablanca || exit 10
 fi
 echo '---- Going back to webconnect ----'
 popd
