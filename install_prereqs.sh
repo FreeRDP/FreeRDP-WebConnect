@@ -57,7 +57,7 @@ case $DISTRO in
 		echo 'git, svn-devel, autotools, gcc, g++, boost, openssl-devel and libpng-devel. For tracing to work, libdwarf is also required'
 		exit 1
 		;;
-	Red\sHat\sEnterprise\sLinux\sServer*6*|CentOS*6*|Red\sHat\sEnterprise\sLinux\sServer*7*|CentOS*7*)
+	Red\sHat\sEnterprise\sLinux\sServer*7*|CentOS*7*)
 		echo 'CentOS detected. Installing required packages...'
 		yum install -y gcc-c++ svn subversion-svn2cl openssl-devel \
 		libpng-devel elfutils-devel glib2-devel
