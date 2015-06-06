@@ -20,32 +20,32 @@ fi
 #Get distro (snipper take from alsa-info.sh)
 DISTRO=`grep -ihs "buntu\|SUSE\|Fedora\|Debian\|CentOS\|Red Hat Enterprise Linux Server" /etc/{issue,*release,*version}`
 case $DISTRO in
-	*buntu*12*)
-		echo 'Ubuntu 12.04 detected. Installing required packages...'
+	*buntu*14*)
+		echo 'Ubuntu 14.04 detected. Installing required packages...'
 		apt-get update
 		apt-get install -y python-software-properties
-		echo | add-apt-repository ppa:ubuntu-toolchain-r/test  
-		apt-get update  
+		echo | add-apt-repository ppa:ubuntu-toolchain-r/test
+		apt-get update
 		apt-get install -y build-essential g++-4.8 libxml++2.6-dev libssl-dev \
-		libboost1.48-all-dev libpng-dev libdwarf-dev subversion subversion-tools \
+		libboost-all-dev libpng-dev libdwarf-dev subversion subversion-tools \
 		autotools-dev autoconf libtool cmake
 		# replace old gcc/g++ with new one
-		rm /usr/bin/g++  
-		ln -s /usr/bin/g++-4.8 /usr/bin/g++  
-		rm /usr/bin/gcc  
-		ln -s /usr/bin/gcc-4.8 /usr/bin/gcc 
-		;;
-	*buntu*13*)
-		echo 'Ubuntu 13.10 detected. Installing required packages...'
-		apt-get update  
-		apt-get install -y build-essential g++-4.8 libxml++2.6-dev libssl-dev \
-		libboost1.49-all-dev libpng-dev libdwarf-dev subversion subversion-tools svn2cl \
-		autotools-dev autoconf libtool cmake
-		# replace old gcc/g++ with new one
-		rm /usr/bin/g++  
-		ln -s /usr/bin/g++-4.8 /usr/bin/g++  
-		rm /usr/bin/gcc  
-		ln -s /usr/bin/gcc-4.8 /usr/bin/gcc 
+		rm /usr/bin/g++
+		ln -s /usr/bin/g++-4.8 /usr/bin/g++
+		rm /usr/bin/gcc
+		ln -s /usr/bin/gcc-4.8 /usr/bin/gcc
+		# installing things for FreeRDP
+		apt-get -y install build-essential git-core cmake libssl-dev libx11-dev libxext-dev libxinerama-dev \
+		  libxcursor-dev libxdamage-dev libxv-dev libxkbfile-dev libasound2-dev libcups2-dev libxml2 libxml2-dev \
+		  libxrandr-dev libgstreamer0.10-dev libgstreamer-plugins-base0.10-dev libxi-dev libavutil-dev \
+		  libavcodec-dev libxtst-dev libgtk-3-dev libgcrypt11-dev libssh-dev libpulse-dev \
+		  libvte-2.90-dev libxkbfile-dev libfreerdp-dev libtelepathy-glib-dev libjpeg-dev \
+		  libgnutls-dev libgnome-keyring-dev libavahi-ui-gtk3-dev libvncserver-dev \
+		  libappindicator3-dev intltool
+
+		apt-get -y --purge remove freerdp-x11 \
+		  remmina remmina-common remmina-plugin-rdp remmina-plugin-vnc remmina-plugin-gnome \
+		  remmina-plugin-nx remmina-plugin-telepathy remmina-plugin-xdmcp
 		;;
 	Fedora*)
 		echo 'Fedora detected.Installing required packages...'
@@ -57,7 +57,7 @@ case $DISTRO in
 		echo 'git, svn-devel, autotools, gcc, g++, boost, openssl-devel and libpng-devel. For tracing to work, libdwarf is also required'
 		exit 1
 		;;
-	Red\sHat\sEnterprise\sLinux\sServer*6*|CentOS*6*)
+	Red\sHat\sEnterprise\sLinux\sServer*7*|CentOS*7*)
 		echo 'CentOS detected. Installing required packages...'
 		yum install -y gcc-c++ svn subversion-svn2cl openssl-devel \
 		libpng-devel elfutils-devel glib2-devel

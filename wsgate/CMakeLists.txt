@@ -186,6 +186,8 @@ if(CMAKE_COMPILER_IS_GNUCC)
 	# option to enable compiler warnings
 	option(GCC_ENABLE_WARNINGS "Enable gcc/g++ compiler warnings" OFF)
 
+	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fpermissive")
+
 	if(GCC_ENABLE_WARNINGS)
 		# set compiler warnings
 		set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall")
