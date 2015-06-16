@@ -388,14 +388,18 @@ namespace wsgate {
         m_rdpSettings->IgnoreCertificate = TRUE;
         m_rdpSettings->NegotiateSecurityLayer = FALSE;
         m_rdpSettings->ServerHostname = strdup(host.c_str());
-        m_rdpSettings->Username = strdup(user.c_str());
+        if (!user.empty()) {
+            m_rdpSettings->Username = strdup(user.c_str());
+        }
         if (!domain.empty()) {
             m_rdpSettings->Domain = strdup(domain.c_str());
         }
         if (!pass.empty()) {
             m_rdpSettings->Password = strdup(pass.c_str());
-        } else {
-            m_rdpSettings->Authentication = 0;
+        }
+        //authentication is not needed when username and password is not specified
+        if (user.empty() && pass.empty()){
+            m_freerdp->Authenticate = nullptr;
         }
         switch (params.perf) {
             case 0:
