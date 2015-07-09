@@ -320,8 +320,7 @@ namespace wsgate {
 
             void LogInfo(std::basic_string<char> remoteAdress, string uri, const char response[])
             {
-                log::info << "Request FROM: " << remoteAdress << endl;
-                log::info << "To URI: " << uri << " => " << response << endl;
+                log::info << "Request FROM: " << remoteAdress << " replied with " << response << endl;
             }
 
             ResponseCode HandleRobotsRequest(HttpRequest *request, HttpResponse *response, string uri, string thisHost)
