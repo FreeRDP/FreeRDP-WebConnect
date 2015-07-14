@@ -30,6 +30,7 @@
 
 namespace wsgate {
 
+    class MyRawSocketHandler;
     /**
      * This class serves as a wrapper around the
      * main FreeRDP API.
@@ -54,8 +55,9 @@ namespace wsgate {
             /**
              * Constructor
              * @param h The WebSockets handler to be used for communication with the client.
+             * @param rsh The Raw Socket handler that is used for starting the RDP session
              */
-            RDP(wspp::wshandler *h);
+            RDP(wspp::wshandler *h, MyRawSocketHandler *rsh);
             /// Destructor
             virtual ~RDP();
 
@@ -160,6 +162,7 @@ namespace wsgate {
             bool m_bThreadLoop;
             pthread_t m_worker;
             wspp::wshandler *m_wshandler;
+            MyRawSocketHandler *m_rsh;
             std::string m_errMsg;
             State m_State;
             Update *m_pUpdate;

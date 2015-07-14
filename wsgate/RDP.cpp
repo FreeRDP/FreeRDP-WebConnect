@@ -30,6 +30,11 @@
 #include "Update.hpp"
 #include "Primary.hpp"
 #include "Png.hpp"
+#include <cpprest/json.h>
+#include <boost/algorithm/string.hpp>
+#include <boost/lexical_cast.hpp>
+#include "myrawsocket.hpp"
+#include "base64.hpp"
 
 #include "btexception.hpp"
 extern "C" {
@@ -313,7 +318,7 @@ namespace wsgate {
         uint32_t id;
     } MyPointer;
 
-    RDP::RDP(wspp::wshandler *h)
+    RDP::RDP(wspp::wshandler *h, MyRawSocketHandler *rsh)
         : m_freerdp(freerdp_new())
           , m_rdpContext(0)
           , m_rdpInput(0)
@@ -321,6 +326,7 @@ namespace wsgate {
           , m_bThreadLoop(false)
           , m_worker()
           , m_wshandler(h)
+          , m_rsh(rsh)
           , m_errMsg()
           , m_State(STATE_INITIAL)
           , m_pUpdate(new Update(h))
@@ -601,6 +607,61 @@ namespace wsgate {
                         }
                     }
                     break;
+            }
+        }
+        if ((STATE_INITIAL == m_State) && (data.length() >= 4) && this->m_rsh->isPostponed()) {
+            const uint32_t *op = reinterpret_cast<const uint32_t *>(data.data());
+            switch (*op) {
+            case WSOP_CS_CREDENTIAL_JSON:
+                std::wstring infoJSON = L"";
+                for (int i = 1; i < data.length() / 4; i++){
+                    infoJSON += (wchar_t)op[i];
+                }
+                try{
+                    web::json::value jsonValue = web::json::value::parse(infoJSON);
+                    std::wstring w_host = jsonValue[L"host"].as_string();
+                    std::wstring w_pcb  = jsonValue[L"pcb"].as_string();
+                    std::wstring w_user = jsonValue[L"user"].as_string();
+                    std::wstring w_pass = jsonValue[L"pass"].as_string();
+                    std::wstring w_dtsize = jsonValue[L"dtsize"].as_string();
+
+                    std::string size(w_dtsize.begin(), w_dtsize.end());
+
+                    WsRdpParams params;
+                    params.fntlm = jsonValue[L"fntlm"].as_integer();
+                    params.nomani = jsonValue[L"nomani"].as_integer();
+                    params.nonla = jsonValue[L"nonla"].as_integer();
+                    params.notheme = jsonValue[L"notheme"].as_integer();
+                    params.notls = jsonValue[L"notls"].as_integer();
+                    params.nowallp = jsonValue[L"nowallp"].as_integer();
+                    params.nowdrag = jsonValue[L"nowdrag"].as_integer();
+                    params.perf = jsonValue[L"perf"].as_integer();
+                    params.port = jsonValue[L"port"].as_integer();
+
+                    if (!size.empty()) {
+                        try {
+                            vector<string> wh;
+                            boost::split(wh, size, boost::algorithm::is_any_of("x"));
+                            if (wh.size() == 2) {
+                                params.width = boost::lexical_cast<int>(wh[0]);
+                                params.height = boost::lexical_cast<int>(wh[1]);
+                            }
+                        }
+                        catch (const exception &e) {
+                            params.width = 1024;
+                            params.height = 768;
+                        }
+                    }
+                    this->m_rsh->PrepareRDP(std::string(w_host.begin(), w_host.end()),
+                                            std::string(w_pcb.begin() , w_pcb.end()),
+                                            std::string(w_user.begin(), w_user.end()),
+                                            std::string(w_pass.begin(), w_pass.end()),
+                                            params);
+                }
+                catch (exception &e){
+                    log::err << "Error starting RDP session:" << e.what() << std::endl;
+                }
+                break;
             }
         }
     }

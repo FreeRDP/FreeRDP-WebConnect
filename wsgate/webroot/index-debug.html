@@ -71,25 +71,9 @@
             }
 
             function RDPrun() {
-                var wsUri = wsBase
-                    + '?host=' + encodeURIComponent($('rdphost').value.trim())
-                    + '&port=' + encodeURIComponent($('rdpport').value.trim())
-                    + '&pcb='  + encodeURIComponent($('rdppcb').value.trim())
-                    + '&user=' + encodeURIComponent($('rdpuser').value.trim())
-                    + '&pass=' + encodeURIComponent($('rdppass').value.toBase64())
-                    + '&perf=' + $('perf').value.trim()
-                    + '&fntlm=' + $('fntlm').value.trim()
-                    + '&nowallp=' + ($('nowallp').checked ? '1' : '0')
-                    + '&nowdrag=' + ($('nowdrag').checked ? '1' : '0')
-                    + '&nomani=' + ($('nomani').checked ? '1' : '0')
-                    + '&notheme=' + ($('notheme').checked ? '1' : '0')
-                    + '&nonla=' + ($('nonla').checked ? '1' : '0')
-                    + '&notls=' + ($('notls').checked ? '1' : '0')
-                    + '&dtsize=' + $('screen').width + 'x' + $('screen').height
-                    ;
                 $('dvLoading').setStyles({'visibility':'visible'});
 
-                rdp = new wsgate.RDP(wsUri, $('screen'), !RIMtablet, RIMtablet, vkbd);
+                rdp = new wsgate.RDP(wsBase, $('screen'), !RIMtablet, RIMtablet, vkbd);
 
                 rdp.addEvent('alert', function(msg) {
                         alert(msg);
@@ -103,7 +87,6 @@
                         button.value = 'Disconnect';
                         button.addEvent('click', rdp.Disconnect.bind(rdp));
                         window.addEvent("beforeunload", rdp.Disconnect.bind(rdp));
-
                         });
                 rdp.addEvent('disconnected', function() {
                         showDialog(true);

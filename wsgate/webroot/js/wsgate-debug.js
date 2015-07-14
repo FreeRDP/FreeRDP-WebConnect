@@ -208,6 +208,32 @@ wsgate.RDP = new Class( {
 
 	};
     },
+    SendCredentials: function() {
+        var infoJSON = {"host"   : $('rdphost').value.trim()
+                       ,"port"   : parseInt($('rdpport').value.trim())
+                       ,"pcb"    : $('rdppcb').value.trim()
+                       ,"user"   : $('rdpuser').value.trim()
+                       ,"pass"   : $('rdppass').value
+                       ,"perf"   : parseInt($('perf').value.trim())
+                       ,"fntlm"  : parseInt($('fntlm').value.trim())
+                       ,"nowallp": parseInt($('nowallp').checked ? '1' : '0')
+                       ,"nowdrag": parseInt($('nowdrag').checked ? '1' : '0')
+                       ,"nomani" : parseInt($('nomani').checked ? '1' : '0')
+                       ,"notheme": parseInt($('notheme').checked ? '1' : '0')
+                       ,"nonla"  : parseInt($('nonla').checked ? '1' : '0')
+                       ,"notls"  : parseInt($('notls').checked ? '1' : '0')
+                       ,"dtsize" : $('screen').width + 'x' + $('screen').height
+                       };
+        var infoJSONstring = JSON.stringify(infoJSON);
+        var len = infoJSONstring.length;
+        var buf = new ArrayBuffer((len + 1)*4); // 4 bytes for each char
+        var bufView = new Uint32Array(buf);
+        bufView[0] = 4; // WSOP_CS_CREDENTIAL_JSON
+        for(var i = 0; i<len; i++){
+            bufView[i+1] = infoJSONstring.charCodeAt(i);
+        }
+        this.sock.send(buf);
+    },
     /**
      * Position cursor image
      */
@@ -932,6 +958,7 @@ wsgate.RDP = new Class( {
         document.addEvent('keyup', this.onKu.bind(this));
         document.addEvent('keypress', this.onKp.bind(this));
         this.fireEvent('connected');
+        this.SendCredentials();
     },
     /**
      * Event handler for WebSocket disconnect events

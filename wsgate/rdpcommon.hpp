@@ -74,7 +74,8 @@ namespace wsgate {
         WSOP_CS_MOUSE,
         WSOP_CS_KUPDOWN,
         WSOP_CS_KPRESS,
-        WSOP_CS_SPECIALCOMB
+        WSOP_CS_SPECIALCOMB,
+        WSOP_CS_CREDENTIAL_JSON
     } WsOPcs;
 
     /**
