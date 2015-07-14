@@ -495,10 +495,11 @@ namespace wsgate {
                 string rdphost;
                 string rdppcb;
                 string rdpuser;
-                int rdpport;
+                int rdpport = 0;
                 string rdppass;
                 WsRdpParams params;
                 bool setCookie = true;
+                bool postponeRDPsession = false;
 
                 if(boost::starts_with(uri, "/wsgate?token="))
                 {
@@ -535,12 +536,7 @@ namespace wsgate {
                 }
                 else
                 {
-                    dtsize  = request->FormValues("dtsize").m_sBody;
-                    rdphost = to_utf8string(web::uri::decode(to_string_t(request->FormValues("host").m_sBody)));
-                    rdppcb  = request->FormValues("pcb").m_sBody;
-                    rdpuser = to_utf8string(web::uri::decode(to_string_t(request->FormValues("user").m_sBody)));
-                    istringstream(request->FormValues("port").m_sBody) >> rdpport;
-                    rdppass = base64_decode(request->FormValues("pass").m_sBody);
+                    postponeRDPsession = true;
                 }
 
                 params =
@@ -620,7 +616,7 @@ namespace wsgate {
                 response->EnableKeepAlive(true);
                 try
                 {
-                    if (!sh->Prepare(request->Connection(), rdphost, rdppcb, rdpuser, rdppass, params))
+                    if (!sh->Prepare(request->Connection(), rdphost, rdppcb, rdpuser, rdppass, params, postponeRDPsession))
                     {
                         LogInfo(request->RemoteAddress(), uri, "503 (RDP backend not available)");
                         response->EnableIdleTimeout(true);
@@ -683,7 +679,7 @@ namespace wsgate {
                     return HandleCursorRequest(request, response, uri, thisHost);
                 }
 
-                if(boost::starts_with(uri, "/wsgate?"))
+                if(boost::starts_with(uri, "/wsgate"))
                 {
                     return HandleWsgateRequest(request, response, uri, thisHost);
                 }
@@ -1503,12 +1499,42 @@ namespace wsgate {
     }
 
     bool MyRawSocketHandler::Prepare(EHSConnection *conn, const string host, const string pcb,
-            const string user, const string pass, const WsRdpParams &params)
+            const string user, const string pass, const WsRdpParams &params, bool postpone)
     {
-        log::debug << "RDP Host:               '" << host << "'" << endl;
+        try
+        {
+            this->postponedRDPsession = postpone;
+            handler_ptr h(new MyWsHandler(conn, m_parent, this));
+            conn_ptr c(new wspp::wsendpoint(h.get()));
+            rdp_ptr r(new RDP(h.get(), this));
+            m_cmap[conn] = conn_tuple(c, h, r);
+
+            this->conn = conn;
+            if (!postpone){
+                PrepareRDP(host, pcb, user, pass, params);
+            }
+        }
+        catch(...)
+        {
+            log::info << "Attemtped double connection to the same machine" << endl;
+            return false;
+        }
+        return true;
+    }
+
+    void MyRawSocketHandler::PrepareRDP(const std::string host, const std::string pcb, const std::string user, const std::string pass, const WsRdpParams &params){
+        string username;
+        string domain;
+        SplitUserDomain(user, username, domain);
+
+        rdp_ptr r = this->m_cmap[this->conn].get<2>();
+        r->Connect(host, pcb, username, domain, pass, params);
+        m_parent->RegisterRdpSession(r);
+
+        log::debug << "RDP Host:              '" << host << "'" << endl;
         log::debug << "RDP Pcb:               '" << pcb << "'" << endl;
+        log::debug << "RDP User:              '" << user << "'" << endl;
         log::info << "RDP Port:               '" << params.port << "'" << endl;
-        log::debug << "RDP User:               '" << user << "'" << endl;
         log::debug << "RDP Desktop size:       " << params.width << "x" << params.height << endl;
         log::debug << "RDP Performance:        " << params.perf << endl;
         log::debug << "RDP No wallpaper:       " << params.nowallp << endl;
@@ -1518,28 +1544,6 @@ namespace wsgate {
         log::debug << "RDP Disable TLS:        " << params.notls << endl;
         log::debug << "RDP Disable NLA:        " << params.nonla << endl;
         log::debug << "RDP NTLM auth:          " << params.fntlm << endl;
-
-
-        try
-        {
-            handler_ptr h(new MyWsHandler(conn, m_parent, this));
-            conn_ptr c(new wspp::wsendpoint(h.get()));
-            rdp_ptr r(new RDP(h.get()));
-            m_cmap[conn] = conn_tuple(c, h, r);
-
-            string username;
-            string domain;
-            SplitUserDomain(user, username, domain);
-
-            r->Connect(host, pcb, username, domain, pass, params);
-            m_parent->RegisterRdpSession(r);
-        }
-        catch(...)
-        {
-            log::info << "Attemtped double connection to the same machine" << endl;
-            return false;
-        }
-        return true;
     }
 
 }
