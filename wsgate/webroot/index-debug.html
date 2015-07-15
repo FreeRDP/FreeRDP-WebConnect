@@ -32,6 +32,11 @@
 
             var externalConnection = false;
 
+            function initBody(){
+                //apply old settings
+                settingsApply();
+            }
+
             function RDPGet(uri, title) {
                 var wsUri = wsBase + uri;
 
@@ -266,6 +271,65 @@
                 }
             }
 
+            var RDPCookieKey = "RDPinfoJSON";
+            //sets a cookie with the settings inserted in the form
+            function settingsSet(){
+                var infoJSON = settingsGetJSON();
+                //remove password
+                infoJSON.pass = "";
+                document.cookie = RDPCookieKey + "=" + JSON.stringify(infoJSON) + "; expires=Fri, 31 Dec 2030 23:59:59 GMT;";
+            }
+            //change the form fields with respect with the cookie
+            function settingsApply(){
+                var cookie = document.cookie;
+                if(cookie){
+                    var cookieValues = cookie.split(';');
+                    var i = 0;
+                    //get the cookie for infoJSON
+                    while(cookieValues[i].indexOf(RDPCookieKey) == -1){
+                        i++;
+                    }
+                    //get the value of the cookie then parse it to a JSON
+                    try{
+                        var infoJSON = JSON.parse(cookieValues[i].split('=')[1]);
+                        //if we found a JSON we apply the values to the form fields
+                        if(infoJSON){
+                            $('rdphost').set('value',infoJSON.host);
+                            $('rdpport').set('value',infoJSON.port);
+                            $('rdppcb').set('value',infoJSON.pcb);
+                            $('rdpuser').set('value',infoJSON.user);
+                            $('nowallp').set('checked', infoJSON.nowallp != 0);
+                            $('nowdrag').set('checked', infoJSON.nowdrag != 0);
+                            $('nomani').set('checked', infoJSON.nomani != 0);
+                            $('notheme').set('checked', infoJSON.notheme != 0);
+                            $('nonla').set('checked', infoJSON.nonla != 0);
+                            $('notls').set('checked', infoJSON.notls != 0);
+                        }
+                    } catch (e){
+                        console.log("Bad JSON format");
+                        console.log(e.message);
+                    }
+                }
+            }
+            //gets a JSON with the settings inserted in the form
+            function settingsGetJSON(){
+                return {"host"   : $('rdphost').value.trim()
+                       ,"port"   : parseInt($('rdpport').value.trim())
+                       ,"pcb"    : $('rdppcb').value.trim()
+                       ,"user"   : $('rdpuser').value.trim()
+                       ,"pass"   : $('rdppass').value
+                       ,"perf"   : parseInt($('perf').value.trim())
+                       ,"fntlm"  : parseInt($('fntlm').value.trim())
+                       ,"nowallp": parseInt($('nowallp').checked ? '1' : '0')
+                       ,"nowdrag": parseInt($('nowdrag').checked ? '1' : '0')
+                       ,"nomani" : parseInt($('nomani').checked ? '1' : '0')
+                       ,"notheme": parseInt($('notheme').checked ? '1' : '0')
+                       ,"nonla"  : parseInt($('nonla').checked ? '1' : '0')
+                       ,"notls"  : parseInt($('notls').checked ? '1' : '0')
+                       ,"dtsize" : $('screen').width + 'x' + $('screen').height
+                       };
+            }
+
             window.addEventListener("beforeunload", function() {
                 if ($('maindialog').hasClass('invisible')){
                     var ans = confirm("Are you sure you want to disconnect?");
@@ -348,7 +412,7 @@
             });
         </script>
     </head>
-    <body id="wrapper">
+    <body id="wrapper" onload="initBody()">
         <div id="extracommands" style="height:28px; background-color:#f1f1f1; padding-left:25px; cursor:default; visibility:hidden;">
             Send keys:
             <ul>
