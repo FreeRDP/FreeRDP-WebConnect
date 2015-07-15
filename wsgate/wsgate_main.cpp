@@ -443,51 +443,6 @@ namespace wsgate {
                 return 0;
             }
 
-            void ManageCookies(HttpRequest *request, HttpResponse *response, string rdphost, string rdppcb, string rdpuser, string thisHost)
-            {
-                CookieParameters setcookie;
-                setcookie["path"] = "/";
-                setcookie["host"] = thisHost;
-                setcookie["max-age"] = "864000";
-                if (request->Secure()) {
-                    setcookie["secure"] = "";
-                }
-                CookieParameters delcookie;
-                delcookie["path"] = "/";
-                delcookie["host"] = thisHost;
-                delcookie["max-age"] = "0";
-                if (request->Secure()) {
-                    delcookie["secure"] = "";
-                }
-                if(rdppcb.empty()) {
-                    delcookie["name"] = "lastpcb";
-                    delcookie["value"] = "%20";
-                    response->SetCookie(delcookie);
-                } else {
-                    setcookie["name"] = "lastpcb";
-                    setcookie["value"] = (rdppcb);
-                    response->SetCookie(setcookie);
-                }
-                if (rdphost.empty()) {
-                    delcookie["name"] = "lasthost";
-                    delcookie["value"] = "%20";
-                    response->SetCookie(delcookie);
-                } else {
-                    setcookie["name"] = "lasthost";
-                    setcookie["value"] = (m_bOverrideRdpHost ? "<predefined>" : rdphost);
-                    response->SetCookie(setcookie);
-                }
-                if (rdpuser.empty()) {
-                    delcookie["name"] = "lastuser";
-                    delcookie["value"] = "%20";
-                    response->SetCookie(delcookie);
-                } else {
-                    setcookie["name"] = "lastuser";
-                    setcookie["value"] = (m_bOverrideRdpUser ? "<predefined>" : rdpuser);
-                    response->SetCookie(setcookie);
-                }
-            }
-
             ResponseCode HandleWsgateRequest(HttpRequest *request, HttpResponse *response, std::string uri, std::string thisHost)
             {
                 //FreeRDP Params
@@ -628,12 +583,6 @@ namespace wsgate {
                     log::info << "caught exception!" << endl;
                 }
 
-                //Use cookies only as standalone app
-                if (setCookie)
-                    ManageCookies(request, response, rdphost, rdppcb, rdpuser, thisHost);
-                else
-                    //openstack - wipe out any cookies
-                    ManageCookies(request, response, "", "", "", thisHost);
                 response->RemoveHeader("Content-Type");
                 response->RemoveHeader("Content-Length");
                 response->RemoveHeader("Last-Modified");
