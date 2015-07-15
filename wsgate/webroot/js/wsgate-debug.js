@@ -896,6 +896,12 @@ wsgate.RDP = new Class( {
 			    this.bstore.width=resolution[0];
 			    this.bstore.height=resolution[1];
 			    break;
+                    case 'C:':
+                            if(evt.data.substr(2) == "RDP session connection started."){
+                                //the connection worked so we can set the cookies
+                                settingsSet();
+                            }
+                            break;
                 }
                 break;
                 // ... and binary messages for the actual RDP stuff.
@@ -944,7 +950,6 @@ wsgate.RDP = new Class( {
         document.addEvent('keypress', this.onKp.bind(this));
         this.fireEvent('connected');
         this.SendCredentials();
-        settingsSet();
     },
     /**
      * Event handler for WebSocket disconnect events

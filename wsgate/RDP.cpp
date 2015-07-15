@@ -1074,6 +1074,8 @@ namespace wsgate {
                 	if(freerdp_connect(m_freerdp)) {
                         m_State = STATE_CONNECTED;
                         //set all flags to off
+                        //everything went ok, send a event to the client
+                        m_wshandler->send_text("C:RDP session connection started.");
                         continue;
                     }
                     m_State = STATE_INITIAL;
