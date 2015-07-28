@@ -279,7 +279,7 @@ wsgate.RDP = new Class( {
         if(this.IMEon){
             var textinput = this.textAreaInput.get("value");
             if(textinput!=""){
-                SendUnicodeString(textinput);
+                this.SendUnicodeString(textinput);
                 this.textAreaInput.set("value","");
             }
             this.IMEon=false;
@@ -878,7 +878,7 @@ wsgate.RDP = new Class( {
         if(evt.code==229||evt.code==0)this.IMEon=true;
         //send key presses only when IME is off
         if(!this.IMEon){
-            if(functionalKey(evt.code)){
+            if(this.FunctionalKey(evt.code)){
 
                 if(evt.preventDefault) evt.preventDefault();
                 if(evt.stopPropagation) evt.stopPropagation();
@@ -896,7 +896,7 @@ wsgate.RDP = new Class( {
     },
     KeyUpEvent: function(evt){
         if(!this.IMEon)
-        if(functionalKey(evt.code)){
+        if(this.FunctionalKey(evt.code)){
 
             if(evt.preventDefault) evt.preventDefault();
             if(evt.stopPropagation) evt.stopPropagation();
@@ -910,19 +910,19 @@ wsgate.RDP = new Class( {
                 this.sock.send(buf);
             }
         }
-        DumpTextArea(evt.code);
+        this.DumpTextArea(evt.code);
     },
     /**
      * Sends unicode to the server
      */
     KeyPressEvent: function(evt){
         if(!this.IMEon){
-            SendUnicodeString(String.fromCharCode(evt.code));
+            this.SendUnicodeString(String.fromCharCode(evt.code));
             $('textareainput').set("value","");
             if(evt.preventDefault) evt.preventDefault();
             if(evt.stopPropagation) evt.stopPropagation();
         }
-        DumpTextArea(evt.code);
+        this.DumpTextArea(evt.code);
     },
     /**
      * Event handler for key down events
