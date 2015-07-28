@@ -775,7 +775,8 @@ wsgate.RDP = new Class( {
     onMd: function(evt) {
         var buf, a, x, y, which;
         if (this.Tcool) {
-            evt.preventDefault();
+            if(evt.preventDefault) evt.preventDefault();
+            if(evt.stopPropagation) evt.stopPropagation();
             if (evt.rightClick && evt.control && evt.alt) {
                 this.fireEvent('touch3');
                 return;
