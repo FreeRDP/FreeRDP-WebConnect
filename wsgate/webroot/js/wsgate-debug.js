@@ -276,13 +276,13 @@ wsgate.RDP = new Class( {
      */
     DumpTextArea: function(key){
         if(key==13||key==0)
-        if(IMEon){
-            var textinput = $('textareainput').get("value");
+        if(this.IMEon){
+            var textinput = this.textAreaInput.get("value");
             if(textinput!=""){
                 SendUnicodeString(textinput);
-                $('textareainput').set("value","");
+                this.textAreaInput.set("value","");
             }
-            IMEon=false;
+            this.IMEon=false;
         }
     },    /**
      * Position cursor image
@@ -875,9 +875,9 @@ wsgate.RDP = new Class( {
         this.sock.send(buf);
     },
     KeyDownEvent: function(evt){
-        if(evt.code==229||evt.code==0)IMEon=true;
+        if(evt.code==229||evt.code==0)this.IMEon=true;
         //send key presses only when IME is off
-        if(!IMEon){
+        if(!this.IMEon){
             if(functionalKey(evt.code)){
 
                 if(evt.preventDefault) evt.preventDefault();
@@ -895,7 +895,7 @@ wsgate.RDP = new Class( {
         }
     },
     KeyUpEvent: function(evt){
-        if(!IMEon)
+        if(!this.IMEon)
         if(functionalKey(evt.code)){
 
             if(evt.preventDefault) evt.preventDefault();
@@ -916,7 +916,7 @@ wsgate.RDP = new Class( {
      * Sends unicode to the server
      */
     KeyPressEvent: function(evt){
-        if(!IMEon){
+        if(!this.IMEon){
             SendUnicodeString(String.fromCharCode(evt.code));
             $('textareainput').set("value","");
             if(evt.preventDefault) evt.preventDefault();
