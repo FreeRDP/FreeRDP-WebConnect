@@ -608,6 +608,16 @@ namespace wsgate {
                         }
                     }
                     break;
+                case WSOP_CS_UNICODE:
+                    const uint32_t* unicodeString = reinterpret_cast<const uint32_t*>(data.data());
+                    //skip the header // WSOP_CS_UNICODE
+                    unicodeString++;
+                    unsigned int len = data.length() / 4 - 1;
+                    for(int i=0; i < len; i++){
+                        freerdp_input_send_unicode_keyboard_event(m_rdpInput, KBD_FLAGS_DOWN, (UINT16) unicodeString[i]);
+                        freerdp_input_send_unicode_keyboard_event(m_rdpInput, KBD_FLAGS_RELEASE, (UINT16) unicodeString[i]);
+                    }
+                    break;
             }
         }
         if ((STATE_INITIAL == m_State) && (data.length() >= 4) && (this->getEmbeddedContext() == CONTEXT_PLAIN)) {
