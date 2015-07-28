@@ -258,6 +258,12 @@ wsgate.RDP = new Class( {
         });
 
         document.body.appendChild(this.textAreaInput);
+
+        //make sure the textarea is always on focus
+        this.textAreaInput.focus();
+        this.textAreaInput.addEvent('blur', function(){
+            setTimeout(function(){$('textareainput').focus();},20);
+        });
     },
     /**
      * Returns true when a non character is pressed
