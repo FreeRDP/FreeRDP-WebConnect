@@ -187,6 +187,8 @@ wsgate.RDP = new Class( {
         this.msie = window.navigator.userAgent.indexOf('MSIE ');
         this.trident = window.navigator.userAgent.indexOf('Trident/');
         this.parent(url);
+        //add the textarea on top of the canvas
+        this.SetupCanvas($('screen'));
     },
     Disconnect: function() {
         this._reset();
@@ -256,7 +258,7 @@ wsgate.RDP = new Class( {
             if (evt.stopPropagation) evt.stopPropagation();
         });
 
-        document.body.appendChild(input);
+        document.body.appendChild(this.textAreaInput);
     },
     /**
      * Returns true when a non character is pressed
