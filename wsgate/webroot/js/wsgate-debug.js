@@ -187,8 +187,6 @@ wsgate.RDP = new Class( {
         this.msie = window.navigator.userAgent.indexOf('MSIE ');
         this.trident = window.navigator.userAgent.indexOf('Trident/');
         this.parent(url);
-        //add the textarea on top of the canvas
-        this.SetupCanvas($('screen'));
     },
     Disconnect: function() {
         this._reset();
@@ -1051,18 +1049,20 @@ wsgate.RDP = new Class( {
     onWSopen: function(evt) {
         this.open = true;
         this.log.setWS(this.sock);
+        //add the textarea on top of the canvas
+        this.SetupCanvas($('screen'));
         // Add listeners for the various input events
-        this.canvas.addEvent('mousemove', this.onMm.bind(this));
-        this.canvas.addEvent('mousedown', this.onMd.bind(this));
-        this.canvas.addEvent('mouseup', this.onMu.bind(this));
-        this.canvas.addEvent('mousewheel', this.onMw.bind(this));
+        this.textAreaInput.addEvent('mousemove', this.onMm.bind(this));
+        this.textAreaInput.addEvent('mousedown', this.onMd.bind(this));
+        this.textAreaInput.addEvent('mouseup', this.onMu.bind(this));
+        this.textAreaInput.addEvent('mousewheel', this.onMw.bind(this));
         // Disable the browser's context menu
-        this.canvas.addEvent('contextmenu', function(e) {e.stop();});
+        this.textAreaInput.addEvent('contextmenu', function(e) {e.stop();});
         // For touch devices
         if (this.uT) {
-            this.canvas.addEvent('touchstart', this.onTs.bind(this));
-            this.canvas.addEvent('touchend', this.onTe.bind(this));
-            this.canvas.addEvent('touchmove', this.onTm.bind(this));
+            this.textAreaInput.addEvent('touchstart', this.onTs.bind(this));
+            this.textAreaInput.addEvent('touchend', this.onTe.bind(this));
+            this.textAreaInput.addEvent('touchmove', this.onTm.bind(this));
         }
         if (!this.cssC) {
             // Same events on pointer image
@@ -1077,11 +1077,6 @@ wsgate.RDP = new Class( {
                 this.cI.addEvent('touchmove', this.onTm.bind(this));
             }
         }
-        // The keyboard events need to be attached to the
-        // document, because otherwise we seem to loose them.
-        document.addEvent('keydown', this.onKd.bind(this));
-        document.addEvent('keyup', this.onKu.bind(this));
-        document.addEvent('keypress', this.onKp.bind(this));
         this.fireEvent('connected');
         this.SendCredentials();
     },
