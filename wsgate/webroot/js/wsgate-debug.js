@@ -248,9 +248,9 @@ wsgate.RDP = new Class( {
 
         this.textAreaInput.setPosition(pos);
 
-        this.textAreaInput.addEvent('keydown', this.KeyDownEvent);
-        this.textAreaInput.addEvent('keypress', this.KeyPressEvent);
-        this.textAreaInput.addEvent('keyup', this.KeyUpEvent);
+        this.textAreaInput.addEvent('keydown', this.KeyDownEvent.bind(this));
+        this.textAreaInput.addEvent('keypress', this.KeyPressEvent.bind(this));
+        this.textAreaInput.addEvent('keyup', this.KeyUpEvent.bind(this));
         this.textAreaInput.addEvent('copy', function(evt){
             if (evt.preventDefault) evt.preventDefault();
             if (evt.stopPropagation) evt.stopPropagation();
