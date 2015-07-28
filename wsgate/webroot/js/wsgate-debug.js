@@ -1022,6 +1022,8 @@ wsgate.RDP = new Class( {
                             $('screen').height=resolution[1];
                             this.bstore.width=resolution[0];
                             this.bstore.height=resolution[1];
+                            $('textareainput').setStyle('width', resolution[0]);
+                            $('textareainput').setStyle('height', resolution[1]);
                             break;
                     case 'C:':
                             var msg = evt.data.substr(2);
