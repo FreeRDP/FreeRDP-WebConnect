@@ -220,6 +220,64 @@ wsgate.RDP = new Class( {
         this.sock.send(buf);
     },
     /**
+     * Used when the special input method is on
+     */
+    IMEon: false,
+    /**
+     * The textarea element object
+     */
+    textAreaInput: null,
+    /**
+     * This function adds a textarea element on top of the canvas for the purpose of keyboard input
+     */
+    SetupCanvas: function(canvas){
+        if(this.textAreaInput)return;
+
+        var pos = canvas.getPosition();
+        var size= canvas.getSize();
+
+        this.textAreaInput = document.createElement('textarea');
+
+        this.textAreaInput.set('id', 'textareainput');
+
+        this.textAreaInput.setStyle('width', size.x);
+        this.textAreaInput.setStyle('height', size.y);
+        this.textAreaInput.setStyle('position', 'absolute');
+        this.textAreaInput.setStyle('opacity', 0);
+        this.textAreaInput.setStyle('resize', 'none');
+
+        this.textAreaInput.setPosition(pos);
+
+        this.textAreaInput.addEvent('keydown', this.keyDownEvent);
+        this.textAreaInput.addEvent('keypress', this.keyPressEvent);
+        this.textAreaInput.addEvent('keyup', this.keyUpEvent);
+        this.textAreaInput.addEvent('copy', function(evt){
+            if (evt.preventDefault) evt.preventDefault();
+            if (evt.stopPropagation) evt.stopPropagation();
+        });
+
+        document.body.appendChild(input);
+    },
+    /**
+     * Returns true when a non character is pressed
+     */
+    FunctionalKey: function(key){
+        return (key != 32 && ((key <= 46) || (91 <= key && key <= 145)));
+    },
+    /**
+     * Takes the contents of the textarea and sends them to the server
+     */
+    DumpTextArea: function(key){
+        if(key==13||key==0)
+        if(IMEon){
+            var textinput = $('textareainput').get("value");
+            if(textinput!=""){
+                SendUnicodeString(textinput);
+                $('textareainput').set("value","");
+            }
+            IMEon=false;
+        }
+    },    /**
      * Position cursor image
      */
     cP: function() {
@@ -789,7 +847,69 @@ wsgate.RDP = new Class( {
             }
         }
     },
+    /**
+     * Sends a unicode char or string
+     */
+    SendUnicodeString: function(str){
+        var len = str.length;
+        buf = new ArrayBuffer(4 * len + 4);
+        a = new Uint32Array(buf);
+        a[0] = 5; // WSOP_CS_UNICODE
+        for(var i = 0; i<len; i++){
+            a[i+1] = str.charCodeAt(i); 
+        }
+        this.sock.send(buf);
+    },
+    KeyDownEvent: function(evt){
+        if(evt.code==229||evt.code==0)IMEon=true;
+        //send key presses only when IME is off
+        if(!IMEon){
+            if(functionalKey(evt.code)){
 
+                if(evt.preventDefault) evt.preventDefault();
+                if(evt.stopPropagation) evt.stopPropagation();
+
+                if (this.sock.readyState == this.sock.OPEN) {
+                    buf = new ArrayBuffer(12);
+                    a = new Uint32Array(buf);
+                    a[0] = 1; // WSOP_CS_KUPDOWN
+                    a[1] = 1; // down
+                    a[2] = evt.code;
+                    this.sock.send(buf);
+                }
+            }
+        }
+    },
+    KeyUpEvent: function(evt){
+        if(!IMEon)
+        if(functionalKey(evt.code)){
+
+            if(evt.preventDefault) evt.preventDefault();
+            if(evt.stopPropagation) evt.stopPropagation();
+
+            if (this.sock.readyState == this.sock.OPEN) {
+                var buf = new ArrayBuffer(12);
+                var a = new Uint32Array(buf);
+                a[0] = 1; // WSOP_CS_KUPDOWN
+                a[1] = 0; // up
+                a[2] = evt.code;
+                this.sock.send(buf);
+            }
+        }
+        DumpTextArea(evt.code);
+    },
+    /**
+     * Sends unicode to the server
+     */
+    KeyPressEvent: function(evt){
+        if(!IMEon){
+            SendUnicodeString(String.fromCharCode(evt.code));
+            $('textareainput').set("value","");
+            if(evt.preventDefault) evt.preventDefault();
+            if(evt.stopPropagation) evt.stopPropagation();
+        }
+        DumpTextArea(evt.code);
+    },
     /**
      * Event handler for key down events
      */
