@@ -245,6 +245,7 @@ wsgate.RDP = new Class( {
         this.textAreaInput.setStyle('position', 'absolute');
         this.textAreaInput.setStyle('opacity', 0);
         this.textAreaInput.setStyle('resize', 'none');
+        this.textAreaInput.setStyle('cursor', 'none');
 
         this.textAreaInput.setPosition(pos);
 
