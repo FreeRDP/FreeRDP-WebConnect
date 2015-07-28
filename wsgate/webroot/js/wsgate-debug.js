@@ -639,6 +639,12 @@ wsgate.RDP = new Class( {
         this.clh = 0;
         this.canvas.removeEvents();
         document.removeEvents();
+        try{
+            this.textAreaInput.remove();
+        }
+        catch(err){
+        }
+        this.textAreaInput = null;
         while (this.ccnt > 0) {
             this.cctx.restore();
             this.ccnt -= 1;
