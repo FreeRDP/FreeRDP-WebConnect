@@ -245,7 +245,8 @@ wsgate.RDP = new Class( {
         this.textAreaInput.setStyle('position', 'absolute');
         this.textAreaInput.setStyle('opacity', 0);
         this.textAreaInput.setStyle('resize', 'none');
-        this.textAreaInput.setStyle('cursor', 'none');
+        this.textAreaInput.setStyle('cursor', 'default');
+        canvas.setStyle('cursor', 'none');
 
         this.textAreaInput.setPosition(pos);
 
@@ -478,7 +479,8 @@ wsgate.RDP = new Class( {
                 // id
                 // this.log.debug('PS:', this.cursors[new Uint32Array(data, 4, 1)[0]]);
                 if (this.cssC) {
-                    this.canvas.setStyle('cursor', this.cursors[new Uint32Array(data, 4, 1)[0]]);
+                    if(this.textAreaInput)
+                        this.textAreaInput.setStyle('cursor', this.cursors[new Uint32Array(data, 4, 1)[0]]);
                 } else {
                     var cobj = this.cursors[new Uint32Array(data, 4, 1)[0]];
                     this.chx = cobj.x;
@@ -489,7 +491,8 @@ wsgate.RDP = new Class( {
             case 11:
                 // PTR_SETNULL
                 if (this.cssC) {
-                    this.canvas.setStyle('cursor', 'none');
+                    if(this.textAreaInput)
+                        this.textAreaInput.setStyle('cursor', 'none');
                 } else {
                     this.cI.src = '/c_none.png';
                 }
@@ -497,7 +500,8 @@ wsgate.RDP = new Class( {
             case 12:
                 // PTR_SETDEFAULT
                 if (this.cssC) {
-                    this.canvas.setStyle('cursor', 'default');
+                    if(this.textAreaInput)
+                        this.textAreaInput.setStyle('cursor', 'default');
                 } else {
                     this.chx = 10;
                     this.chy = 10;
