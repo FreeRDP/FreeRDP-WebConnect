@@ -280,6 +280,9 @@ wsgate.RDP = new Class( {
         if(this.IMEon){
             var textinput = this.textAreaInput.get("value");
             if(textinput!=""){
+                if(textinput[0]=='\n'){
+                    textinput = textinput.substring(1);
+                }
                 this.SendUnicodeString(textinput);
                 this.textAreaInput.set("value","");
             }
