@@ -187,6 +187,8 @@ wsgate.RDP = new Class( {
         this.msie = window.navigator.userAgent.indexOf('MSIE ');
         this.trident = window.navigator.userAgent.indexOf('Trident/');
         this.parent(url);
+        //add the toggle function to the keyboard language button
+        $('keyboardlanguage').addEvent('click', this.ToggleLanguageButton.bind(this));
     },
     Disconnect: function() {
         this._reset();
@@ -218,6 +220,18 @@ wsgate.RDP = new Class( {
             bufView[i+1] = infoJSONstring.charCodeAt(i);
         }
         this.sock.send(buf);
+    },
+    /**
+     * Multilanguage mode
+     */
+    useIME: false,
+    ToggleLanguageButton: function(){
+        this.useIME = $('keyboardlanguage').get('text') == "Multilanguage keyboard";
+        if(this.useIME){
+            $('keyboardlanguage').set('text','Normal keyboard');
+        }else{
+            $('keyboardlanguage').set('text','Multilanguage keyboard');
+        }
     },
     /**
      * Used when the special input method is on
@@ -881,55 +895,64 @@ wsgate.RDP = new Class( {
         }
         this.sock.send(buf);
     },
+    /**
+     * Sends a scancode key event
+     * down = 1
+     * up = 0
+     */
+    SendKeyUpDown: function(key, upDown){
+        if (this.sock.readyState == this.sock.OPEN) {
+            buf = new ArrayBuffer(12);
+            a = new Uint32Array(buf);
+            a[0] = 1; // WSOP_CS_KUPDOWN
+            a[1] = upDown;
+            a[2] = key;
+            this.sock.send(buf);
+        }
+    },
     KeyDownEvent: function(evt){
-        if(evt.code==229||evt.code==0)this.IMEon=true;
-        //send key presses only when IME is off
-        if(!this.IMEon){
-            if(this.FunctionalKey(evt.code)){
+        if(!this.useIME){
+            this.SendKeyUpDown(evt.code, 1);
+        }else{
+            if(evt.code==229||evt.code==0)this.IMEon=true;
+            //send key presses only when IME is off
+            if(!this.IMEon){
+                if(this.FunctionalKey(evt.code)){
+                    if(evt.preventDefault) evt.preventDefault();
+                    if(evt.stopPropagation) evt.stopPropagation();
 
-                if(evt.preventDefault) evt.preventDefault();
-                if(evt.stopPropagation) evt.stopPropagation();
-
-                if (this.sock.readyState == this.sock.OPEN) {
-                    buf = new ArrayBuffer(12);
-                    a = new Uint32Array(buf);
-                    a[0] = 1; // WSOP_CS_KUPDOWN
-                    a[1] = 1; // down
-                    a[2] = evt.code;
-                    this.sock.send(buf);
+                    this.SendKeyUpDown(evt.code, 1);
                 }
             }
         }
     },
     KeyUpEvent: function(evt){
-        if(!this.IMEon)
-        if(this.FunctionalKey(evt.code)){
-
-            if(evt.preventDefault) evt.preventDefault();
-            if(evt.stopPropagation) evt.stopPropagation();
-
-            if (this.sock.readyState == this.sock.OPEN) {
-                var buf = new ArrayBuffer(12);
-                var a = new Uint32Array(buf);
-                a[0] = 1; // WSOP_CS_KUPDOWN
-                a[1] = 0; // up
-                a[2] = evt.code;
-                this.sock.send(buf);
-            }
-        }
-        this.DumpTextArea(evt.code);
-        //IME helper div
-        if(this.IMEon){
-            $('IMEhelper').setStyle('visibility','visible');
-            $('IMEhelper').set('html',$('textareainput').get('value'));
+        if(!this.useIME){
+            this.SendKeyUpDown(evt.code, 0);
+            this.textAreaInput.set("value","");
         }else{
-            $('IMEhelper').setStyle('visibility','hidden');
+            if(!this.IMEon)
+            if(this.FunctionalKey(evt.code)){
+                if(evt.preventDefault) evt.preventDefault();
+                if(evt.stopPropagation) evt.stopPropagation();
+
+                this.SendKeyUpDown(evt.code, 0);
+            }
+            this.DumpTextArea(evt.code);
+            //IME helper div
+            if(this.IMEon){
+                $('IMEhelper').setStyle('visibility','visible');
+                $('IMEhelper').set('html',$('textareainput').get('value'));
+            }else{
+                $('IMEhelper').setStyle('visibility','hidden');
+            }
         }
     },
     /**
      * Sends unicode to the server
      */
     KeyPressEvent: function(evt){
+        if(this.useIME)
         if(!this.IMEon){
             this.SendUnicodeString(String.fromCharCode(evt.code));
             $('textareainput').set("value","");
