@@ -918,6 +918,13 @@ wsgate.RDP = new Class( {
             }
         }
         this.DumpTextArea(evt.code);
+        //IME helper div
+        if(this.IMEon){
+            $('IMEhelper').setStyle('visibility','visible');
+            $('IMEhelper').set('html',$('textareainput').get('value'));
+        }else{
+            $('IMEhelper').setStyle('visibility','hidden');
+        }
     },
     /**
      * Sends unicode to the server
