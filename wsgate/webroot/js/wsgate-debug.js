@@ -872,8 +872,13 @@ wsgate.RDP = new Class( {
                             this._reset();
                             break;
                     case "E:":
-                            this.log.err(evt.data.substring(2));
-                            this.fireEvent('alert', evt.data.substring(2));
+                            var msg = evt.data.substring(2);
+                            if(msg.substring(0, 2)=='E:'){
+                                this.embedded = true;
+                                msg = msg.substring(2);
+                            }
+                            this.log.err(msg);
+                            this.fireEvent('alert', msg);
                             this._reset();
                             break;
                     case 'I:':
@@ -897,7 +902,12 @@ wsgate.RDP = new Class( {
 			    this.bstore.height=resolution[1];
 			    break;
                     case 'C:':
-                            if(evt.data.substr(2) == "RDP session connection started."){
+                            var msg = evt.data.substr(2);
+                            if(msg.substr(0, 2) == 'E:'){
+                                msg = msg.substr(2);
+                                this.embedded = true;
+                            }
+                            if(msg == "RDP session connection started."){
                                 //the connection worked so we can set the cookies
                                 settingsSet();
                             }

@@ -119,7 +119,7 @@
                 rdp = new wsgate.RDP(wsUri, $('screen'), !RIMtablet, RIMtablet, vkbd);
 
                 rdp.addEvent('alert', function(msg) {
-                    alert(msg);
+                    popUpMessage('error', msg, 5);
                     });
                 rdp.addEvent('connected', function() {
                         document.title = title;
@@ -131,6 +131,9 @@
                         });
                 rdp.addEvent('disconnected', function() {
                         showDialog(true);
+                        if(rdp.embedded){
+                            $('maindialog').addClass('invisible');
+                        }
                         button = $("rdpconnect");
                         button.removeEvents();
                         button.value = 'Connect';
@@ -157,8 +160,8 @@
                 rdp = new wsgate.RDP(wsBase, $('screen'), !RIMtablet, RIMtablet, vkbd);
 
                 rdp.addEvent('alert', function(msg) {
-                        alert(msg);
-                        });
+                    popUpMessage('error', msg, 5);
+                });
                 rdp.addEvent('connected', function() {
                         document.title = "FreeRDP WebConnect: connected to " +
                         $('rdphost').value.trim();
@@ -171,6 +174,9 @@
                         });
                 rdp.addEvent('disconnected', function() {
                         showDialog(true);
+                        if(rdp.embedded){
+                            $('maindialog').addClass('invisible');
+                        }
                         button = $("rdpconnect");
                         button.removeEvents();
                         button.value = 'Connect';

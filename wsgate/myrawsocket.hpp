@@ -86,12 +86,12 @@ namespace wsgate {
              * @param user The user name to be used for the RDP session.
              * @param pass The password to be used for the RDP session.
              * @param params Additional RDP parameters.
-             * @param postpone Allows the RDP session to be created later (JSON credential sending through WebSocket)
+             * @param embeddedContext Tells the purpose of the connection
              * @return true on success.
              */
             bool Prepare(EHSConnection *conn, const std::string host, const std::string pcb,
                     const std::string user, const std::string pass,
-                    const WsRdpParams &params, bool postpone);
+                    const WsRdpParams &params, EmbeddedContext embeddedContext);
             /**
              * Creates an RDP session using parameters specified to wsgate::MyRawSocketHandler::Prepare
              */
@@ -105,15 +105,12 @@ namespace wsgate {
              * @param data The payload of the message.
              */
             void OnMessage(EHSConnection *conn, const std::string & data);
-
-            bool isPostponed(){return this->postponedRDPsession;}
         private:
             MyRawSocketHandler(const MyRawSocketHandler&);
             MyRawSocketHandler& operator=(const MyRawSocketHandler&);
 
             WsGate *m_parent;
             conn_map m_cmap;
-            bool postponedRDPsession;
             EHSConnection *conn;
     };
 
