@@ -35,6 +35,82 @@
             function initBody(){
                 //apply old settings
                 settingsApply();
+                initPopUpDeck();
+            }
+
+
+            //pop up message procedure
+            var popUpDeck = null;
+            var popUpElements = [];
+
+            function initPopUpDeck(){
+                popUpDeck = document.createElement('div');
+                document.body.appendChild(popUpDeck);
+
+                popUpDeck.setStyle('background-color', 'transparent');
+                popUpDeck.setStyle('width', '50%');
+                popUpDeck.setStyle('margin', 'auto');
+                popUpDeck.setStyle('left', 0);
+                popUpDeck.setStyle('right', 0);
+                popUpDeck.setStyle('top', 0);
+                popUpDeck.setStyle('bottom', 0);
+                popUpDeck.setStyle('position', 'absolute');
+            }
+
+            function popUpMessage(type, msg, timeout, callback, center){
+                var newMessage = document.createElement('div');
+                popUpDeck.appendChild(newMessage);
+
+                newMessage.set('class', 'popupmessage');
+                newMessage.set('text', msg);
+                newMessage.addEvent('mousedown',
+                    function(){
+                        if(callback)
+                            callback();
+                        newMessage.destroy();
+                        newMessage = null;
+                    });
+
+                var color = {
+                    r: 255,
+                    g: 255,
+                    b: 255
+                };
+
+                if(type=='error'){
+                    color.r = 247;
+		    color.g = 203;
+                    color.b = 30;
+                }else
+                if(type=='message'){
+                    color.r = 107;
+                    color.g = 180;
+                    color.b = 229;
+                }
+
+                if(center){
+                    newMessage.setStyle('position','absolute');
+                    newMessage.setStyle('top', document.body.offsetHeight/2);
+                    newMessage.setStyle('z-index', '1235');
+                }
+                newMessage.setStyle('background-color','rgba(' + color.r
+                                                         + ',' + color.g
+                                                         + ',' + color.b
+                                                         + ', 0.8)' );
+
+                if(timeout){
+                    window.setTimeout(
+                        function(){
+                            if(newMessage){
+                                if(callback)
+                                    callback();
+                                newMessage.destroy();
+                            }
+                        },
+                        timeout*1000);
+                }
+
+                return newMessage;
             }
 
             function RDPGet(uri, title) {
