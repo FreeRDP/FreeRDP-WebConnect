@@ -86,7 +86,12 @@
                     color.r = 107;
                     color.g = 180;
                     color.b = 229;
-                }
+                }else
+		if(type=='critical'){
+		    color.r = 255;
+		    color.g = 0;
+		    color.b = 0;
+		}
 
                 if(center){
                     newMessage.setStyle('position','absolute');
