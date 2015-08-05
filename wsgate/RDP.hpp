@@ -30,6 +30,14 @@
 
 namespace wsgate {
 
+    /**
+     * Possible embedded contexts
+     */
+    typedef enum {
+        CONTEXT_PLAIN
+       ,CONTEXT_EMBEDDED
+    } EmbeddedContext;
+
     class MyRawSocketHandler;
     /**
      * This class serves as a wrapper around the
@@ -47,6 +55,7 @@ namespace wsgate {
                 STATE_CONNECTED,
                 STATE_CLOSED
             } State;
+            
 
             /// Map for storing cursor images of this session
             typedef boost::tuple<time_t, std::string> cursor;
@@ -57,7 +66,7 @@ namespace wsgate {
              * @param h The WebSockets handler to be used for communication with the client.
              * @param rsh The Raw Socket handler that is used for starting the RDP session
              */
-            RDP(wspp::wshandler *h, MyRawSocketHandler *rsh);
+            RDP(wspp::wshandler *h, MyRawSocketHandler *rsh, EmbeddedContext embeddedContext = CONTEXT_PLAIN);
             /// Destructor
             virtual ~RDP();
 
@@ -99,6 +108,16 @@ namespace wsgate {
              * @return A tuple, containing the creation time and PNG-encoded RGBA image or a tuple containing 0 and an empty String, if no cursor image is defined for the given Id.
              */
             cursor GetCursor(uint32_t cid);
+            /**
+             * Sets the context of the web-connect app
+             * @param kind of ebdedded context
+             */
+            void setEmbeddedContext(EmbeddedContext embeddedContext){this->m_embeddedContext = embeddedContext;}
+            /**
+             * Gets the context of the web-connect app
+             * @return the context
+             */
+            EmbeddedContext getEmbeddedContext(){return this->m_embeddedContext;}
 
         private:
             /**
@@ -170,6 +189,7 @@ namespace wsgate {
             uint32_t m_lastError;
             uint32_t m_ptrId;
             CursorMap m_cursorMap;
+            EmbeddedContext m_embeddedContext;
 
             // Callbacks from C pthreads - Must be static in order t be assigned to C fnPtrs.
             static void *cbThreadFunc(void *ctx);

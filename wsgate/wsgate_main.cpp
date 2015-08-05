@@ -454,7 +454,7 @@ namespace wsgate {
                 string rdppass;
                 WsRdpParams params;
                 bool setCookie = true;
-                bool postponeRDPsession = false;
+                EmbeddedContext embeddedContext = CONTEXT_PLAIN;
 
                 if(boost::starts_with(uri, "/wsgate?token="))
                 {
@@ -482,16 +482,14 @@ namespace wsgate {
 
                         rdpuser = m_sHyperVHostUsername;
                         rdppass = m_sHyperVHostPassword;
+
+                        embeddedContext = CONTEXT_EMBEDDED;
                     }
                     catch(exception& ex)
                     {
                         log::err << "OpenStack token authentication failed: " << ex.what() << endl;
                         return HTTPRESPONSECODE_400_BADREQUEST;
                     }
-                }
-                else
-                {
-                    postponeRDPsession = true;
                 }
 
                 params =
@@ -571,7 +569,7 @@ namespace wsgate {
                 response->EnableKeepAlive(true);
                 try
                 {
-                    if (!sh->Prepare(request->Connection(), rdphost, rdppcb, rdpuser, rdppass, params, postponeRDPsession))
+                    if (!sh->Prepare(request->Connection(), rdphost, rdppcb, rdpuser, rdppass, params, embeddedContext))
                     {
                         LogInfo(request->RemoteAddress(), uri, "503 (RDP backend not available)");
                         response->EnableIdleTimeout(true);
@@ -1448,18 +1446,19 @@ namespace wsgate {
     }
 
     bool MyRawSocketHandler::Prepare(EHSConnection *conn, const string host, const string pcb,
-            const string user, const string pass, const WsRdpParams &params, bool postpone)
+            const string user, const string pass, const WsRdpParams &params, EmbeddedContext embeddedContext)
     {
         try
         {
-            this->postponedRDPsession = postpone;
             handler_ptr h(new MyWsHandler(conn, m_parent, this));
             conn_ptr c(new wspp::wsendpoint(h.get()));
             rdp_ptr r(new RDP(h.get(), this));
             m_cmap[conn] = conn_tuple(c, h, r);
 
+            r->setEmbeddedContext(embeddedContext);
+
             this->conn = conn;
-            if (!postpone){
+            if (embeddedContext == CONTEXT_EMBEDDED){
                 PrepareRDP(host, pcb, user, pass, params);
             }
         }

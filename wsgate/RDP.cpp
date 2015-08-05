@@ -318,7 +318,7 @@ namespace wsgate {
         uint32_t id;
     } MyPointer;
 
-    RDP::RDP(wspp::wshandler *h, MyRawSocketHandler *rsh)
+    RDP::RDP(wspp::wshandler *h, MyRawSocketHandler *rsh, EmbeddedContext embeddedContext)
         : m_freerdp(freerdp_new())
           , m_rdpContext(0)
           , m_rdpInput(0)
@@ -334,6 +334,7 @@ namespace wsgate {
           , m_lastError(0)
           , m_ptrId(1)
           , m_cursorMap()
+          , m_embeddedContext(embeddedContext)
     {
         if (!m_freerdp) {
             throw tracing::runtime_error("Could not create freerep instance");
@@ -609,7 +610,7 @@ namespace wsgate {
                     break;
             }
         }
-        if ((STATE_INITIAL == m_State) && (data.length() >= 4) && this->m_rsh->isPostponed()) {
+        if ((STATE_INITIAL == m_State) && (data.length() >= 4) && (this->getEmbeddedContext() == CONTEXT_PLAIN)) {
             const uint32_t *op = reinterpret_cast<const uint32_t *>(data.data());
             switch (*op) {
             case WSOP_CS_CREDENTIAL_JSON:
@@ -1060,7 +1061,12 @@ namespace wsgate {
             }
             if (!m_errMsg.empty()) {
                 log::debug << m_errMsg << endl;
-                m_wshandler->send_text(m_errMsg);
+                std::string errorMsg = "";
+                if(m_embeddedContext == CONTEXT_EMBEDDED){
+                    errorMsg = "E:";
+                }
+                errorMsg.append(m_errMsg);
+                m_wshandler->send_text(errorMsg);
                 m_errMsg.clear();
             }
             if (freerdp_shall_disconnect(m_freerdp)) {
@@ -1075,7 +1081,12 @@ namespace wsgate {
                         m_State = STATE_CONNECTED;
                         //set all flags to off
                         //everything went ok, send a event to the client
-                        m_wshandler->send_text("C:RDP session connection started.");
+                        std::string msg = "C:";
+                        if(this->m_embeddedContext == CONTEXT_EMBEDDED){
+                            msg.append("E:");
+                        }
+                        msg.append("RDP session connection started.");
+                        m_wshandler->send_text(msg);
                         continue;
                     }
                     m_State = STATE_INITIAL;
