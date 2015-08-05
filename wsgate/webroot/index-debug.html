@@ -133,6 +133,7 @@
                         showDialog(true);
                         if(rdp.embedded){
                             $('maindialog').addClass('invisible');
+                            popUpMessage('critical', "This instance seems to be not working. Try to enter the console again.", 0, null, true);
                         }
                         button = $("rdpconnect");
                         button.removeEvents();
