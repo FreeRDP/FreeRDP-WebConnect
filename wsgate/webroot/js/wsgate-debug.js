@@ -893,14 +893,14 @@ wsgate.RDP = new Class( {
                     case 'S:':
                             this.sid = evt.data.substring(2);
                             break;
-		    case 'R:':
-		    	    //resolution changed
-		    	    resolution=evt.data.substr(2).split('x');
-			    $('screen').width=resolution[0];
-			    $('screen').height=resolution[1];
-			    this.bstore.width=resolution[0];
-			    this.bstore.height=resolution[1];
-			    break;
+                    case 'R:':
+                            //resolution changed
+                            resolution=evt.data.substr(2).split('x');
+                            $('screen').width=resolution[0];
+                            $('screen').height=resolution[1];
+                            this.bstore.width=resolution[0];
+                            this.bstore.height=resolution[1];
+                            break;
                     case 'C:':
                             var msg = evt.data.substr(2);
                             if(msg.substr(0, 2) == 'E:'){
