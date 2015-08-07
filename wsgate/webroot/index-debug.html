@@ -58,6 +58,13 @@
                 popUpDeck.setStyle('position', 'absolute');
             }
 
+            function cleanPopUpDeck(){
+                for(var i=0; i<popUpElements.length; i++){
+                    popUpElements[i].removeEvents();
+                    popUpElements[i].destroy();
+                }
+            }
+
             function popUpMessage(type, msg, timeout, callback, center){
                 var newMessage = document.createElement('div');
                 popUpDeck.appendChild(newMessage);
@@ -80,7 +87,7 @@
 
                 if(type=='error'){
                     color.r = 247;
-		    color.g = 203;
+                    color.g = 203;
                     color.b = 30;
                 }else
                 if(type=='message'){
@@ -88,11 +95,11 @@
                     color.g = 180;
                     color.b = 229;
                 }else
-		if(type=='critical'){
-		    color.r = 255;
-		    color.g = 0;
-		    color.b = 0;
-		}
+                if(type=='critical'){
+                    color.r = 255;
+                    color.g = 0;
+                    color.b = 0;
+                }
 
                 if(center){
                     newMessage.setStyle('position','absolute');
@@ -116,6 +123,8 @@
                         timeout*1000);
                 }
 
+                popUpElements.push(newMessage);
+
                 return newMessage;
             }
 
@@ -128,6 +137,7 @@
                     popUpMessage('error', msg, 5);
                     });
                 rdp.addEvent('connected', function() {
+                        cleanPopUpDeck();
                         document.title = title;
                         button = $("rdpconnect");
                         button.removeEvents();
@@ -170,6 +180,7 @@
                     popUpMessage('error', msg, 5);
                 });
                 rdp.addEvent('connected', function() {
+                        cleanPopUpDeck();
                         document.title = "FreeRDP WebConnect: connected to " +
                         $('rdphost').value.trim();
                         button = $("rdpconnect");
