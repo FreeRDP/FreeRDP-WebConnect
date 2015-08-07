@@ -874,7 +874,7 @@ wsgate.RDP = new Class( {
                     case "E:":
                             var msg = evt.data.substring(2);
                             if(msg.substring(0, 2)=='E:'){
-                                this.embedded = true;
+                                embedded = true;
                                 msg = msg.substring(2);
                             }
                             this.log.err(msg);
@@ -905,7 +905,7 @@ wsgate.RDP = new Class( {
                             var msg = evt.data.substr(2);
                             if(msg.substr(0, 2) == 'E:'){
                                 msg = msg.substr(2);
-                                this.embedded = true;
+                                embedded = true;
                             }
                             if(msg == "RDP session connection started."){
                                 //the connection worked so we can set the cookies
