@@ -571,8 +571,8 @@ wsgate.RDP = new Class( {
      */
     _reset: function() {
         this.log.setWS(null);
+        this.fireEvent('disconnected');
         if (this.sock.readyState == this.sock.OPEN) {
-            this.fireEvent('disconnected');
             this.sock.close();
         }
         this.clx = 0;
@@ -975,7 +975,6 @@ wsgate.RDP = new Class( {
         }*/
         //this.open = false;
         this._reset();
-        this.fireEvent('disconnected');
     },
     /**
      * Event handler for WebSocket error events
