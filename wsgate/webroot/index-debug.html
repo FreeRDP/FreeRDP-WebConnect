@@ -29,6 +29,7 @@
             var inDrag = false;
             var rdp = null;
             var vkbd = null;
+            var embedded = false;
 
             var externalConnection = false;
 
@@ -136,7 +137,7 @@
                         });
                 rdp.addEvent('disconnected', function() {
                         showDialog(true);
-                        if(rdp.embedded){
+                        if(embedded){
                             $('maindialog').addClass('invisible');
                             popUpMessage('critical', "This instance seems to be not working. Try to enter the console again.", 0, null, true);
                         }
@@ -180,7 +181,7 @@
                         });
                 rdp.addEvent('disconnected', function() {
                         showDialog(true);
-                        if(rdp.embedded){
+                        if(embedded){
                             $('maindialog').addClass('invisible');
                         }
                         button = $("rdpconnect");
@@ -467,6 +468,7 @@
                             showDialog(false);
                             if (querystring.indexOf('token=')>=0){
                                 $('disconnect').setStyles({'visibility':'hidden'});
+                                embedded = true;
                             }
                             var urlParams;
                             (window.onpopstate = function () {
