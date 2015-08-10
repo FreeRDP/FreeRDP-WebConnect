@@ -860,6 +860,8 @@ namespace wsgate {
         }
         msg.append("RDP session connection started.");
         m_wshandler->send_text(msg);
+        //make sure that the client gets the resize event
+        m_freerdp->update->DesktopResize(m_freerdp->context);
 
         return true;
     }
