@@ -474,7 +474,16 @@ label.big {
  */
 
 .popupwrapper {
+  background-color: transparent;
+  width: 50%;
+  margin: auto;
+  left: 0;
+  right: 0;
+  top: 0;
+  bottom: 0;
+  position: absolute;
 }
+
 .popupmessage {
   border-style: solid;
   border-radius: 15px;

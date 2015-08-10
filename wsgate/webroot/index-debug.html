@@ -48,14 +48,7 @@
                 popUpDeck = document.createElement('div');
                 document.body.appendChild(popUpDeck);
 
-                popUpDeck.setStyle('background-color', 'transparent');
-                popUpDeck.setStyle('width', '50%');
-                popUpDeck.setStyle('margin', 'auto');
-                popUpDeck.setStyle('left', 0);
-                popUpDeck.setStyle('right', 0);
-                popUpDeck.setStyle('top', 0);
-                popUpDeck.setStyle('bottom', 0);
-                popUpDeck.setStyle('position', 'absolute');
+                popUpDeck.set('class', 'popupwrapper');
             }
 
             function cleanPopUpDeck(){
