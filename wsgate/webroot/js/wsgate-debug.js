@@ -187,6 +187,8 @@ wsgate.RDP = new Class( {
         this.msie = window.navigator.userAgent.indexOf('MSIE ');
         this.trident = window.navigator.userAgent.indexOf('Trident/');
         this.parent(url);
+        //add the toggle function to the keyboard language button
+        $('keyboardlanguage').addEvent('click', this.ToggleLanguageButton.bind(this));
     },
     Disconnect: function() {
         this._reset();
@@ -220,6 +222,91 @@ wsgate.RDP = new Class( {
         this.sock.send(buf);
     },
     /**
+     * Multilanguage mode
+     */
+    useIME: false,
+    ToggleLanguageButton: function(){
+        this.useIME = $('keyboardlanguage').get('text') == "Multilanguage keyboard";
+        if(this.useIME){
+            $('keyboardlanguage').set('text','Normal keyboard');
+        }else{
+            $('keyboardlanguage').set('text','Multilanguage keyboard');
+        }
+    },
+    /**
+     * Used when the special input method is on
+     */
+    IMEon: false,
+    /**
+     * The textarea element object
+     */
+    textAreaInput: null,
+    /**
+     * This function adds a textarea element on top of the canvas for the purpose of keyboard input
+     */
+    SetupCanvas: function(canvas){
+        if(this.textAreaInput)return;
+
+        var pos = canvas.getPosition();
+        var size= canvas.getSize();
+
+        this.textAreaInput = document.createElement('textarea');
+
+        this.textAreaInput.set('id', 'textareainput');
+
+        this.textAreaInput.setStyle('width', size.x);
+        this.textAreaInput.setStyle('height', size.y);
+        this.textAreaInput.setStyle('position', 'absolute');
+        this.textAreaInput.setStyle('opacity', 0);
+        this.textAreaInput.setStyle('resize', 'none');
+        this.textAreaInput.setStyle('cursor', 'default');
+        canvas.setStyle('cursor', 'none');
+
+        this.textAreaInput.setPosition(pos);
+
+        this.textAreaInput.addEvent('keydown', this.KeyDownEvent.bind(this));
+        this.textAreaInput.addEvent('keypress', this.KeyPressEvent.bind(this));
+        this.textAreaInput.addEvent('keyup', this.KeyUpEvent.bind(this));
+        this.textAreaInput.addEvent('copy', function(evt){
+            if (evt.preventDefault) evt.preventDefault();
+            if (evt.stopPropagation) evt.stopPropagation();
+        });
+
+        document.body.appendChild(this.textAreaInput);
+
+        //make sure the textarea is always on focus
+        this.textAreaInput.focus();
+        this.textAreaInput.addEvent('blur', function(){
+            try{
+                setTimeout(function(){$('textareainput').focus();},20);
+            }
+            catch(err){
+            }
+        });
+    },
+    /**
+     * Returns true when a non character is pressed
+     */
+    FunctionalKey: function(key){
+        return (key != 32 && ((key <= 46) || (91 <= key && key <= 145)));
+    },
+    /**
+     * Takes the contents of the textarea and sends them to the server
+     */
+    DumpTextArea: function(key){
+        if(key==13||key==0)
+        if(this.IMEon){
+            var textinput = this.textAreaInput.get("value");
+            if(textinput!=""){
+                if(textinput[0]=='\n'){
+                    textinput = textinput.substring(1);
+                }
+                this.SendUnicodeString(textinput);
+                this.textAreaInput.set("value","");
+            }
+            this.IMEon=false;
+        }
+    },    /**
      * Position cursor image
      */
     cP: function() {
@@ -413,7 +500,8 @@ wsgate.RDP = new Class( {
                 // id
                 // this.log.debug('PS:', this.cursors[new Uint32Array(data, 4, 1)[0]]);
                 if (this.cssC) {
-                    this.canvas.setStyle('cursor', this.cursors[new Uint32Array(data, 4, 1)[0]]);
+                    if(this.textAreaInput)
+                        this.textAreaInput.setStyle('cursor', this.cursors[new Uint32Array(data, 4, 1)[0]]);
                 } else {
                     var cobj = this.cursors[new Uint32Array(data, 4, 1)[0]];
                     this.chx = cobj.x;
@@ -424,7 +512,8 @@ wsgate.RDP = new Class( {
             case 11:
                 // PTR_SETNULL
                 if (this.cssC) {
-                    this.canvas.setStyle('cursor', 'none');
+                    if(this.textAreaInput)
+                        this.textAreaInput.setStyle('cursor', 'none');
                 } else {
                     this.cI.src = '/c_none.png';
                 }
@@ -432,7 +521,8 @@ wsgate.RDP = new Class( {
             case 12:
                 // PTR_SETDEFAULT
                 if (this.cssC) {
-                    this.canvas.setStyle('cursor', 'default');
+                    if(this.textAreaInput)
+                        this.textAreaInput.setStyle('cursor', 'default');
                 } else {
                     this.chx = 10;
                     this.chy = 10;
@@ -581,6 +671,12 @@ wsgate.RDP = new Class( {
         this.clh = 0;
         this.canvas.removeEvents();
         document.removeEvents();
+        try{
+            this.textAreaInput.remove();
+        }
+        catch(err){
+        }
+        this.textAreaInput = null;
         while (this.ccnt > 0) {
             this.cctx.restore();
             this.ccnt -= 1;
@@ -711,7 +807,8 @@ wsgate.RDP = new Class( {
     onMd: function(evt) {
         var buf, a, x, y, which;
         if (this.Tcool) {
-            evt.preventDefault();
+            if(evt.preventDefault) evt.preventDefault();
+            if(evt.stopPropagation) evt.stopPropagation();
             if (evt.rightClick && evt.control && evt.alt) {
                 this.fireEvent('touch3');
                 return;
@@ -789,7 +886,85 @@ wsgate.RDP = new Class( {
             }
         }
     },
+    /**
+     * Sends a unicode char or string
+     */
+    SendUnicodeString: function(str){
+        var len = str.length;
+        buf = new ArrayBuffer(4 * len + 4);
+        a = new Uint32Array(buf);
+        a[0] = 5; // WSOP_CS_UNICODE
+        for(var i = 0; i<len; i++){
+            a[i+1] = str.charCodeAt(i); 
+        }
+        this.sock.send(buf);
+    },
+    /**
+     * Sends a scancode key event
+     * down = 1
+     * up = 0
+     */
+    SendKeyUpDown: function(key, upDown){
+        if (this.sock.readyState == this.sock.OPEN) {
+            buf = new ArrayBuffer(12);
+            a = new Uint32Array(buf);
+            a[0] = 1; // WSOP_CS_KUPDOWN
+            a[1] = upDown;
+            a[2] = key;
+            this.sock.send(buf);
+        }
+    },
+    KeyDownEvent: function(evt){
+        if(!this.useIME){
+            this.SendKeyUpDown(evt.code, 1);
+        }else{
+            if(evt.code==229||evt.code==0)this.IMEon=true;
+            //send key presses only when IME is off
+            if(!this.IMEon){
+                if(this.FunctionalKey(evt.code)){
+                    if(evt.preventDefault) evt.preventDefault();
+                    if(evt.stopPropagation) evt.stopPropagation();
 
+                    this.SendKeyUpDown(evt.code, 1);
+                }
+            }
+        }
+    },
+    KeyUpEvent: function(evt){
+        if(!this.useIME){
+            this.SendKeyUpDown(evt.code, 0);
+            this.textAreaInput.set("value","");
+        }else{
+            if(!this.IMEon)
+            if(this.FunctionalKey(evt.code)){
+                if(evt.preventDefault) evt.preventDefault();
+                if(evt.stopPropagation) evt.stopPropagation();
+
+                this.SendKeyUpDown(evt.code, 0);
+            }
+            this.DumpTextArea(evt.code);
+            //IME helper div
+            if(this.IMEon){
+                $('IMEhelper').setStyle('visibility','visible');
+                $('IMEhelper').set('html',$('textareainput').get('value'));
+            }else{
+                $('IMEhelper').setStyle('visibility','hidden');
+            }
+        }
+    },
+    /**
+     * Sends unicode to the server
+     */
+    KeyPressEvent: function(evt){
+        if(this.useIME)
+        if(!this.IMEon){
+            this.SendUnicodeString(String.fromCharCode(evt.code));
+            $('textareainput').set("value","");
+            if(evt.preventDefault) evt.preventDefault();
+            if(evt.stopPropagation) evt.stopPropagation();
+        }
+        this.DumpTextArea(evt.code);
+    },
     /**
      * Event handler for key down events
      */
@@ -900,6 +1075,8 @@ wsgate.RDP = new Class( {
                             $('screen').height=resolution[1];
                             this.bstore.width=resolution[0];
                             this.bstore.height=resolution[1];
+                            $('textareainput').setStyle('width', resolution[0]);
+                            $('textareainput').setStyle('height', resolution[1]);
                             break;
                     case 'C:':
                             var msg = evt.data.substr(2);
@@ -927,18 +1104,20 @@ wsgate.RDP = new Class( {
     onWSopen: function(evt) {
         this.open = true;
         this.log.setWS(this.sock);
+        //add the textarea on top of the canvas
+        this.SetupCanvas($('screen'));
         // Add listeners for the various input events
-        this.canvas.addEvent('mousemove', this.onMm.bind(this));
-        this.canvas.addEvent('mousedown', this.onMd.bind(this));
-        this.canvas.addEvent('mouseup', this.onMu.bind(this));
-        this.canvas.addEvent('mousewheel', this.onMw.bind(this));
+        this.textAreaInput.addEvent('mousemove', this.onMm.bind(this));
+        this.textAreaInput.addEvent('mousedown', this.onMd.bind(this));
+        this.textAreaInput.addEvent('mouseup', this.onMu.bind(this));
+        this.textAreaInput.addEvent('mousewheel', this.onMw.bind(this));
         // Disable the browser's context menu
-        this.canvas.addEvent('contextmenu', function(e) {e.stop();});
+        this.textAreaInput.addEvent('contextmenu', function(e) {e.stop();});
         // For touch devices
         if (this.uT) {
-            this.canvas.addEvent('touchstart', this.onTs.bind(this));
-            this.canvas.addEvent('touchend', this.onTe.bind(this));
-            this.canvas.addEvent('touchmove', this.onTm.bind(this));
+            this.textAreaInput.addEvent('touchstart', this.onTs.bind(this));
+            this.textAreaInput.addEvent('touchend', this.onTe.bind(this));
+            this.textAreaInput.addEvent('touchmove', this.onTm.bind(this));
         }
         if (!this.cssC) {
             // Same events on pointer image
@@ -953,11 +1132,6 @@ wsgate.RDP = new Class( {
                 this.cI.addEvent('touchmove', this.onTm.bind(this));
             }
         }
-        // The keyboard events need to be attached to the
-        // document, because otherwise we seem to loose them.
-        document.addEvent('keydown', this.onKd.bind(this));
-        document.addEvent('keyup', this.onKu.bind(this));
-        document.addEvent('keypress', this.onKp.bind(this));
         this.fireEvent('connected');
         this.SendCredentials();
     },
