@@ -468,3 +468,31 @@ label.big {
   p, h2, h3 { orphans: 3; widows: 3; }
   h2, h3 { page-break-after: avoid; }
 }
+
+
+/* Pop up message box
+ */
+
+.popupwrapper {
+  background-color: transparent;
+  width: 50%;
+  margin: auto;
+  left: 0;
+  right: 0;
+  top: 0;
+  bottom: 0;
+  position: absolute;
+}
+
+.popupmessage {
+  border-style: solid;
+  border-radius: 15px;
+  border-width: 0;
+  padding: 15px;
+  width: auto;
+  height: auto;
+  z-index: 1234;
+  position: relative;
+  font-family: sans-serif;
+  text-align: center;
+}

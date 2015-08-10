@@ -208,6 +208,17 @@ wsgate.RDP = new Class( {
 
 	};
     },
+    SendCredentials: function() {
+        var infoJSONstring = JSON.stringify(settingsGetJSON());
+        var len = infoJSONstring.length;
+        var buf = new ArrayBuffer((len + 1)*4); // 4 bytes for each char
+        var bufView = new Uint32Array(buf);
+        bufView[0] = 4; // WSOP_CS_CREDENTIAL_JSON
+        for(var i = 0; i<len; i++){
+            bufView[i+1] = infoJSONstring.charCodeAt(i);
+        }
+        this.sock.send(buf);
+    },
     /**
      * Position cursor image
      */
@@ -560,8 +571,8 @@ wsgate.RDP = new Class( {
      */
     _reset: function() {
         this.log.setWS(null);
+        this.fireEvent('disconnected');
         if (this.sock.readyState == this.sock.OPEN) {
-            this.fireEvent('disconnected');
             this.sock.close();
         }
         this.clx = 0;
@@ -861,8 +872,13 @@ wsgate.RDP = new Class( {
                             this._reset();
                             break;
                     case "E:":
-                            this.log.err(evt.data.substring(2));
-                            this.fireEvent('alert', evt.data.substring(2));
+                            var msg = evt.data.substring(2);
+                            if(msg.substring(0, 2)=='E:'){
+                                embedded = true;
+                                msg = msg.substring(2);
+                            }
+                            this.log.err(msg);
+                            this.fireEvent('alert', msg);
                             this._reset();
                             break;
                     case 'I:':
@@ -877,14 +893,25 @@ wsgate.RDP = new Class( {
                     case 'S:':
                             this.sid = evt.data.substring(2);
                             break;
-		    case 'R:':
-		    	    //resolution changed
-		    	    resolution=evt.data.substr(2).split('x');
-			    $('screen').width=resolution[0];
-			    $('screen').height=resolution[1];
-			    this.bstore.width=resolution[0];
-			    this.bstore.height=resolution[1];
-			    break;
+                    case 'R:':
+                            //resolution changed
+                            resolution=evt.data.substr(2).split('x');
+                            $('screen').width=resolution[0];
+                            $('screen').height=resolution[1];
+                            this.bstore.width=resolution[0];
+                            this.bstore.height=resolution[1];
+                            break;
+                    case 'C:':
+                            var msg = evt.data.substr(2);
+                            if(msg.substr(0, 2) == 'E:'){
+                                msg = msg.substr(2);
+                                embedded = true;
+                            }
+                            if(msg == "RDP session connection started."){
+                                //the connection worked so we can set the cookies
+                                settingsSet();
+                            }
+                            break;
                 }
                 break;
                 // ... and binary messages for the actual RDP stuff.
@@ -932,6 +959,7 @@ wsgate.RDP = new Class( {
         document.addEvent('keyup', this.onKu.bind(this));
         document.addEvent('keypress', this.onKp.bind(this));
         this.fireEvent('connected');
+        this.SendCredentials();
     },
     /**
      * Event handler for WebSocket disconnect events
@@ -947,7 +975,6 @@ wsgate.RDP = new Class( {
         }*/
         //this.open = false;
         this._reset();
-        this.fireEvent('disconnected');
     },
     /**
      * Event handler for WebSocket error events

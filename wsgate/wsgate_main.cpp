@@ -320,8 +320,7 @@ namespace wsgate {
 
             void LogInfo(std::basic_string<char> remoteAdress, string uri, const char response[])
             {
-                log::info << "Request FROM: " << remoteAdress << endl;
-                log::info << "To URI: " << uri << " => " << response << endl;
+                log::info << "Request FROM: " << remoteAdress << " replied with " << response << endl;
             }
 
             ResponseCode HandleRobotsRequest(HttpRequest *request, HttpResponse *response, string uri, string thisHost)
@@ -444,51 +443,6 @@ namespace wsgate {
                 return 0;
             }
 
-            void ManageCookies(HttpRequest *request, HttpResponse *response, string rdphost, string rdppcb, string rdpuser, string thisHost)
-            {
-                CookieParameters setcookie;
-                setcookie["path"] = "/";
-                setcookie["host"] = thisHost;
-                setcookie["max-age"] = "864000";
-                if (request->Secure()) {
-                    setcookie["secure"] = "";
-                }
-                CookieParameters delcookie;
-                delcookie["path"] = "/";
-                delcookie["host"] = thisHost;
-                delcookie["max-age"] = "0";
-                if (request->Secure()) {
-                    delcookie["secure"] = "";
-                }
-                if(rdppcb.empty()) {
-                    delcookie["name"] = "lastpcb";
-                    delcookie["value"] = "%20";
-                    response->SetCookie(delcookie);
-                } else {
-                    setcookie["name"] = "lastpcb";
-                    setcookie["value"] = (rdppcb);
-                    response->SetCookie(setcookie);
-                }
-                if (rdphost.empty()) {
-                    delcookie["name"] = "lasthost";
-                    delcookie["value"] = "%20";
-                    response->SetCookie(delcookie);
-                } else {
-                    setcookie["name"] = "lasthost";
-                    setcookie["value"] = (m_bOverrideRdpHost ? "<predefined>" : rdphost);
-                    response->SetCookie(setcookie);
-                }
-                if (rdpuser.empty()) {
-                    delcookie["name"] = "lastuser";
-                    delcookie["value"] = "%20";
-                    response->SetCookie(delcookie);
-                } else {
-                    setcookie["name"] = "lastuser";
-                    setcookie["value"] = (m_bOverrideRdpUser ? "<predefined>" : rdpuser);
-                    response->SetCookie(setcookie);
-                }
-            }
-
             ResponseCode HandleWsgateRequest(HttpRequest *request, HttpResponse *response, std::string uri, std::string thisHost)
             {
                 //FreeRDP Params
@@ -496,10 +450,11 @@ namespace wsgate {
                 string rdphost;
                 string rdppcb;
                 string rdpuser;
-                int rdpport;
+                int rdpport = 0;
                 string rdppass;
                 WsRdpParams params;
                 bool setCookie = true;
+                EmbeddedContext embeddedContext = CONTEXT_PLAIN;
 
                 if(boost::starts_with(uri, "/wsgate?token="))
                 {
@@ -527,21 +482,14 @@ namespace wsgate {
 
                         rdpuser = m_sHyperVHostUsername;
                         rdppass = m_sHyperVHostPassword;
+
+                        embeddedContext = CONTEXT_EMBEDDED;
                     }
                     catch(exception& ex)
                     {
                         log::err << "OpenStack token authentication failed: " << ex.what() << endl;
                         return HTTPRESPONSECODE_400_BADREQUEST;
                     }
-                }
-                else
-                {
-                    dtsize  = request->FormValues("dtsize").m_sBody;
-                    rdphost = to_utf8string(web::uri::decode(to_string_t(request->FormValues("host").m_sBody)));
-                    rdppcb  = request->FormValues("pcb").m_sBody;
-                    rdpuser = to_utf8string(web::uri::decode(to_string_t(request->FormValues("user").m_sBody)));
-                    istringstream(request->FormValues("port").m_sBody) >> rdpport;
-                    rdppass = base64_decode(request->FormValues("pass").m_sBody);
                 }
 
                 params =
@@ -621,7 +569,7 @@ namespace wsgate {
                 response->EnableKeepAlive(true);
                 try
                 {
-                    if (!sh->Prepare(request->Connection(), rdphost, rdppcb, rdpuser, rdppass, params))
+                    if (!sh->Prepare(request->Connection(), rdphost, rdppcb, rdpuser, rdppass, params, embeddedContext))
                     {
                         LogInfo(request->RemoteAddress(), uri, "503 (RDP backend not available)");
                         response->EnableIdleTimeout(true);
@@ -633,12 +581,6 @@ namespace wsgate {
                     log::info << "caught exception!" << endl;
                 }
 
-                //Use cookies only as standalone app
-                if (setCookie)
-                    ManageCookies(request, response, rdphost, rdppcb, rdpuser, thisHost);
-                else
-                    //openstack - wipe out any cookies
-                    ManageCookies(request, response, "", "", "", thisHost);
                 response->RemoveHeader("Content-Type");
                 response->RemoveHeader("Content-Length");
                 response->RemoveHeader("Last-Modified");
@@ -684,7 +626,7 @@ namespace wsgate {
                     return HandleCursorRequest(request, response, uri, thisHost);
                 }
 
-                if(boost::starts_with(uri, "/wsgate?"))
+                if(boost::starts_with(uri, "/wsgate"))
                 {
                     return HandleWsgateRequest(request, response, uri, thisHost);
                 }
@@ -1504,12 +1446,43 @@ namespace wsgate {
     }
 
     bool MyRawSocketHandler::Prepare(EHSConnection *conn, const string host, const string pcb,
-            const string user, const string pass, const WsRdpParams &params)
+            const string user, const string pass, const WsRdpParams &params, EmbeddedContext embeddedContext)
     {
-        log::debug << "RDP Host:               '" << host << "'" << endl;
+        try
+        {
+            handler_ptr h(new MyWsHandler(conn, m_parent, this));
+            conn_ptr c(new wspp::wsendpoint(h.get()));
+            rdp_ptr r(new RDP(h.get(), this));
+            m_cmap[conn] = conn_tuple(c, h, r);
+
+            r->setEmbeddedContext(embeddedContext);
+
+            this->conn = conn;
+            if (embeddedContext == CONTEXT_EMBEDDED){
+                PrepareRDP(host, pcb, user, pass, params);
+            }
+        }
+        catch(...)
+        {
+            log::info << "Attemtped double connection to the same machine" << endl;
+            return false;
+        }
+        return true;
+    }
+
+    void MyRawSocketHandler::PrepareRDP(const std::string host, const std::string pcb, const std::string user, const std::string pass, const WsRdpParams &params){
+        string username;
+        string domain;
+        SplitUserDomain(user, username, domain);
+
+        rdp_ptr r = this->m_cmap[this->conn].get<2>();
+        r->Connect(host, pcb, username, domain, pass, params);
+        m_parent->RegisterRdpSession(r);
+
+        log::debug << "RDP Host:              '" << host << "'" << endl;
         log::debug << "RDP Pcb:               '" << pcb << "'" << endl;
+        log::debug << "RDP User:              '" << user << "'" << endl;
         log::info << "RDP Port:               '" << params.port << "'" << endl;
-        log::debug << "RDP User:               '" << user << "'" << endl;
         log::debug << "RDP Desktop size:       " << params.width << "x" << params.height << endl;
         log::debug << "RDP Performance:        " << params.perf << endl;
         log::debug << "RDP No wallpaper:       " << params.nowallp << endl;
@@ -1519,28 +1492,6 @@ namespace wsgate {
         log::debug << "RDP Disable TLS:        " << params.notls << endl;
         log::debug << "RDP Disable NLA:        " << params.nonla << endl;
         log::debug << "RDP NTLM auth:          " << params.fntlm << endl;
-
-
-        try
-        {
-            handler_ptr h(new MyWsHandler(conn, m_parent, this));
-            conn_ptr c(new wspp::wsendpoint(h.get()));
-            rdp_ptr r(new RDP(h.get()));
-            m_cmap[conn] = conn_tuple(c, h, r);
-
-            string username;
-            string domain;
-            SplitUserDomain(user, username, domain);
-
-            r->Connect(host, pcb, username, domain, pass, params);
-            m_parent->RegisterRdpSession(r);
-        }
-        catch(...)
-        {
-            log::info << "Attemtped double connection to the same machine" << endl;
-            return false;
-        }
-        return true;
     }
 
 }

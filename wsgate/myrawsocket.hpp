@@ -21,6 +21,8 @@
 #define _MYRAWSOCKET_H_
 
 #include "RDP.hpp"
+#include <ehs\ehs.h>
+#include <ehs\ehsconnection.h>
 
 namespace wsgate {
 
@@ -78,18 +80,22 @@ namespace wsgate {
             virtual void OnDisconnect(EHSConnection *conn);
 
             /**
-             * Creates an RDP session and instantiates the relevant
-             * handler classes.
+             * Instantiates the relevant handler classes.
              * @param conn The EHSConnection which triggered thsi action.
              * @param host The RDP host to connect to
              * @param user The user name to be used for the RDP session.
              * @param pass The password to be used for the RDP session.
              * @param params Additional RDP parameters.
+             * @param embeddedContext Tells the purpose of the connection
              * @return true on success.
              */
             bool Prepare(EHSConnection *conn, const std::string host, const std::string pcb,
                     const std::string user, const std::string pass,
-                    const WsRdpParams &params);
+                    const WsRdpParams &params, EmbeddedContext embeddedContext);
+            /**
+             * Creates an RDP session using parameters specified to wsgate::MyRawSocketHandler::Prepare
+             */
+            void PrepareRDP(const std::string host, const std::string pcb, const std::string user, const std::string pass, const WsRdpParams &params);
 
             /**
              * Event handler for WebSocket message events.
@@ -99,13 +105,13 @@ namespace wsgate {
              * @param data The payload of the message.
              */
             void OnMessage(EHSConnection *conn, const std::string & data);
-
         private:
             MyRawSocketHandler(const MyRawSocketHandler&);
             MyRawSocketHandler& operator=(const MyRawSocketHandler&);
 
             WsGate *m_parent;
             conn_map m_cmap;
+            EHSConnection *conn;
     };
 
 }
