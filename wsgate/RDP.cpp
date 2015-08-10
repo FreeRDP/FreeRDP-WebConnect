@@ -853,6 +853,16 @@ namespace wsgate {
         graphics_register_pointer(rdp->context->graphics, &p);
         pointer_cache_register_callbacks(rdp->update);
 
+        //everything went ok, send a event to the client
+        std::string msg = "C:";
+        if(this->m_embeddedContext == CONTEXT_EMBEDDED){
+            msg.append("E:");
+        }
+        msg.append("RDP session connection started.");
+        m_wshandler->send_text(msg);
+        //make sure that the client gets the resize event
+        m_freerdp->update->DesktopResize(m_freerdp->context);
+
         return true;
     }
 
@@ -1089,14 +1099,6 @@ namespace wsgate {
                 case STATE_CONNECT:
                 	if(freerdp_connect(m_freerdp)) {
                         m_State = STATE_CONNECTED;
-                        //set all flags to off
-                        //everything went ok, send a event to the client
-                        std::string msg = "C:";
-                        if(this->m_embeddedContext == CONTEXT_EMBEDDED){
-                            msg.append("E:");
-                        }
-                        msg.append("RDP session connection started.");
-                        m_wshandler->send_text(msg);
                         continue;
                     }
                     m_State = STATE_INITIAL;
