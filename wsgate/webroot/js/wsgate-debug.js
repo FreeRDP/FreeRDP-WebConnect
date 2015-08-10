@@ -825,6 +825,7 @@ wsgate.RDP = new Class( {
                 a[2] = x;
                 a[3] = y;
                 this.sock.send(buf);
+                this.mouseDownStatus[which] = true;
             }
         }
     },
@@ -850,6 +851,7 @@ wsgate.RDP = new Class( {
                 a[2] = x;
                 a[3] = y;
                 this.sock.send(buf);
+                this.mouseDownStatus[which] = false;
             }
         }
     },
@@ -872,7 +874,31 @@ wsgate.RDP = new Class( {
             this.sock.send(buf);
         }
     },
-
+    /**
+     * Field used to keep the states of the sent mouse events
+     */
+    mouseDownStatus: {},
+    /**
+     * Event handler for mouse leaving the canvas area
+     * used to send mouse release for any unsent mouse releases
+     */
+    onMouseLeave: function(evt){
+       for(var button in this.mouseDownStatus){
+           if(this.mouseDownStatus[button]){
+               var which = button;
+               if (this.sock.readyState == this.sock.OPEN) {
+                   buf = new ArrayBuffer(16);
+                   a = new Uint32Array(buf);
+                   a[0] = 0; // WSOP_CS_MOUSE
+                   a[1] = which;
+                   a[2] = 0;
+                   a[3] = 0;
+                   this.sock.send(buf);
+                   this.mouseDownStatus[which] = false;
+               }
+           }
+       }
+    },
     /**
      * Event handler for sending array of keys to be pressed
      */
@@ -1111,6 +1137,7 @@ wsgate.RDP = new Class( {
         this.textAreaInput.addEvent('mousedown', this.onMd.bind(this));
         this.textAreaInput.addEvent('mouseup', this.onMu.bind(this));
         this.textAreaInput.addEvent('mousewheel', this.onMw.bind(this));
+        this.textAreaInput.addEvent('mouseleave', this.onMouseLeave.bind(this));
         // Disable the browser's context menu
         this.textAreaInput.addEvent('contextmenu', function(e) {e.stop();});
         // For touch devices
