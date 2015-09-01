@@ -42,6 +42,10 @@
 #include <boost/date_time/posix_time/posix_time.hpp>
 #include <boost/tuple/tuple.hpp>
 #include <boost/regex.hpp>
+#include <boost/optional/optional.hpp>
+#include <boost/property_tree/ptree.hpp>
+#include <boost/property_tree/ini_parser.hpp>
+#include <boost/property_tree/detail/file_parser_error.hpp>
 #include <cpprest/uri.h>
 #include <cpprest/asyncrt_utils.h>
 
@@ -231,7 +235,7 @@ namespace wsgate {
                 , m_sRdpOverridePass()
                 , m_RdpOverrideParams()
                 , m_sConfigFile()
-                , m_pVm(NULL)
+                , m_ptIniConfig()
                 , m_bDaemon(false)
                 , m_bRedirect(false)
                 , m_StaticCache()
@@ -243,8 +247,6 @@ namespace wsgate {
                 if (!m_sPidFile.empty()) {
                     unlink(m_sPidFile.c_str());
                 }
-                delete m_pVm;
-                m_pVm = NULL;
             }
 
             HttpResponse *HandleThreadException(ehs_threadid_t, HttpRequest *request, exception &ex)
@@ -369,10 +371,10 @@ namespace wsgate {
             {
                 string dest(boost::starts_with(uri, "/wsgate?") ? "wss" : "https");
                 //adding the sslPort to the dest Location
-                if (m_pVm->count("ssl.port"))
+                if (this->m_ptIniConfig.get_optional<uint16_t>("ssl.port"))
                 {
                     stringstream sslPort;
-                    sslPort << (*m_pVm)["ssl.port"].as<uint16_t>();
+                    sslPort << this->m_ptIniConfig.get<uint16_t>("ssl.port");
 
                     //Replace the http port with the ssl one
                     string thisSslHost = thisHost.substr(0, thisHost.find(":")) + ":" + sslPort.str();      
@@ -871,8 +873,8 @@ namespace wsgate {
                 return HTTPRESPONSECODE_200_OK;
             }
 
-            po::variables_map *GetConfig() {
-                return m_pVm;
+            boost::property_tree::ptree GetConfig() {
+                return this->m_ptIniConfig;
             }
 
             const string & GetConfigFile() {
@@ -941,90 +943,70 @@ namespace wsgate {
                     ("hyperv.hostpassword", po::value<string>(), "Hyper-V user's password")
                     ;
 
-                m_pVm = new po::variables_map();
                 try {
-                    ifstream f(m_sConfigFile.c_str());
-                    if (f.fail()) {
-#ifdef _WIN32
-                        wsgate::log::err << "Could not read config file '" << m_sConfigFile << "'." << endl;
-#endif
-                        cerr << "Could not read config file '" << m_sConfigFile << "'." << endl;
-                        return false;
-                    }
-                    po::store(po::parse_config_file(f, cfg, true), *m_pVm);
-                    po::notify(*m_pVm);
+                    boost::property_tree::ini_parser::read_ini(m_sConfigFile, this->m_ptIniConfig);
+                    boost::property_tree::ptree pt = this->m_ptIniConfig;
 
                     try {
                         // Examine values from config file
-
-                        if (m_pVm->count("global.daemon")) {
-                            m_bDaemon = str2bool((*m_pVm)["global.daemon"].as<string>());
-                        }
-                        m_bDebug = false;
-                        if (m_pVm->count("global.debug")) {
-                            m_bDebug = str2bool((*m_pVm)["global.debug"].as<string>());
-                        }
-                        m_bEnableCore = false;
-                        if (m_pVm->count("global.enablecore")) {
-                            m_bEnableCore = str2bool((*m_pVm)["global.enablecore"].as<string>());
-                        }
-                        if (m_pVm->count("global.logmask")) {
+                        m_bDaemon = str2bool(pt.get<std::string>("global.daemon","false"));
+                        m_bDebug = str2bool(pt.get<std::string>("global.debug","false"));
+                        m_bEnableCore = str2bool(pt.get<std::string>("global.enablecore","false"));
+                        if (pt.get_optional<std::string>("global.logmask")) {
                             if (NULL != logger) {
-                                logger->setmaskByName(to_upper_copy((*m_pVm)["global.logmask"].as<string>()));
+                                logger->setmaskByName(to_upper_copy(pt.get<std::string>("global.logmask")));
                             }
                         }
-                        if (m_pVm->count("global.logfacility")) {
+                        if (pt.get_optional<std::string>("global.logfacility")) {
                             if (NULL != logger) {
-                                logger->setfacilityByName(to_upper_copy((*m_pVm)["global.logfacility"].as<string>()));
+                                logger->setfacilityByName(to_upper_copy(pt.get<std::string>("global.logfacility")));
                             }
                         }
-                        if (0 == (m_pVm->count("global.port") + m_pVm->count("ssl.port"))) {
+                        if (!pt.get_optional<std::string>("global.port") && !pt.get_optional<std::string>("ssl.port")) {
                             throw tracing::invalid_argument("No listening ports defined.");
                         }
-                        if (0 == (m_pVm->count("http.documentroot"))) {
+
+                        if (!pt.get_optional<std::string>("http.documentroot")) {
                             throw tracing::invalid_argument("No documentroot defined.");
                         }
-                        m_sDocumentRoot.assign((*m_pVm)["http.documentroot"].as<string>());
+                        m_sDocumentRoot.assign(pt.get<std::string>("http.documentroot"));
                         if (m_sDocumentRoot.empty()) {
                             throw tracing::invalid_argument("documentroot is empty.");
                         }
 
-                        m_bRedirect = false;
-                        if (m_pVm->count("global.redirect")) {
-                            m_bRedirect = str2bool((*m_pVm)["global.redirect"].as<string>());
+                        m_bRedirect = str2bool(pt.get<std::string>("global.redirect","false"));
+                        
+                        if (pt.get_optional<std::string>("acl.order")) {
+                            setAclOrder(pt.get<std::string>("acl.order"));
+                        }
+                        if (pt.get_child_optional("acl.allow")) {
+                            setHostList(as_vector<std::string>(pt, "acl.allow"), m_allowedHosts);
+                        }
+                        if (pt.get_child_optional("acl.deny")) {
+                            setHostList(as_vector<std::string>(pt, "acl.deny"), m_deniedHosts);
                         }
 
-                        if (m_pVm->count("acl.order")) {
-                            setAclOrder((*m_pVm)["acl.order"].as<string>());
-                        }
-                        if (m_pVm->count("acl.allow")) {
-                            setHostList((*m_pVm)["acl.allow"].as<vector <string>>(), m_allowedHosts);
-                        }
-                        if (m_pVm->count("acl.deny")) {
-                            setHostList((*m_pVm)["acl.deny"].as<vector <string>>(), m_deniedHosts);
-                        }
-
-                        if (m_pVm->count("rdpoverride.host")) {
-                            m_sRdpOverrideHost.assign((*m_pVm)["rdpoverride.host"].as<string>());
+                        if (pt.get_optional<std::string>("rdpoverride.host")) {
+                            m_sRdpOverrideHost.assign(pt.get<std::string>("rdpoverride.host"));
                             m_bOverrideRdpHost = true;
                         } else {
                             m_bOverrideRdpHost = false;
                         }
-                        if (m_pVm->count("rdpoverride.user")) {
-                            m_sRdpOverrideUser.assign((*m_pVm)["rdpoverride.user"].as<string>());
+                        if (pt.get_optional<std::string>("rdpoverride.user")) {
+                            m_sRdpOverrideUser.assign(pt.get<std::string>("rdpoverride.user"));
                             m_bOverrideRdpUser = true;
                         } else {
                             m_bOverrideRdpUser = false;
                         }
-                        if (m_pVm->count("rdpoverride.pass")) {
-                            m_sRdpOverridePass.assign((*m_pVm)["rdpoverride.pass"].as<string>());
+                        if (pt.get_optional<std::string>("rdpoverride.pass")) {
+                            m_sRdpOverridePass.assign(pt.get<std::string>("rdpoverride.pass"));
                             m_bOverrideRdpPass = true;
                         } else {
                             m_bOverrideRdpPass = false;
                         }
 
-                        if (m_pVm->count("rdpoverride.port")) {
-                            int n = (*m_pVm)["rdpoverride.port"].as<int>();
+                        if (pt.get_optional<int>("rdpoverride.port")) {
+                            int n = pt.get<int>("rdpoverride.port");
                             if ((0 > n) || (2 < n)) {
                                 throw tracing::invalid_argument("Invalid port value.");
                             }
@@ -1034,8 +1016,8 @@ namespace wsgate {
                             m_bOverrideRdpPort = false;
                         }
 
-                        if (m_pVm->count("rdpoverride.performance")) {
-                            int n = (*m_pVm)["rdpoverride.performance"].as<int>();
+                        if (pt.get_optional<int>("rdpoverride.performance")) {
+                            int n = pt.get<int>("rdpoverride.performance");
                             if ((0 > n) || (2 < n)) {
                                 throw tracing::invalid_argument("Invalid performance value.");
                             }
@@ -1044,8 +1026,8 @@ namespace wsgate {
                         } else {
                             m_bOverrideRdpPerf = false;
                         }
-                        if (m_pVm->count("rdpoverride.forcentlm")) {
-                            int n = (*m_pVm)["rdpoverride.forcentlm"].as<int>();
+                        if (pt.get_optional<int>("rdpoverride.forcentlm")) {
+                            int n = pt.get<int>("rdpoverride.forcentlm");
                             if ((0 > n) || (2 < n)) {
                                 throw tracing::invalid_argument("Invalid forcentlm value.");
                             }
@@ -1054,74 +1036,74 @@ namespace wsgate {
                         } else {
                             m_bOverrideRdpFntlm = false;
                         }
-                        if (m_pVm->count("rdpoverride.nowallpaper")) {
-                            m_RdpOverrideParams.nowallp = str2bint((*m_pVm)["rdpoverride.nowallpaper"].as<string>());
+                        if (pt.get_optional<std::string>("rdpoverride.nowallpaper")) {
+                            m_RdpOverrideParams.nowallp = str2bint(pt.get<std::string>("rdpoverride.nowallpaper"));
                             m_bOverrideRdpNowallp = true;
                         } else {
                             m_bOverrideRdpNowallp = false;
                         }
-                        if (m_pVm->count("rdpoverride.nofullwindowdrag")) {
-                            m_RdpOverrideParams.nowdrag = str2bint((*m_pVm)["rdpoverride.nofullwindowdrag"].as<string>());
+                        if (pt.get_optional<std::string>("rdpoverride.nofullwindowdrag")) {
+                            m_RdpOverrideParams.nowdrag = str2bint(pt.get<std::string>("rdpoverride.nofullwindowdrag"));
                             m_bOverrideRdpNowdrag = true;
                         } else {
                             m_bOverrideRdpNowdrag = false;
                         }
-                        if (m_pVm->count("rdpoverride.nomenuanimation")) {
-                            m_RdpOverrideParams.nomani = str2bint((*m_pVm)["rdpoverride.nomenuanimation"].as<string>());
+                        if (pt.get_optional<std::string>("rdpoverride.nomenuanimation")) {
+                            m_RdpOverrideParams.nomani = str2bint(pt.get<std::string>("rdpoverride.nomenuanimation"));
                             m_bOverrideRdpNomani = true;
                         } else {
                             m_bOverrideRdpNomani = false;
                         }
-                        if (m_pVm->count("rdpoverride.notheming")) {
-                            m_RdpOverrideParams.notheme = str2bint((*m_pVm)["rdpoverride.notheming"].as<string>());
+                        if (pt.get_optional<std::string>("rdpoverride.notheming")) {
+                            m_RdpOverrideParams.notheme = str2bint(pt.get<std::string>("rdpoverride.notheming"));
                             m_bOverrideRdpNotheme = true;
                         } else {
                             m_bOverrideRdpNotheme = false;
                         }
-                        if (m_pVm->count("rdpoverride.notls")) {
-                            m_RdpOverrideParams.notls = str2bint((*m_pVm)["rdpoverride.notls"].as<string>());
+                        if (pt.get_optional<std::string>("rdpoverride.notls")) {
+                            m_RdpOverrideParams.notls = str2bint(pt.get<std::string>("rdpoverride.notls"));
                             m_bOverrideRdpNotls = true;
                         } else {
                             m_bOverrideRdpNotls = false;
                         }
-                        if (m_pVm->count("rdpoverride.nonla")) {
-                            m_RdpOverrideParams.nonla = str2bint((*m_pVm)["rdpoverride.nonla"].as<string>());
+                        if (pt.get_optional<std::string>("rdpoverride.nonla")) {
+                            m_RdpOverrideParams.nonla = str2bint(pt.get<std::string>("rdpoverride.nonla"));
                             m_bOverrideRdpNonla = true;
                         } else {
                             m_bOverrideRdpNonla = false;
                         }
-                        if (m_pVm->count("global.hostname")) {
-                            m_sHostname.assign((*m_pVm)["global.hostname"].as<string>());
+                        if (pt.get_optional<std::string>("global.hostname")) {
+                            m_sHostname.assign(pt.get<std::string>("global.hostname"));
                         } else {
                             m_sHostname.clear();
                         }
-                        if (m_pVm->count("openstack.authurl")) {
-                            m_sOpenStackAuthUrl.assign((*m_pVm)["openstack.authurl"].as<string>());
+                        if (pt.get_optional<std::string>("openstack.authurl")) {
+                            m_sOpenStackAuthUrl.assign(pt.get<std::string>("openstack.authurl"));
                         } else {
                             m_sOpenStackAuthUrl.clear();
                         }
-                        if (m_pVm->count("openstack.username")) {
-                            m_sOpenStackUsername.assign((*m_pVm)["openstack.username"].as<string>());
+                        if (pt.get_optional<std::string>("openstack.username")) {
+                            m_sOpenStackUsername.assign(pt.get<std::string>("openstack.username"));
                         } else {
                             m_sOpenStackUsername.clear();
                         }
-                        if (m_pVm->count("openstack.password")) {
-                            m_sOpenStackPassword.assign((*m_pVm)["openstack.password"].as<string>());
+                        if (pt.get_optional<std::string>("openstack.password")) {
+                            m_sOpenStackPassword.assign(pt.get<std::string>("openstack.password"));
                         } else {
                             m_sOpenStackPassword.clear();
                         }
-                        if (m_pVm->count("openstack.tenantname")) {
-                            m_sOpenStackTenantName.assign((*m_pVm)["openstack.tenantname"].as<string>());
+                        if (pt.get_optional<std::string>("openstack.tenantname")) {
+                            m_sOpenStackTenantName.assign(pt.get<std::string>("openstack.tenantname"));
                         } else {
                             m_sOpenStackTenantName.clear();
                         }
-                        if (m_pVm->count("hyperv.hostusername")) {
-                            m_sHyperVHostUsername.assign((*m_pVm)["hyperv.hostusername"].as<string>());
+                        if (pt.get_optional<std::string>("hyperv.hostusername")) {
+                            m_sHyperVHostUsername.assign(pt.get<std::string>("hyperv.hostusername"));
                         } else {
                             m_sHyperVHostUsername.clear();
                         }
-                        if (m_pVm->count("hyperv.hostpassword")) {
-                            m_sHyperVHostPassword.assign((*m_pVm)["hyperv.hostpassword"].as<string>());
+                        if (pt.get_optional<std::string>("hyperv.hostpassword")) {
+                            m_sHyperVHostPassword.assign(pt.get<std::string>("hyperv.hostpassword"));
                         } else {
                             m_sHyperVHostPassword.clear();
                         }
@@ -1132,7 +1114,7 @@ namespace wsgate {
                         return false;
                     }
 
-                } catch (const po::error &e) {
+                } catch (const boost::property_tree::ini_parser_error &e) {
                     cerr << e.what() << endl;
                     return false;
                 }
@@ -1140,6 +1122,14 @@ namespace wsgate {
             }
 
         private:
+
+            template <typename T>
+            std::vector<T> as_vector(boost::property_tree::ptree const& pt, boost::property_tree::ptree::key_type const& key){
+                std::vector<T> r;
+                for (auto& item : pt.get_child(key))
+                    r.push_back(item.second.get_value<T>());
+                return r;
+            }
 
             bool notModified(HttpRequest *request, HttpResponse *response, time_t mtime)
             {
@@ -1296,7 +1286,7 @@ namespace wsgate {
             string m_sRdpOverridePass;
             WsRdpParams m_RdpOverrideParams;
             string m_sConfigFile;
-            po::variables_map *m_pVm;
+            boost::property_tree::ptree m_ptIniConfig;
             bool m_bDaemon;
             bool m_bRedirect;
             StaticCache m_StaticCache;
@@ -1579,22 +1569,20 @@ int main (int argc, char **argv)
     if (!srv.ReadConfig(&log)) {
         return -1;
     }
-    po::variables_map *pvm = srv.GetConfig();
-    if (NULL == pvm) {
-        return -1;
-    }
+
+    boost::property_tree::ptree pt = srv.GetConfig();
 
     int port = -1;
     bool https = false;
     bool need2 = false;
-    if (pvm->count("ssl.port")) {
-        port = (*pvm)["ssl.port"].as<uint16_t>();
+    if (pt.get_optional<uint16_t>("ssl.port")) {
+        port = pt.get<uint16_t>("ssl.port");
         https = true;
-        if (pvm->count("global.port")) {
+        if (pt.get_optional<uint16_t>("global.port")) {
             need2 = true;
         }
-    } else if (pvm->count("global.port")) {
-        port = (*pvm)["global.port"].as<uint16_t>();
+    } else if (pt.get_optional<uint16_t>("global.port")) {
+        port = pt.get<uint16_t>("global.port");
     }
 
 #ifndef _WIN32
@@ -1609,34 +1597,34 @@ int main (int argc, char **argv)
     oSP["bindaddress"] = "0.0.0.0";
     oSP["norouterequest"] = 1;
     if (https) {
-        if (pvm->count("ssl.bindaddr")) {
-            oSP["bindaddress"] = (*pvm)["ssl.bindaddr"].as<string>();
+        if (pt.get_optional<std::string>("ssl.bindaddr")) {
+            oSP["bindaddress"] = pt.get<std::string>("ssl.bindaddr");
         }
         oSP["https"] = 1;
-        if (pvm->count("ssl.certfile")) {
-            oSP["certificate"] = (*pvm)["ssl.certfile"].as<string>();
+        if (pt.get_optional<std::string>("ssl.certfile")) {
+            oSP["certificate"] = pt.get<std::string>("ssl.certfile");
         }
-        if (pvm->count("ssl.certpass")) {
-            oSP["passphrase"] = (*pvm)["ssl.certpass"].as<string>();
+        if (pt.get_optional<std::string>("ssl.certpass")) {
+            oSP["passphrase"] = pt.get<std::string>("ssl.certpass");
         }
     } else {
-        if (pvm->count("global.bindaddr")) {
-            oSP["bindaddress"] = (*pvm)["global.bindaddr"].as<string>();
+        if (pt.get_optional<std::string>("global.bindaddr")) {
+            oSP["bindaddress"] = pt.get<std::string>("global.bindaddr");
         }
     }
-    if (pvm->count("http.maxrequestsize")) {
-        oSP["maxrequestsize"] = (*pvm)["http.maxrequestsize"].as<unsigned long>();
+    if (pt.get_optional<unsigned long>("http.maxrequestsize")) {
+        oSP["maxrequestsize"] = pt.get<unsigned long>("http.maxrequestsize");
     }
     bool sleepInLoop = true;
-    if (pvm->count("threading.mode")) {
-        string mode((*pvm)["threading.mode"].as<string>());
+    if (pt.get_optional<std::string>("threading.mode")) {
+        string mode(pt.get<std::string>("threading.mode"));
         if (0 == mode.compare("single")) {
             oSP["mode"] = "singlethreaded";
             sleepInLoop = false;
         } else if (0 == mode.compare("pool")) {
             oSP["mode"] = "threadpool";
-            if (pvm->count("threading.poolsize")) {
-                oSP["threadcount"] = (*pvm)["threading.poolsize"].as<int>();
+            if (pt.get_optional<int>("threading.poolsize")) {
+                oSP["threadcount"] = pt.get<int>("threading.poolsize");
             }
         } else if (0 == mode.compare("perrequest")) {
             oSP["mode"] = "onethreadperrequest";
@@ -1647,18 +1635,18 @@ int main (int argc, char **argv)
     } else {
         oSP["mode"] = "onethreadperrequest";
     }
-    if (pvm->count("ssl.certfile")) {
-        oSP["certificate"] = (*pvm)["ssl.certfile"].as<string>();
+    if (pt.get_optional<std::string>("ssl.certfile")) {
+        oSP["certificate"] = pt.get<std::string>("ssl.certfile");
     }
-    if (pvm->count("ssl.certpass")) {
-        oSP["passphrase"] = (*pvm)["ssl.certpass"].as<string>();
+    if (pt.get_optional<std::string>("ssl.certpass")) {
+        oSP["passphrase"] = pt.get<std::string>("ssl.certpass");
     }
 
 #ifdef _WIN32
-    bool daemon = (pvm->count("foreground")) ? false : g_service_background;
+    bool daemon = (pt.get_child_optional("foreground")) ? false : g_service_background;
 #else
     bool daemon = false;
-    if (pvm->count("global.daemon") && (0 == pvm->count("foreground"))) {
+    if (pt.get_child_optional("global.daemon") && !pt.get_child_optional("foreground")) {
         daemon = srv.GetDaemon();
         if (daemon) {
             pid_t pid = fork();
@@ -1668,13 +1656,13 @@ int main (int argc, char **argv)
                     {
                         int nfd = open("/dev/null", O_RDWR);
                         dup2(nfd, 0);
-                        dup2(nfd, 1);
+                         dup2(nfd, 1);
                         dup2(nfd, 2);
                         close(nfd);
                         (void)chdir("/");
                         setsid();
-                        if (pvm->count("global.pidfile")) {
-                            const string pidfn((*pvm)["global.pidfile"].as<string>());
+                        if (pt.get_child_optional("global.pidfile")) {
+                            const string pidfn(pt.get<std::string>("global.pidfile"));
                             if (!pidfn.empty()) {
                                 ofstream pidfile(pidfn.c_str());
                                 pidfile << getpid() << endl;
@@ -1724,9 +1712,9 @@ int main (int argc, char **argv)
             psrv->SetConfigFile(srv.GetConfigFile());
             psrv->ReadConfig();
             oSP["https"] = 0;
-            oSP["port"] = (*pvm)["global.port"].as<uint16_t>();
-            if (pvm->count("global.bindaddr")) {
-                oSP["bindaddress"] = (*pvm)["global.bindaddr"].as<string>();
+            oSP["port"] = pt.get<uint16_t>("global.port");
+            if (pt.get_child_optional("global.bindaddr")) {
+                oSP["bindaddress"] = pt.get<std::string>("global.bindaddr");
             }
             psrv->SetSourceEHS(srv);
             wsgate::MyRawSocketHandler *psh = new wsgate::MyRawSocketHandler(psrv);
