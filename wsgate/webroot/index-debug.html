@@ -125,10 +125,17 @@
                 popUpMessage('critical', "This instance seems to be not working. Try to enter the console again.", 0, noInstancePopUp, true);
             }
 
-            function RDPGet(uri, title) {
-                var wsUri = wsBase + uri;
-
-                rdp = new wsgate.RDP(wsUri, $('screen'), !RIMtablet, RIMtablet, vkbd);
+            function RDPStart(uri, title){
+                if(uri === undefined){
+                    uri = wsBase;
+                }
+                if(title === undefined){
+                    title = "FreeRDP WebConnect: connected to " + $('rdphost').value.trim();
+                }
+                if(!embedded){
+                    $('dvLoading').setStyles({'visibility':'visible'});
+                }
+                rdp = new wsgate.RDP(uri, $('screen'), !RIMtablet, RIMtablet, vkbd);
 
                 rdp.addEvent('alert', function(msg) {
                     popUpMessage('error', msg, 5);
@@ -141,6 +148,7 @@
                         window.removeEvent('resize', OnDesktopSize);
                         button.value = 'Disconnect';
                         button.addEvent('click', rdp.Disconnect.bind(rdp));
+                        window.addEvent("beforeunload", rdp.Disconnect.bind(rdp));
                         });
                 rdp.addEvent('disconnected', function() {
                         showDialog(true);
@@ -151,51 +159,7 @@
                         button = $("rdpconnect");
                         button.removeEvents();
                         button.value = 'Connect';
-                        button.addEvent('click', RDPrun);
-                        OnDesktopSize();
-                        window.addEvent('resize', OnDesktopSize);
-                        });
-                rdp.addEvent('mouserelease', ResetRdpMouseFlags);
-                rdp.addEvent('touch2', function() {
-                    ShowMouseHelper($('mousehelper').hasClass('invisible'));
-                });
-
-                rdp.addEvent('touch3', function() {
-                    vkbd.toggle();
-                });
-
-                showDialog(false);
-                rdp.Run();
-            }
-
-            function RDPrun() {
-                $('dvLoading').setStyles({'visibility':'visible'});
-
-                rdp = new wsgate.RDP(wsBase, $('screen'), !RIMtablet, RIMtablet, vkbd);
-
-                rdp.addEvent('alert', function(msg) {
-                    popUpMessage('error', msg, 5);
-                });
-                rdp.addEvent('connected', function() {
-                        cleanPopUpDeck();
-                        document.title = "FreeRDP WebConnect: connected to " +
-                        $('rdphost').value.trim();
-                        button = $("rdpconnect");
-                        button.removeEvents();
-                        window.removeEvent('resize', OnDesktopSize);
-                        button.value = 'Disconnect';
-                        button.addEvent('click', rdp.Disconnect.bind(rdp));
-                        window.addEvent("beforeunload", rdp.Disconnect.bind(rdp));
-                        });
-                rdp.addEvent('disconnected', function() {
-                        showDialog(true);
-                        if(embedded){
-                            $('maindialog').addClass('invisible');
-                        }
-                        button = $("rdpconnect");
-                        button.removeEvents();
-                        button.value = 'Connect';
-                        button.addEvent('click', RDPrun);
+                        button.addEvent('click', function(){RDPStart();});
                         OnDesktopSize();
                         window.addEvent('resize', OnDesktopSize);
                         });
@@ -211,7 +175,6 @@
                         rdp.Disconnect();
                     }
                 });
-
                 showDialog(false);
                 rdp.Run();
             }
@@ -463,7 +426,7 @@
                         (Browser.ie && (Browser.version >= 10.0));
                     if(externalConnection == true)
                     {
-                        RDPrun();
+                        RDPStart();
                         vkbd = new wsgate.vkbd({
                             version:false,
                             sizeswitch:false,
@@ -490,11 +453,11 @@
                                 while (match = search.exec(query))
                                    urlParams[decode(match[1])] = decode(match[2]);
                             })();
-                            RDPGet(querystring, urlParams["title"]);
+                            RDPStart(wsBase + querystring, urlParams["title"]);
                         }
                         else
                         {
-                            $('rdpconnect').addEvent('click', RDPrun);
+                            $('rdpconnect').addEvent('click', function(){RDPStart();});
                             showDialog(true);
                         }
                         vkbd = new wsgate.vkbd({
