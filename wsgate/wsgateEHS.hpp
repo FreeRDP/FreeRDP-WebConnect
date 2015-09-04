@@ -1,0 +1,185 @@
+#ifndef _WSGATE_EHS_
+#define _WSGATE_EHS_
+
+#ifdef HAVE_CONFIG_H
+# include "config.h"
+#endif
+
+#include <ehs/ehs.h>
+#include <vector>
+#include <sstream>
+#include <iostream>
+#include <fstream>
+#include <stdexcept>
+#include <typeinfo>
+#include <cstdlib>
+#include <cstdio>
+#include <cerrno>
+#include <boost/algorithm/string.hpp>
+#include <boost/program_options.hpp>
+#include <boost/filesystem.hpp>
+#include <boost/filesystem/fstream.hpp>
+#include <boost/date_time/posix_time/posix_time.hpp>
+#include <boost/tuple/tuple.hpp>
+#include <boost/regex.hpp>
+#include <boost/optional/optional.hpp>
+#include <boost/property_tree/ptree.hpp>
+#include <boost/property_tree/ini_parser.hpp>
+#include <boost/property_tree/detail/file_parser_error.hpp>
+#include <cpprest/uri.h>
+#include <cpprest/asyncrt_utils.h>
+
+#ifdef HAVE_SIGNAL_H
+# include <signal.h>
+#endif
+#ifdef HAVE_SYS_TYPES_H
+# include <sys/types.h>
+#endif
+#ifdef HAVE_SYS_STAT_H
+# include <sys/stat.h>
+#endif
+#ifdef HAVE_FCNTL_H
+# include <fcntl.h>
+#endif
+#ifdef HAVE_UNISTD_H
+ #include <unistd.h>
+#endif
+#ifdef HAVE_SYS_SOCKET_H
+# include <sys/socket.h>
+#endif
+#ifdef HAVE_SYS_WAIT_H
+# include <sys/wait.h>
+#endif
+#ifdef HAVE_SYS_RESOURCE_H
+# include <sys/resource.h>
+#endif
+#ifdef HAVE_NETINET_IN_H
+# include <netinet/in.h>
+#endif
+#ifdef HAVE_ARPA_INET_H
+#include <arpa/inet.h>
+#endif
+
+#include "common.hpp"
+#include "btexception.hpp"
+#include "base64.hpp"
+#include "sha1.hpp"
+#include "logging.hpp"
+#include "wsendpoint.hpp"
+#include "wsgate.hpp"
+#include "myrawsocket.hpp"
+#include "nova_token_auth.hpp"
+
+using namespace std;
+using boost::algorithm::iequals;
+using boost::algorithm::to_lower_copy;
+using boost::algorithm::ends_with;
+using boost::algorithm::replace_all;
+using boost::algorithm::to_upper_copy;
+using boost::algorithm::trim_right_copy_if;
+using boost::algorithm::trim;
+using boost::algorithm::is_any_of;
+using boost::algorithm::split;
+namespace po = boost::program_options;
+namespace fs = boost::filesystem;
+namespace pt = boost::posix_time;
+using boost::filesystem::path;
+using namespace utility::conversions;
+
+namespace wsgate{
+    // subclass of EHS that defines a custom HTTP response.
+    class WsGate : public EHS
+    {
+        public:
+            WsGate(EHS *parent = NULL, std::string registerpath = "");
+            virtual ~WsGate();
+            HttpResponse *HandleThreadException(ehs_threadid_t, HttpRequest *request, exception &ex);
+            void CheckForPredefined(string& rdpHost, string& rdpUser, string& rdpPass);
+            bool ConnectionIsAllowed(string rdphost);
+            void LogInfo(std::basic_string<char> remoteAdress, string uri, const char response[]);
+            ResponseCode HandleRobotsRequest(HttpRequest *request, HttpResponse *response, string uri, string thisHost);
+            ResponseCode HandleCursorRequest(HttpRequest *request, HttpResponse *response, string uri, string thisHost);
+            ResponseCode HandleRedirectRequest(HttpRequest *request, HttpResponse *response, string uri, string thisHost);
+            int CheckIfWSocketRequest(HttpRequest *request, HttpResponse *response, string uri, string thisHost);
+            ResponseCode HandleWsgateRequest(HttpRequest *request, HttpResponse *response, std::string uri, std::string thisHost);
+            ResponseCode HandleRequest(HttpRequest *request, HttpResponse *response);
+            ResponseCode HandleHTTPRequest(HttpRequest *request, HttpResponse *response, bool tokenAuth = false);
+            boost::property_tree::ptree GetConfig();
+            const string & GetConfigFile();
+            bool GetEnableCore();
+            bool SetConfigFile(const string &name);
+            bool ReadConfig(wsgate::log *logger = NULL);
+            bool GetDaemon();
+            void SetPidFile(const string &name);
+            void RegisterRdpSession(rdp_ptr rdp);
+            void UnregisterRdpSession(rdp_ptr rdp);
+        private:
+            typedef enum {
+                TEXT,
+                HTML,
+                PNG,
+                ICO,
+                JAVASCRIPT,
+                JSON,
+                CSS,
+                OGG,
+                CUR,
+                BINARY
+            } MimeType;
+            typedef map<string, rdp_ptr> SessionMap;
+            typedef boost::tuple<time_t, string> cache_entry;
+            typedef map<path, cache_entry> StaticCache;
+
+            string m_sHostname;
+            string m_sDocumentRoot;
+            string m_sPidFile;
+            bool m_bDebug;
+            bool m_bEnableCore;
+            SessionMap m_SessionMap;
+            vector<boost::regex> m_allowedHosts;
+            vector<boost::regex> m_deniedHosts;
+            bool m_bOrderDenyAllow;
+            bool m_bOverrideRdpHost;
+            bool m_bOverrideRdpPort;
+            bool m_bOverrideRdpUser;
+            bool m_bOverrideRdpPass;
+            bool m_bOverrideRdpPerf;
+            bool m_bOverrideRdpNowallp;
+            bool m_bOverrideRdpNowdrag;
+            bool m_bOverrideRdpNomani;
+            bool m_bOverrideRdpNotheme;
+            bool m_bOverrideRdpNotls;
+            bool m_bOverrideRdpNonla;
+            bool m_bOverrideRdpFntlm;
+            string m_sRdpOverrideHost;
+            string m_sRdpOverrideUser;
+            string m_sRdpOverridePass;
+            WsRdpParams m_RdpOverrideParams;
+            string m_sConfigFile;
+            boost::property_tree::ptree m_ptIniConfig;
+            bool m_bDaemon;
+            bool m_bRedirect;
+            StaticCache m_StaticCache;
+            string m_sOpenStackAuthUrl;
+            string m_sOpenStackUsername;
+            string m_sOpenStackPassword;
+            string m_sOpenStackTenantName;
+            string m_sHyperVHostUsername;
+            string m_sHyperVHostPassword;
+
+            // Non-copyable
+            WsGate(const WsGate&);
+            WsGate & operator=(const WsGate&);
+
+            MimeType simpleMime(const string & filename);
+            template <typename T> std::vector<T> as_vector(boost::property_tree::ptree const& pt, boost::property_tree::ptree::key_type const& key);
+            bool notModified(HttpRequest *request, HttpResponse *response, time_t mtime);
+            int str2bint(const string &s);
+            bool str2bool(const string &s);
+            void wc2pat(string &wildcards);
+            void setHostList(const vector<string> &hosts, vector<boost::regex> &hostlist);
+            void setAclOrder(const string &order);
+    };
+}
+
+#endif
