@@ -35,7 +35,6 @@
 #include "sha1.hpp"
 #include "logging.hpp"
 #include "wsendpoint.hpp"
-#include "wsgate.hpp"
 #include "myrawsocket.hpp"
 #include "nova_token_auth.hpp"
 

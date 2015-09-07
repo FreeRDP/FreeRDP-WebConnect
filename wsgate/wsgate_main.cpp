@@ -24,6 +24,46 @@
 #include "wsGateService.hpp"
 #include "myBindHelper.hpp"
 
+namespace wsgate{
+
+    int nFormValue(HttpRequest *request, const string & name, int defval) {
+        string tmp(request->FormValues(name).m_sBody);
+        int ret = defval;
+        if (!tmp.empty()) {
+            try {
+                ret = boost::lexical_cast<int>(tmp);
+            } catch (const boost::bad_lexical_cast & e) {  ret = defval; }
+        }
+        return ret;
+    }
+
+    void SplitUserDomain(const string& fullUsername, string& username, string& domain)
+    {
+        std::vector<string> strs;
+        boost::split(strs, fullUsername, boost::is_any_of("\\"));
+        if (strs.size() > 1)
+        {
+            username = strs[1];
+            domain = strs[0];
+        }
+        else
+        {
+            strs.clear();
+            boost::split(strs, fullUsername, boost::is_any_of("@"));
+            if (strs.size() > 1)
+            {
+                username = strs[0];
+                domain = strs[1];
+            }
+            else
+            {
+                username = fullUsername;
+                domain = "";
+            }
+        }
+    }
+}
+
 static bool g_signaled = false;
 #ifdef _WIN32
 static bool g_service_background = true;
@@ -53,7 +93,7 @@ static void reload(int)
 #endif
 
 #ifdef _WIN32
-static int _service_main (int argc, char **argv)
+int _service_main (int argc, char **argv)
 #else
 int main (int argc, char **argv)
 #endif
