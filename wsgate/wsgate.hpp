@@ -40,42 +40,8 @@ namespace wsgate {
     //disable two connections to the same host
     std::map<string, bool> activeConnections;
 
-    int nFormValue(HttpRequest *request, const string & name, int defval) {
-        string tmp(request->FormValues(name).m_sBody);
-        int ret = defval;
-        if (!tmp.empty()) {
-            try {
-                ret = boost::lexical_cast<int>(tmp);
-            } catch (const boost::bad_lexical_cast & e) {  ret = defval; }
-        }
-        return ret;
-    }
-
-    void SplitUserDomain(const string& fullUsername, string& username, string& domain)
-    {
-        std::vector<string> strs;
-        boost::split(strs, fullUsername, boost::is_any_of("\\"));
-        if (strs.size() > 1)
-        {
-            username = strs[1];
-            domain = strs[0];
-        }
-        else
-        {
-            strs.clear();
-            boost::split(strs, fullUsername, boost::is_any_of("@"));
-            if (strs.size() > 1)
-            {
-                username = strs[0];
-                domain = strs[1];
-            }
-            else
-            {
-                username = fullUsername;
-                domain = "";
-            }
-        }
-    }
+    int nFormValue(HttpRequest *request, const string & name, int defval);
+    void SplitUserDomain(const string& fullUsername, string& username, string& domain);
 }
 
 #endif
