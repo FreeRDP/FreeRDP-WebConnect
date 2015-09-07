@@ -20,8 +20,14 @@
 #ifndef _WSGATE_H_
 #define _WSGATE_H_
 
-#include "logging.hpp"
 #include <string>
+#include <vector>
+#include <map>
+#include <boost/algorithm/string.hpp>
+#include <ehs/ehs.h>
+#include <boost\lexical_cast.hpp>
+#include "logging.hpp"
+
 using namespace std;
 
 namespace wsgate {

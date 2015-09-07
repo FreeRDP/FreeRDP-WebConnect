@@ -3,7 +3,7 @@
 
 #include "wshandler.hpp"
 #include "myrawsocket.hpp"
-#include <ehs\ehsconnection.h>
+#include <ehs/ehsconnection.h>
 
 namespace wsgate{
     class MyWsHandler : public wspp::wshandler
