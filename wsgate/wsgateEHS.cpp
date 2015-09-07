@@ -24,7 +24,7 @@ namespace wsgate{
         return BINARY;
     }
 
-    WsGate::WsGate(EHS *parent = NULL, std::string registerpath = "")
+    WsGate::WsGate(EHS *parent, std::string registerpath)
         : EHS(parent, registerpath)
         , m_sHostname()
         , m_sDocumentRoot()
@@ -458,7 +458,7 @@ namespace wsgate{
         return HandleHTTPRequest(request, response);
     }
 
-    ResponseCode WsGate::HandleHTTPRequest(HttpRequest *request, HttpResponse *response, bool tokenAuth = false)
+    ResponseCode WsGate::HandleHTTPRequest(HttpRequest *request, HttpResponse *response, bool tokenAuth)
     {
         string uri(request->Uri());
         string thisHost(m_sHostname.empty() ? request->Headers("Host") : m_sHostname);
@@ -713,7 +713,7 @@ namespace wsgate{
         return true;
     }
 
-    bool WsGate::ReadConfig(wsgate::log *logger = NULL) {
+    bool WsGate::ReadConfig(wsgate::log *logger) {
         // config file options
         po::options_description cfg("");
         cfg.add_options()
