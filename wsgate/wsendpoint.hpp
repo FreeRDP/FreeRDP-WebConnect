@@ -23,6 +23,10 @@
 #ifndef WSENDPOINT_H
 #define WSENDPOINT_H
 
+#ifdef HAVE_CONFIG_H
+# include "config.h"
+#endif
+
 #include <vector>
 #include <sstream>
 #include <iostream>
