@@ -22,56 +22,7 @@
 #include "wsgateEHS.hpp"
 #include "myWsHandler.hpp"
 #include "wsGateService.hpp"
-
-namespace wsgate {
-    
-
-#ifndef _WIN32
-    // Bind helper is not needed on win32, because win32 does not
-    // have a concept of privileged ports.
-    class MyBindHelper : public PrivilegedBindHelper {
-
-        public:
-            MyBindHelper() : mutex(pthread_mutex_t()) {
-                pthread_mutex_init(&mutex, NULL);
-            }
-
-            bool BindPrivilegedPort(int socket, const char *addr, const unsigned short port) {
-                bool ret = false;
-                pid_t pid;
-                int status;
-                char buf[32];
-                pthread_mutex_lock(&mutex);
-                switch (pid = fork()) {
-                    case 0:
-                        sprintf(buf, "%08x%08x%04x", socket, inet_addr(addr), port);
-                        execl(BINDHELPER_PATH, buf, ((void *)NULL));
-                        exit(errno);
-                        break;
-                    case -1:
-                        break;
-                    default:
-                        if (waitpid(pid, &status, 0) != -1) {
-                            ret = (0 == status);
-                            if (0 != status) {
-                                log::err << BINDHELPER_PATH << " reports: " << strerror(WEXITSTATUS(status)) << endl;
-                                errno = WEXITSTATUS(status);
-                            }
-                        }
-                        break;
-                }
-                pthread_mutex_unlock(&mutex);
-                return ret;
-            }
-
-        private:
-            pthread_mutex_t mutex;
-    };
-#endif
-
-
-
-}
+#include "myBindHelper.hpp"
 
 static bool g_signaled = false;
 #ifdef _WIN32
