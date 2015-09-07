@@ -37,9 +37,6 @@ namespace wsgate {
 
     static const char * const ws_magic = "258EAFA5-E914-47DA-95CA-C5AB0DC85B11";
 
-    //disable two connections to the same host
-    std::map<string, bool> activeConnections;
-
     int nFormValue(HttpRequest *request, const string & name, int defval);
     void SplitUserDomain(const string& fullUsername, string& username, string& domain);
 }
