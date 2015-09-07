@@ -309,12 +309,6 @@ int main (int argc, char **argv)
 }
 
 #ifdef _WIN32
-// Windows Service implementation
-
-namespace wsgate {
-
-
-}
 
 int main (int argc, char **argv)
 {
