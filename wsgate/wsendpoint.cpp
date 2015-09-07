@@ -23,7 +23,7 @@
 #include "wsendpoint.hpp"
 
 #ifndef HAVE_BOOST_LOCK_GUARD
-    MutexHelper::MutexHelper(pthread_mutex_t *mutex, bool locknow = true) :
+    MutexHelper::MutexHelper(pthread_mutex_t *mutex, bool locknow) :
         m_pMutex(mutex), m_bLocked(false)
     {
         if (locknow)
@@ -303,5 +303,3 @@ namespace wspp {
         }
     }
 }
-
-#endif
