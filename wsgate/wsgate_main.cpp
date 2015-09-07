@@ -66,67 +66,6 @@ namespace wsgate {
     };
 #endif
 
-    class MyWsHandler : public wspp::wshandler
-    {
-        public:
-            MyWsHandler(EHSConnection *econn, EHS *ehs, MyRawSocketHandler *rsh)
-                : m_econn(econn)
-                  , m_ehs(ehs)
-                  , m_rsh(rsh)
-        {}
-
-            virtual void on_message(std::string hdr, std::string data) {
-                if (1 == (hdr[0] & 0x0F)) {
-                    // A text message
-                    if (':' == data[1]) {
-                        switch (data[0]) {
-                            case 'D':
-                                log::debug << "JS: " << data.substr(2) << endl;
-                                break;
-                            case 'I':
-                                log::info << "JS: " << data.substr(2) << endl;
-                                break;
-                            case 'W':
-                                log::warn << "JS: " << data.substr(2) << endl;
-                                break;
-                            case 'E':
-                                log::err << "JS: " << data.substr(2) << endl;
-                                break;
-                        }
-                    }
-                    return;
-                }
-                // binary message;
-                m_rsh->OnMessage(m_econn, data);
-            }
-            virtual void on_close() {
-                log::debug << "GOT Close" << endl;
-                ehs_autoptr<GenericResponse> r(new GenericResponse(0, m_econn));
-                m_ehs->AddResponse(ehs_move(r));
-            }
-            virtual bool on_ping(const std::string & data) {
-                log::debug << "GOT Ping: '" << data << "'" << endl;
-                return true;
-            }
-            virtual void on_pong(const std::string & data) {
-                log::debug << "GOT Pong: '" << data << "'" << endl;
-            }
-            virtual void do_response(const std::string & data) {
-                ehs_autoptr<GenericResponse> r(new GenericResponse(0, m_econn));
-                r->SetBody(data.data(), data.length());
-                m_ehs->AddResponse(ehs_move(r));
-            }
-
-        private:
-            // Non-copyable
-            MyWsHandler(const MyWsHandler&);
-            MyWsHandler& operator=(const MyWsHandler&);
-
-            EHSConnection *m_econn;
-            EHS *m_ehs;
-            MyRawSocketHandler *m_rsh;
-    };
-
     MyRawSocketHandler::MyRawSocketHandler(WsGate *parent)
         : m_parent(parent)
           , m_cmap(conn_map())
