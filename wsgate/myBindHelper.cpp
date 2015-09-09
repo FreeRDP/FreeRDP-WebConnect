@@ -1,6 +1,9 @@
 #ifndef _WIN32
 
 #include "myBindHelper.hpp"
+#include "wsgate.hpp"
+
+using namespace std;
 
 namespace wsgate {
     MyBindHelper::MyBindHelper()
