@@ -25,7 +25,7 @@
 #include <map>
 #include <boost/algorithm/string.hpp>
 #include <ehs/ehs.h>
-#include <boost\lexical_cast.hpp>
+#include <boost/lexical_cast.hpp>
 #include "logging.hpp"
 
 using namespace std;
