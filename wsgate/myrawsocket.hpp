@@ -22,7 +22,6 @@
 
 #include "RDP.hpp"
 #include <ehs/ehs.h>
-#include <ehs/ehsconnection.h>
 
 namespace wsgate {
 
