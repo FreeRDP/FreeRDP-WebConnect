@@ -1,3 +1,5 @@
+#ifdef _WIN32
+
 #ifdef HAVE_CONFIG_H
 # include "config.h"
 #endif
@@ -8,9 +10,7 @@
 #include "wsGateService.hpp"
 #include "btexception.hpp"
 #include <boost/filesystem.hpp>
-#ifdef _WIN32
 #include <direct.h>
-#endif
 
 using namespace std;
 using boost::filesystem::path;
@@ -135,3 +135,5 @@ namespace wsgate{
         return false;
     }
 }
+
+#endif //_WIN32
