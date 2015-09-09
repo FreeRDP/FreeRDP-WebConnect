@@ -589,15 +589,18 @@ add_definitions(-DBINDHELPER_PATH="${CMAKE_CURRENT_BINARY_DIR}/bindhelper${bindh
 
 set(WSGATE_SOURCES base64.cpp btexception.cpp logging.cpp sha1.cpp
 			wsgate_main.cpp RDP.cpp Update.cpp Primary.cpp
+			myBindHelper.cpp myWsHandler.cpp myrawsocket.cpp
+			wsendpoint.cpp wsgateEHS.cpp wshandler.cpp
 			Png.cpp nova_token_auth.cpp)
 
 if (WIN32)
-	set(WSGATE_SOURCES "${WSGATE_SOURCES}" NTService.cpp)
+	set(WSGATE_SOURCES "${WSGATE_SOURCES}" NTService.cpp wsGateService.cpp)
 	# in order for header files to appear in VS solution, add them to the sources list
 	set(WSGATE_SOURCES "${WSGATE_SOURCES}" ${CMAKE_CURRENT_BINARY_DIR}/config.h base64.hpp btexception.hpp common.hpp
 	 				logging.hpp myrawsocket.hpp nova_token_auth.hpp NTService.hpp 
 	 				Png.hpp Primary.hpp rdpcommon.hpp RDP.hpp sha1.hpp Update.hpp
 	 				wscommon.hpp wsendpoint.hpp wsframe.hpp wsgate.hpp wshandler.hpp
+					myBindHelper.hpp myWsHandler.hpp wsGateService.hpp wsgateEHS.hpp
 	 				wsutf8.hpp)
 endif()
 
