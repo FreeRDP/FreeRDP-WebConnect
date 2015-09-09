@@ -624,19 +624,19 @@ namespace wsgate {
             const uint32_t *op = reinterpret_cast<const uint32_t *>(data.data());
             switch (*op) {
             case WSOP_CS_CREDENTIAL_JSON:
-                std::wstring infoJSON = L"";
+                std::string infoJSON = "";
                 for (int i = 1; i < data.length() / 4; i++){
-                    infoJSON += (wchar_t)op[i];
+                    infoJSON += (char)op[i];
                 }
                 try{
-                    web::json::value jsonValue = web::json::value::parse(infoJSON);
-                    std::wstring w_host = jsonValue[L"host"].as_string();
-                    std::wstring w_pcb  = jsonValue[L"pcb"].as_string();
-                    std::wstring w_user = jsonValue[L"user"].as_string();
-                    std::wstring w_pass = jsonValue[L"pass"].as_string();
-                    std::wstring w_dtsize = jsonValue[L"dtsize"].as_string();
+                    web::json::value jsonValue = web::json::value::parse(utility::conversions::to_string_t(infoJSON));
+                    utility::string_t w_host = jsonValue[L"host"].as_string();
+                    utility::string_t w_pcb  = jsonValue[L"pcb"].as_string();
+                    utility::string_t w_user = jsonValue[L"user"].as_string();
+                    utility::string_t w_pass = jsonValue[L"pass"].as_string();
+                    utility::string_t w_dtsize = jsonValue[L"dtsize"].as_string();
 
-                    std::string size(w_dtsize.begin(), w_dtsize.end());
+                    utility::string_t size(w_dtsize.begin(), w_dtsize.end());
 
                     WsRdpParams params;
                     params.fntlm = jsonValue[L"fntlm"].as_integer();
