@@ -901,6 +901,19 @@ namespace wsgate {
                     pointer->width, pointer->height, pointer->xorBpp, hclrconv);
         }
 
+        //check if the cursor is fully transparent
+        bool transparent = true;
+        for (int y = 0; y < pointer->height; y++){
+            for (int x = 0; x < pointer->width; x++){
+                if (pixels[0 + x * 4 + y * 4 * pointer->width] != 0){
+                    transparent = false;
+                }
+            }
+        }
+        if (transparent){
+            pixels[3] = 1;
+        }
+
         Png png;
         std::string png_string = png.GenerateFromARGB(pointer->width, pointer->height, pixels);
 
