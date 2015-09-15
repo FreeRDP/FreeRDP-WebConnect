@@ -885,14 +885,22 @@ wsgate.RDP = new Class( {
     onMouseLeave: function(evt){
        for(var button in this.mouseDownStatus){
            if(this.mouseDownStatus[button]){
+               var x = (this.msie > 0 || this.trident > 0) ? evt.event.layerX - evt.event.currentTarget.offsetLeft : evt.event.layerX;
+               var y = (this.msie > 0 || this.trident > 0) ? evt.event.layerY - evt.event.currentTarget.offsetTop : evt.event.layerY;
+               var maxX = $('textareainput').getStyle('width').toInt();
+               var maxY = $('textareainput').getStyle('height').toInt();
+               if (x < 0) x = 0;
+               if (y < 0) y = 0;
+               if (x > maxX) x = maxX;
+               if (y > maxY) y = maxY;
                var which = button;
                if (this.sock.readyState == this.sock.OPEN) {
                    buf = new ArrayBuffer(16);
                    a = new Uint32Array(buf);
                    a[0] = 0; // WSOP_CS_MOUSE
                    a[1] = which;
-                   a[2] = 0;
-                   a[3] = 0;
+                   a[2] = x;
+                   a[3] = y;
                    this.sock.send(buf);
                    this.mouseDownStatus[which] = false;
                }
