@@ -274,11 +274,14 @@ wsgate.RDP = new Class( {
 
         document.body.appendChild(this.textAreaInput);
 
+        //start the IME helper refresh
+        refreshIMEhelper();
+
         //make sure the textarea is always on focus
         this.textAreaInput.focus();
         this.textAreaInput.addEvent('blur', function(){
             try{
-                setTimeout(function(){$('textareainput').focus();},20);
+                setTimeout(function(){$('textareainput').focus();},30);
             }
             catch(err){
             }
@@ -958,7 +961,6 @@ wsgate.RDP = new Class( {
                 if(this.FunctionalKey(evt.code)){
                     if(evt.preventDefault) evt.preventDefault();
                     if(evt.stopPropagation) evt.stopPropagation();
-
                     this.SendKeyUpDown(evt.code, 1);
                 }
             }
@@ -973,17 +975,9 @@ wsgate.RDP = new Class( {
             if(this.FunctionalKey(evt.code)){
                 if(evt.preventDefault) evt.preventDefault();
                 if(evt.stopPropagation) evt.stopPropagation();
-
                 this.SendKeyUpDown(evt.code, 0);
             }
             this.DumpTextArea(evt.code);
-            //IME helper div
-            if(this.IMEon){
-                $('IMEhelper').setStyle('visibility','visible');
-                $('IMEhelper').set('html',$('textareainput').get('value'));
-            }else{
-                $('IMEhelper').setStyle('visibility','hidden');
-            }
         }
     },
     /**
@@ -1636,4 +1630,16 @@ wsgate.dRLE16_RGBA = function(inA, inLength, width, outA) {
         }
     }
 }
-
+/**
+ * Continuos refresh for the IMEhelper
+ */
+function refreshIMEhelper(){
+    setTimeout(this.refreshIMEhelper,20);
+    //IME helper div
+    if(rdp.IMEon){
+        $('IMEhelper').setStyle('visibility','visible');
+        $('IMEhelper').set('html',$('textareainput').get('value'));
+    }else{
+        $('IMEhelper').setStyle('visibility','hidden');
+   }
+}
