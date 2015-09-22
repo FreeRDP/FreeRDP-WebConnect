@@ -297,6 +297,20 @@
 		}
             }
 
+            var altTabOn = false;
+            function altTabEvent(){
+                if(altTabOn){
+                    altTabOn = false;
+                    rdp.SendKey(2);//alt+tab release
+                    $('alttab').removeClass('extracommandshold');
+                }
+                else{
+                    altTabOn = true;
+                    rdp.SendKey(1);//alt+tab
+                    $('alttab').addClass('extracommandshold');
+                }
+            }
+
             function showDialog(show) {
                 if (show) {
                     ShowMouseHelper(false);
@@ -325,6 +339,7 @@
                         'visibility':'visible'
                     });
                     $('ctrlaltdelete').addEvent('click', function(){ rdp.SendKey(0); });
+                    $('alttab').addEvent('click', altTabEvent);
                     $('disconnect').addEvent('click', sendDisconnect);
                 }
             }
@@ -478,6 +493,9 @@
 
                 <li id="ctrlaltdelete">
                     Ctrl+Alt+Delete
+                </li>
+                <li id="alttab">
+                    Alt+Tab
                 </li>
                 <li id="keyboardlanguage">
                     Multilanguage keyboard : OFF
