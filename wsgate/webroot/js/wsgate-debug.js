@@ -223,11 +223,12 @@ wsgate.RDP = new Class( {
      */
     useIME: false,
     ToggleLanguageButton: function(){
-        this.useIME = $('keyboardlanguage').get('text') == "Multilanguage keyboard : OFF";
         if(this.useIME){
-            $('keyboardlanguage').set('text','Multilanguage keyboard : ON');
+            this.useIME = false;
+            $('keyboardlanguage').removeClass('extracommandshold');
         }else{
-            $('keyboardlanguage').set('text','Multilanguage keyboard : OFF');
+            this.useIME = true;
+            $('keyboardlanguage').addClass('extracommandshold');
         }
     },
     /**
