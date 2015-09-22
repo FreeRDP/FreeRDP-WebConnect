@@ -297,8 +297,6 @@
 		}
             }
 
-            var sendCtrlAltDel = function() { rdp.SendKey(1); }
-
             function showDialog(show) {
                 if (show) {
                     ShowMouseHelper(false);
@@ -326,7 +324,7 @@
                     {
                         'visibility':'visible'
                     });
-                    $('ctrlaltdelete').addEvent('click', sendCtrlAltDel);
+                    $('ctrlaltdelete').addEvent('click', function(){ rdp.SendKey(0); });
                     $('disconnect').addEvent('click', sendDisconnect);
                 }
             }
