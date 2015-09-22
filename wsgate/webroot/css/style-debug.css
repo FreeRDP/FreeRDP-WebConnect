@@ -409,7 +409,10 @@ label.big {
   cursor:hand;
 }
 
-
+.extracommandshold
+{
+  background-color: #d7d7d7;
+}
 
 /* ==|== media queries ======================================================
    EXAMPLE Media Query for Responsive Design.

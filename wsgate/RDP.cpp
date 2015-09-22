@@ -491,6 +491,13 @@ namespace wsgate {
                                 actionList.push_back(std::pair< UINT16, UINT16 >(KBD_FLAGS_RELEASE, RDP_SCANCODE_LMENU));
                                 actionList.push_back(std::pair< UINT16, UINT16 >(KBD_FLAGS_RELEASE, RDP_SCANCODE_LCONTROL));
                                 break;
+                            case 1:    //alt+tab
+                                actionList.push_back(std::pair< UINT16, UINT16 >(KBD_FLAGS_DOWN, RDP_SCANCODE_LMENU));
+                                actionList.push_back(std::pair< UINT16, UINT16 >(KBD_FLAGS_DOWN, RDP_SCANCODE_TAB));
+                                actionList.push_back(std::pair< UINT16, UINT16 >(KBD_FLAGS_RELEASE, RDP_SCANCODE_TAB));
+                                break;
+                            case 2:    //alt+tab release
+                                actionList.push_back(std::pair< UINT16, UINT16 >(KBD_FLAGS_RELEASE, RDP_SCANCODE_LMENU));
                         }
 
                         for(unsigned int i=0;i<actionList.size();i++){

@@ -195,6 +195,8 @@ wsgate.RDP = new Class( {
     },
     SendKey: function(comb) {
         //code 0 : ctrl+alt+delete
+        //code 1 : alt+tab
+        //code 2 : alt+tab release
 
         if (this.sock.readyState == this.sock.OPEN) {
             this.log.debug('send  special combination', comb);
