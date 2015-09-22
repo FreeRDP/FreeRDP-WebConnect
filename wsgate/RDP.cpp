@@ -478,32 +478,24 @@ namespace wsgate {
                             uint32_t op;
                             uint32_t code;
                         } wsmsg;
-                        
+
                         const wsmsg *m = reinterpret_cast<const wsmsg *>(data.data());
                         log::debug << "Special combination sent: " << m->code << endl;
-                        uint32_t tcode1, tcode2, tcode3  = 0;
-                        //keeping the switch logic for  further key combos
+                        std::vector< std::pair< UINT16, UINT16 > > actionList;
                         switch (m->code){
                             case 42:    //ctrl+alt+delete
-                                tcode1 = RDP_SCANCODE_LCONTROL;
-                                tcode2 = RDP_SCANCODE_LMENU;
-                                tcode3 = RDP_SCANCODE_DELETE;
+                                actionList.push_back(std::pair< UINT16, UINT16 >(KBD_FLAGS_DOWN, RDP_SCANCODE_LCONTROL));
+                                actionList.push_back(std::pair< UINT16, UINT16 >(KBD_FLAGS_DOWN, RDP_SCANCODE_LMENU));
+                                actionList.push_back(std::pair< UINT16, UINT16 >(KBD_FLAGS_DOWN, RDP_SCANCODE_DELETE));
+                                actionList.push_back(std::pair< UINT16, UINT16 >(KBD_FLAGS_RELEASE, RDP_SCANCODE_DELETE));
+                                actionList.push_back(std::pair< UINT16, UINT16 >(KBD_FLAGS_RELEASE, RDP_SCANCODE_LMENU));
+                                actionList.push_back(std::pair< UINT16, UINT16 >(KBD_FLAGS_RELEASE, RDP_SCANCODE_LCONTROL));
                                 break;
                         }
-                        //send down signal for the keys
-                        freerdp_input_send_keyboard_event(m_rdpInput, KBD_FLAGS_DOWN, tcode1);
-                        freerdp_input_send_keyboard_event(m_rdpInput, KBD_FLAGS_DOWN, tcode2);
 
-                        //aditional signal send/release for the delete key
-                        if (m->code == 42){
-                            freerdp_input_send_keyboard_event(m_rdpInput, KBD_FLAGS_DOWN, tcode3);
-                            freerdp_input_send_keyboard_event(m_rdpInput, KBD_FLAGS_RELEASE, tcode3);
-                        } 
-		    
-                        //send release signal for the keys
-                        freerdp_input_send_keyboard_event(m_rdpInput, KBD_FLAGS_RELEASE, tcode1);
-                        freerdp_input_send_keyboard_event(m_rdpInput, KBD_FLAGS_RELEASE, tcode2);
-
+                        for(unsigned int i=0;i<actionList.size();i++){
+                            freerdp_input_send_keyboard_event(m_rdpInput, actionList[i].first, actionList[i].second);
+                        }
                     }
                     break;
                 case WSOP_CS_MOUSE:
