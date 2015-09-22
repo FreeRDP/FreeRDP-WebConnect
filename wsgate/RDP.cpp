@@ -483,7 +483,7 @@ namespace wsgate {
                         log::debug << "Special combination sent: " << m->code << endl;
                         std::vector< std::pair< UINT16, UINT16 > > actionList;
                         switch (m->code){
-                            case 42:    //ctrl+alt+delete
+                            case 0:    //ctrl+alt+delete
                                 actionList.push_back(std::pair< UINT16, UINT16 >(KBD_FLAGS_DOWN, RDP_SCANCODE_LCONTROL));
                                 actionList.push_back(std::pair< UINT16, UINT16 >(KBD_FLAGS_DOWN, RDP_SCANCODE_LMENU));
                                 actionList.push_back(std::pair< UINT16, UINT16 >(KBD_FLAGS_DOWN, RDP_SCANCODE_DELETE));
