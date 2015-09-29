@@ -14,14 +14,14 @@ typedef bool(*queryPluginFUNC)(std::string, std::map<std::string, std::string>&)
 
 class PluginManager {
 public:
-    PluginManager* getInstance();
-    void shutDown();
+    static PluginManager* getInstance();
+    static void shutDown();
     bool queryPlugins(std::string query, std::map<std::string, std::string>& output);
 private:
     static PluginManager* instance;
     void listPlugins(std::string findPath, std::vector<std::string>& pluginFileNames);
     void loadPlugins(bool orUnload);
-    queryPluginFUNC loadPlugin(std::string fileName);
+    void loadPlugin(std::string fileName);
     void unloadPlugin(LIBHANDLER handle);
     std::vector<queryPluginFUNC> functionPointers;
     PluginManager();

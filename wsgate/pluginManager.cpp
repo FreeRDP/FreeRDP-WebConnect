@@ -1,5 +1,6 @@
 #include "pluginManager.h"
 #include <windows.h>
+#include <algorithm>
 
 PluginManager* PluginManager::instance = NULL;
 
@@ -11,15 +12,16 @@ PluginManager::~PluginManager(){
     this->loadPlugins(true);
 }
 
+void PluginManager::shutDown(){
+    delete PluginManager::instance;
+}
+
 void PluginManager::loadPlugins(bool orUnload){
     if (!orUnload){
         std::vector<std::string> files;
-        listPlugins("./plugins/*", files);
+        listPlugins("plugins\\", files);
         for (int i = 0; i < files.size(); i++){
-            queryPluginFUNC func = this->loadPlugin(files[i]);
-            if (func != NULL){
-                functionPointers.push_back(func);
-            }
+            loadPlugin(files[i]);
         }
     }
     //unload
@@ -44,10 +46,14 @@ bool PluginManager::queryPlugins(std::string query, std::map<std::string, std::s
     return result;
 }
 
-//TODO will not work with unicode
-#define string2LPCSTR(str) (LPCSTR)std::wstring( str .begin(), str .end()).c_str()
+#define string2LPCSTR(str) (LPCSTR)str.c_str()
+std::string getexepath()
+{
+    char result[MAX_PATH];
+    return std::string(result, GetModuleFileName(NULL, result, MAX_PATH));
+}
 
-queryPluginFUNC PluginManager::loadPlugin(std::string fileName){
+void PluginManager::loadPlugin(std::string fileName){
     LIBHANDLER handle = LoadLibrary(string2LPCSTR(fileName));
     if (handle != NULL){
         queryPluginFUNC function = (queryPluginFUNC)GetProcAddress(handle, "queryPlugin");
@@ -64,7 +70,6 @@ queryPluginFUNC PluginManager::loadPlugin(std::string fileName){
     else{
         wsgate::logger::err << "Error loading plugin " << fileName << std::endl;
     }
-    return 0;
 }
 
 void PluginManager::unloadPlugin(LIBHANDLER handle){
@@ -76,12 +81,20 @@ void PluginManager::listPlugins(std::string findPath, std::vector<std::string>& 
     size_t length_of_arg;
     HANDLE findHandle = INVALID_HANDLE_VALUE;
     DWORD dwError = 0;
-
-    findHandle = FindFirstFile(string2LPCSTR(findPath), &file);
+    std::string path(getexepath());
+    //find path delimiter
+    int n = path.length();
+    int i = n - 1;
+    while (path[i] != '\\') i--;
+    path.erase(i + 1, n);
+    path += findPath;
+    findPath = path;
+    findHandle = FindFirstFile(string2LPCSTR((findPath + "*.dll")), &file);
 
     if (findHandle == INVALID_HANDLE_VALUE)
     {
         wsgate::logger::err << "Bad find path." << std::endl;
+        return;
     }
 
     do
@@ -92,7 +105,7 @@ void PluginManager::listPlugins(std::string findPath, std::vector<std::string>& 
         }
         else
         {
-            pluginFileNames.push_back(std::string(file.cFileName));
+            pluginFileNames.push_back(findPath + std::string(file.cFileName));
         }
     } while (FindNextFile(findHandle, &file) != 0);
 
