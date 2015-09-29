@@ -1,6 +1,8 @@
 #ifndef _PLUGIN_MANAGER_
 #define _PLUGIN_MANAGER_
 
+#include "logging.hpp"
+
 #include<Windows.h>
 #define LIBHANDLER HMODULE
 
@@ -16,8 +18,11 @@ public:
     void shutDown();
     bool queryPlugins(std::string query, std::map<std::string, std::string>& output);
 private:
-    std::vector<std::string> listPlugins();
-    void loadPlugins();
+    static PluginManager* instance;
+    void listPlugins(std::string findPath, std::vector<std::string>& pluginFileNames);
+    void loadPlugins(bool orUnload);
+    queryPluginFUNC loadPlugin(std::string fileName);
+    void unloadPlugin(LIBHANDLER handle);
     std::vector<queryPluginFUNC> functionPointers;
     PluginManager();
     ~PluginManager();
