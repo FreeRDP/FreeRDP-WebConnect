@@ -1,6 +1,9 @@
 #include "../pluginTemplate/pluginCommon.h"
+#include "nova_token_auth.hpp"
 #include <sstream>
 #include <exception>
+
+using namespace wsgate;
 
 bool entryPoint(std::map<std::string, std::string> formValues, std::map<std::string, std::string> & result){
     bool returnValue = false;
