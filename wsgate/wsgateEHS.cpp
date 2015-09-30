@@ -275,6 +275,7 @@ namespace wsgate{
         EmbeddedContext embeddedContext = CONTEXT_PLAIN;
 
         std::map<std::string, std::string> pluginOutput;
+        pluginOutput["configfile"] = m_sConfigFile;
         if (PluginManager::getInstance()->queryPlugins(uri, pluginOutput)){
             //wsgate will get auth info from the plugin
             setCookie = false;
