@@ -277,18 +277,20 @@ namespace wsgate{
         bool setCookie = true;
         EmbeddedContext embeddedContext = CONTEXT_PLAIN;
 
-        std::map<std::string, std::string> pluginOutput;
-        pluginOutput["configfile"] = m_sConfigFile;
-        if (PluginManager::getInstance()->queryPlugins(uri, pluginOutput)){
-            //wsgate will get auth info from the plugin
-            setCookie = false;
-            embeddedContext = CONTEXT_EMBEDDED;
+        if (boost::contains(uri, "?")){
+            std::map<std::string, std::string> pluginOutput;
+            pluginOutput["configfile"] = m_sConfigFile;
+            if (PluginManager::getInstance()->queryPlugins(uri, pluginOutput)){
+                //wsgate will get auth info from the plugin
+                setCookie = false;
+                embeddedContext = CONTEXT_EMBEDDED;
 
-            rdphost = pluginOutput["rdphost"];
-            rdpport = std::stoi(pluginOutput["rdpport"]);
-            rdppcb = pluginOutput["rdppcb"];
-            rdpuser = pluginOutput["rdpuser"];
-            rdppass = pluginOutput["rdppass"];
+                rdphost = pluginOutput["rdphost"];
+                rdpport = std::stoi(pluginOutput["rdpport"]);
+                rdppcb = pluginOutput["rdppcb"];
+                rdpuser = pluginOutput["rdpuser"];
+                rdppass = pluginOutput["rdppass"];
+            }
         }
 
         params =
