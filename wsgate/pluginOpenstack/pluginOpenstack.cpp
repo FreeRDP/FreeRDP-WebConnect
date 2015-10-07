@@ -5,6 +5,7 @@
 #include <boost/property_tree/ptree.hpp>
 #include <boost/property_tree/ini_parser.hpp>
 #include <boost/property_tree/detail/file_parser_error.hpp>
+#include <boost/lexical_cast.hpp>
 
 using namespace wsgate;
 
@@ -20,7 +21,7 @@ bool readConfigFile(std::map<std::string, std::string> & result){
     std::stringstream err(errStr);
     bool returnValue = false;
 
-    if (result.count["configfile"]){
+    if (result.count("configfile")){
         try {
             boost::property_tree::ptree pt;
             boost::property_tree::ini_parser::read_ini(result["configfile"], pt);
@@ -89,7 +90,7 @@ bool entryPoint(std::map<std::string, std::string> formValues, std::map<std::str
     std::stringstream err(errStr);
 
     if (readConfigFile(result)){
-        if (formValues.count("wsgate") && formValues.count("token"))
+        if (formValues.count("token") && formValues.count("title"))
         {
             // OpenStack console authentication
             try
@@ -109,7 +110,7 @@ bool entryPoint(std::map<std::string, std::string> formValues, std::map<std::str
                     << std::endl;
 
                 result["rdphost"] = info.host;
-                result["rdpport"] = info.port;
+                result["rdpport"] = boost::lexical_cast<std::string>(info.port);
                 result["rdppcb"] = info.internal_access_path;
 
                 result["rdpuser"] = m_sHyperVHostUsername;
