@@ -82,10 +82,10 @@ json::value nova_console_token_auth_impl::get_auth_token_data(
     auto jsonRequestBody = json::value::object();
     auto auth = json::value::object();
     auto cred = json::value::object();
-    cred[U("username")] = json::value::string(to_string_t(osUserName));
-    cred[U("password")] = json::value::string(to_string_t(osPassword));
+    cred[U("username")] = json::value::string(utility::conversions::to_string_t(osUserName));
+    cred[U("password")] = json::value::string(utility::conversions::to_string_t(osPassword));
     auth[U("passwordCredentials")] = cred;
-    auth[U("tenantName")] = json::value::string(to_string_t(osTenantName));
+    auth[U("tenantName")] = json::value::string(utility::conversions::to_string_t(osTenantName));
     jsonRequestBody[U("auth")] = auth;
     http::http_request request(http::methods::POST);
     request.set_request_uri(U("tokens"));
@@ -93,21 +93,21 @@ json::value nova_console_token_auth_impl::get_auth_token_data(
     request.headers().set_content_type(U("application/json"));
     request.set_body(jsonRequestBody);
 
-    http::client::http_client client(to_string_t(osAuthUrl));
+    http::client::http_client client(utility::conversions::to_string_t(osAuthUrl));
     return execute_request_and_get_json_value(client, request);
 }
 
 json::value nova_console_token_auth_impl::get_console_token_data(
     string authToken, string novaUrl, string consoleToken)
 {
-    http::client::http_client client(to_string_t(novaUrl));
+    http::client::http_client client(utility::conversions::to_string_t(novaUrl));
     http::uri_builder console_token_uri;
     console_token_uri.append(U("os-console-auth-tokens"));
-    console_token_uri.append(to_string_t(consoleToken));
+    console_token_uri.append(utility::conversions::to_string_t(consoleToken));
 
     http::http_request request(http::methods::GET);
     request.set_request_uri(console_token_uri.to_string());
-    request.headers().add(U("X-Auth-Token"), to_string_t(authToken));
+    request.headers().add(U("X-Auth-Token"), utility::conversions::to_string_t(authToken));
     request.headers().add(http::header_names::accept, U("application/json"));
     request.headers().set_content_type(U("application/json"));
 
