@@ -1,6 +1,6 @@
 #include "wsgateEHS.hpp"
 #include "wsgate.hpp"
-#include "pluginManager.h"
+#include "pluginManager.hpp"
 
 namespace wsgate{
     WsGate::MimeType WsGate::simpleMime(const string & filename)
