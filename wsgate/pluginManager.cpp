@@ -1,4 +1,4 @@
-#include "pluginManager.h"
+#include "pluginManager.hpp"
 #include <windows.h>
 #include <algorithm>
 
