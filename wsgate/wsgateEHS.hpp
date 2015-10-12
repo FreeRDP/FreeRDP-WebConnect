@@ -26,8 +26,6 @@
 #include <boost/property_tree/ptree.hpp>
 #include <boost/property_tree/ini_parser.hpp>
 #include <boost/property_tree/detail/file_parser_error.hpp>
-#include <cpprest/uri.h>
-#include <cpprest/asyncrt_utils.h>
 
 #include "common.hpp"
 #include "btexception.hpp"
@@ -52,7 +50,6 @@ namespace po = boost::program_options;
 namespace fs = boost::filesystem;
 namespace pt = boost::posix_time;
 using boost::filesystem::path;
-using namespace utility::conversions;
 
 namespace wsgate{
     // subclass of EHS that defines a custom HTTP response.
