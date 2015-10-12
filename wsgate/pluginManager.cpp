@@ -1,6 +1,7 @@
 #include "pluginManager.hpp"
 #include <windows.h>
 #include <algorithm>
+#include <boost\algorithm\string\predicate.hpp>
 
 PluginManager* PluginManager::instance = NULL;
 
@@ -40,8 +41,30 @@ PluginManager* PluginManager::getInstance(){
 
 bool PluginManager::queryPlugins(std::string query, std::map<std::string, std::string>& output){
     bool result = false;
-    for (int i = 0; i < functionPointers.size(); i++){
-        result |= functionPointers[i](query, output);
+    //execute queries with respect to the config file
+    for (int i = 0; i < pluginOrder.size(); i++){
+        for (int j = 0; j < pluginNames.size(); j++){
+            if (boost::algorithm::ends_with(pluginNames[j], pluginOrder[i])){
+                result |= functionPointers[j](query, output);
+            }
+        }
+    }
+    //execute remaining queries
+    for (int j = 0; j < pluginNames.size(); j++){
+        if (pluginOrder.size()){
+            bool found = false;
+            for (int i = 0; i < pluginOrder.size(); i++){
+                if (boost::algorithm::ends_with(pluginNames[j], pluginOrder[i])){
+                    found = true;
+                }
+            }
+            if (!found)
+                result |= functionPointers[j](query, output);
+        }
+        else
+        {
+            result |= functionPointers[j](query, output);
+        }
     }
     return result;
 }
@@ -61,6 +84,7 @@ void PluginManager::loadPlugin(std::string fileName){
             wsgate::logger::debug << "Found plugin " << fileName << std::endl;
             pluginHandles.push_back(handle);
             functionPointers.push_back(function);
+            pluginNames.push_back(fileName);
         }
         else{
             FreeLibrary(handle);
