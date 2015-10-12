@@ -17,6 +17,7 @@ public:
     static PluginManager* getInstance();
     static void shutDown();
     bool queryPlugins(std::string query, std::map<std::string, std::string>& output);
+    inline void setOrder(std::vector<std::string> order){ pluginOrder = order; }
 private:
     static PluginManager* instance;
     void listPlugins(std::string findPath, std::vector<std::string>& pluginFileNames);
@@ -28,5 +29,7 @@ private:
     ~PluginManager();
 
     std::vector<LIBHANDLER> pluginHandles;
+    std::vector<std::string> pluginOrder;
+    std::vector<std::string> pluginNames;
 };
 #endif //_PLUGIN_MANAGER_
