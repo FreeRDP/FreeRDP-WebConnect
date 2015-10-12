@@ -365,13 +365,6 @@ set(HAVE_EHS_H 1)
 # add ehs to libs list
 set(LIBS ${LIBS} ${EHS_LIBRARIES})
 
-# find casablanca
-find_package(Casablanca REQUIRED)
-include_directories(${CASABLANCA_INCLUDE_DIR})
-# add casablanca to libs list
-set(LIBS ${LIBS} ${CASABLANCA_LIBRARIES})
-
-
 CHECK_FUNCTION_EXISTS(memset HAVE_MEMSET)
 CHECK_FUNCTION_EXISTS(select HAVE_SELECT)
 CHECK_FUNCTION_EXISTS(setlocale HAVE_SETLOCALE)
@@ -591,13 +584,13 @@ set(WSGATE_SOURCES base64.cpp btexception.cpp logging.cpp sha1.cpp
 			wsgate_main.cpp RDP.cpp Update.cpp Primary.cpp
 			myBindHelper.cpp myWsHandler.cpp myrawsocket.cpp
 			wsendpoint.cpp wsgateEHS.cpp wshandler.cpp
-			Png.cpp nova_token_auth.cpp)
+			Png.cpp pluginManager.cpp)
 
 if (WIN32)
 	set(WSGATE_SOURCES "${WSGATE_SOURCES}" NTService.cpp wsGateService.cpp)
 	# in order for header files to appear in VS solution, add them to the sources list
 	set(WSGATE_SOURCES "${WSGATE_SOURCES}" ${CMAKE_CURRENT_BINARY_DIR}/config.h base64.hpp btexception.hpp common.hpp
-	 				logging.hpp myrawsocket.hpp nova_token_auth.hpp NTService.hpp 
+	 				logging.hpp myrawsocket.hpp pluginManager.hpp NTService.hpp 
 	 				Png.hpp Primary.hpp rdpcommon.hpp RDP.hpp sha1.hpp Update.hpp
 	 				wscommon.hpp wsendpoint.hpp wsframe.hpp wsgate.hpp wshandler.hpp
 					myBindHelper.hpp myWsHandler.hpp wsGateService.hpp wsgateEHS.hpp
