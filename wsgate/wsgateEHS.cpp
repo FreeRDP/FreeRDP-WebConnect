@@ -910,6 +910,13 @@ namespace wsgate{
                 } else {
                     m_sHyperVHostPassword.clear();
                 }
+
+                if (pt.get_optional<std::string>("plugins.order")){
+                    std::string str = pt.get<std::string>("plugins.order");
+                    std::vector<std::string> order;
+                    boost::split(order, str, boost::is_any_of(";"));
+                    PluginManager::getInstance()->setOrder(order);
+                }
             } catch (const tracing::invalid_argument & e) {
                 cerr << e.what() << endl;
                 wsgate::log::err << e.what() << endl;
