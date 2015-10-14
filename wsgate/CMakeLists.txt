@@ -345,6 +345,12 @@ include_directories(${PNG_INCLUDE_DIR})
 # add png to libs list
 set(LIBS ${LIBS} ${PNG_LIBRARIES})
 
+# find casablanca
+find_package(Casablanca REQUIRED)
+include_directories(${CASABLANCA_INCLUDE_DIR})
+# add casablanca to libs list
+set(LIBS ${LIBS} ${CASABLANCA_LIBRARIES})
+
 # find freerdp
 find_package(FreeRDP REQUIRED)
 include_directories(${FREERDP_INCLUDE_DIR})
@@ -600,3 +606,16 @@ endif()
 add_executable(wsgate ${WSGATE_SOURCES})
 
 target_link_libraries(wsgate ${LIBS})
+
+
+set(PLUGINOPENSTACK_SOURCE pluginOpenstack/nova_token_auth.cpp pluginOpenstack/pluginOpenstack.cpp pluginTemplate/pluginCommon.cpp)
+
+if(WIN32)
+    set(PLUGINOPENSTACK_SOURCE ${PLUGINOPENSTACK_SOURCE} pluginOpenstack/nova_token_auth.hpp pluginTemplate/pluginCommon.hpp config.h)
+endif()
+
+include_directories(${CMAKE_CURRENT_SOURCE_DIR})
+
+add_library(pluginOpenstack SHARED ${PLUGINOPENSTACK_SOURCE})
+target_link_libraries(pluginOpenstack ${LIBS})
+set_target_properties(pluginOpenstack PROPERTIES LINKER_LANGUAGE C++)
