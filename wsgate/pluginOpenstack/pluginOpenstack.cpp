@@ -1,4 +1,4 @@
-#include "../pluginTemplate/pluginCommon.h"
+#include "../pluginTemplate/pluginCommon.hpp"
 #include "nova_token_auth.hpp"
 #include <sstream>
 #include <exception>
