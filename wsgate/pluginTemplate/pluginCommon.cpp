@@ -1,4 +1,4 @@
-#include "pluginCommon.h"
+#include "pluginCommon.hpp"
 
 void split(std::string input, std::vector<std::string>& tokens, char delim){
     std::stringstream stream(input);
