@@ -607,7 +607,7 @@ add_executable(wsgate ${WSGATE_SOURCES})
 
 target_link_libraries(wsgate ${LIBS})
 
-
+#pluginOpenstack
 set(PLUGINOPENSTACK_SOURCE pluginOpenstack/nova_token_auth.cpp pluginOpenstack/pluginOpenstack.cpp pluginTemplate/pluginCommon.cpp)
 
 if(WIN32)
@@ -618,4 +618,4 @@ include_directories(${CMAKE_CURRENT_SOURCE_DIR})
 
 add_library(pluginOpenstack SHARED ${PLUGINOPENSTACK_SOURCE})
 target_link_libraries(pluginOpenstack ${LIBS})
-set_target_properties(pluginOpenstack PROPERTIES LINKER_LANGUAGE C++)
+set_target_properties(pluginOpenstack PROPERTIES LINKER_LANGUAGE C++ COMPILE_FLAGS "${CMAKE_CXX_FLAGS}")
