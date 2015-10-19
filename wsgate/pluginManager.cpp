@@ -2,6 +2,7 @@
 #include <windows.h>
 #include <algorithm>
 #include <boost\algorithm\string\predicate.hpp>
+#include <boost\filesystem.hpp>
 
 PluginManager* PluginManager::instance = NULL;
 
@@ -101,7 +102,31 @@ void PluginManager::unloadPlugin(LIBHANDLER handle){
 }
 
 void PluginManager::listPlugins(std::string findPath, std::vector<std::string>& pluginFileNames){
-    WIN32_FIND_DATA file;
+    std::string path(getexepath());
+    //find path delimiter
+    int n = path.length();
+    int i = n - 1;
+    while (path[i] != '\\') i--;
+    path.erase(i + 1, n);
+    path += findPath;
+    findPath = path;
+
+    namespace fs = boost::filesystem;
+    fs::path directory(findPath);
+    fs::directory_iterator end;
+
+    if (fs::exists(directory) && fs::is_directory(directory))
+    {
+        for (fs::directory_iterator i(path); i != end; ++i)
+        {
+            if (fs::is_regular_file(i->status()))
+            {
+                pluginFileNames.push_back(i->path().string());
+            }
+        }
+    }
+
+/*    WIN32_FIND_DATA file;
     size_t length_of_arg;
     HANDLE findHandle = INVALID_HANDLE_VALUE;
     DWORD dwError = 0;
@@ -133,5 +158,5 @@ void PluginManager::listPlugins(std::string findPath, std::vector<std::string>& 
         }
     } while (FindNextFile(findHandle, &file) != 0);
 
-    FindClose(findHandle);
+    FindClose(findHandle);*/
 }
