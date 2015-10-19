@@ -52,20 +52,14 @@ bool PluginManager::queryPlugins(std::string query, std::map<std::string, std::s
     }
     //execute remaining queries
     for (int j = 0; j < pluginNames.size(); j++){
-        if (pluginOrder.size()){
-            bool found = false;
-            for (int i = 0; i < pluginOrder.size(); i++){
-                if (boost::algorithm::ends_with(pluginNames[j], pluginOrder[i])){
-                    found = true;
-                }
+        bool found = false;
+        for (int i = 0; i < pluginOrder.size(); i++){
+            if (boost::algorithm::ends_with(pluginNames[j], pluginOrder[i])){
+                found = true;
             }
-            if (!found)
-                result |= functionPointers[j](query, output);
         }
-        else
-        {
+        if (!found)
             result |= functionPointers[j](query, output);
-        }
     }
     return result;
 }
@@ -93,7 +87,8 @@ void PluginManager::loadPlugin(std::string fileName){
         }
     }
     else{
-        wsgate::logger::err << "Error loading plugin " << fileName << std::endl;
+        DWORD lastError = GetLastError();
+        wsgate::logger::err << "Error loading plugin " << fileName << " ; error code:" << lastError << std::endl;
     }
 }
 
