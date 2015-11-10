@@ -8,7 +8,13 @@ void split(std::string input, std::vector<std::string>& tokens, char delim){
     }
 }
 
-bool EXPORT_FUNC queryPlugin(std::string queryInput, std::map<std::string, std::string> & result){
+#ifdef _WIN32
+bool EXPORT_FUNC
+#elif
+bool
+#endif
+queryPlugin(std::string queryInput, std::map<std::string, std::string> & result)
+{
     std::map<std::string, std::string> params;
     //split the link in link body and parameter body
     std::vector<std::string> trims;
