@@ -7,13 +7,13 @@ void split(std::string input, std::vector<std::string>& tokens, char delim){
         tokens.push_back(token);
     }
 }
-
+extern "C" {
 #ifdef _WIN32
-bool EXPORT_FUNC
-#elif
-bool
+bool EXPORT_FUNC queryPlugin(std::string queryInput, std::map<std::string, std::string> & result)
 #endif
-queryPlugin(std::string queryInput, std::map<std::string, std::string> & result)
+#ifndef _WIN32
+bool queryPlugin(std::string queryInput, std::map<std::string, std::string> & result)
+#endif
 {
     std::map<std::string, std::string> params;
     //split the link in link body and parameter body
@@ -36,4 +36,5 @@ queryPlugin(std::string queryInput, std::map<std::string, std::string> & result)
         splits.resize(0);
     }
     return entryPoint(params, result);
+}
 }
