@@ -16,11 +16,10 @@ bool entryPoint(std::map<std::string, std::string> formValues, std::map<std::str
 extern "C"
 {
 #ifdef _WIN32
-    bool EXPORT_FUNC
-#elif
-    bool
+    bool EXPORT_FUNC queryPlugin(std::string queryInput, std::map<std::string, std::string> & result);
+#elif _UNIX
+    bool queryPlugin(std::string queryInput, std::map<std::string, std::string> & result);
 #endif
-    queryPlugin(std::string queryInput, std::map<std::string, std::string> & result);
 }
 
 #endif //_PLUGIN_COMMON_
