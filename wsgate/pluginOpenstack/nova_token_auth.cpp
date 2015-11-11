@@ -15,7 +15,7 @@
  * limitations under the License.
  */
 #ifdef HAVE_CONFIG_H
-#include "../config.h"
+#include "../build/config.h"
 #endif
 
 #include <sstream>
