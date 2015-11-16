@@ -300,6 +300,11 @@ set(CMAKE_EXTRA_INCLUDE_FILES)
 # linked libraries list
 SET(LIBS)
 
+#if UNIX add DL library for dynamic linking
+if(UNIX)
+	set(LIBS ${LIBS} dl)
+endif()
+
 
 # if win32 use PTHREADS_WIN32
 if(WIN32)
