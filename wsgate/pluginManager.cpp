@@ -62,8 +62,9 @@ bool PluginManager::queryPlugins(std::string query, std::map<std::string, std::s
     }
     return result;
 }
-
+#ifdef _WIN32
 #define string2LPCSTR(str) (LPCSTR)str.c_str()
+#endif
 std::string getexepath()
 {
     char result[MAX_PATH];
@@ -75,9 +76,17 @@ std::string getexepath()
 }
 
 void PluginManager::loadPlugin(std::string fileName){
+#ifdef _WIN32
     LIBHANDLER handle = LoadLibrary(string2LPCSTR(fileName));
+#else
+    LIBHANDLER handle = dlopen(fileName.c_str(), RTLD_NOW);
+#endif
     if (handle != NULL){
+#ifdef _WIN32
         queryPluginFUNC function = (queryPluginFUNC)GetProcAddress(handle, "queryPlugin");
+#else
+        queryPluginFUNC function = (queryPluginFUNC)dlsym(handle, "queryPlugin");
+#endif
         if (function != NULL){
             wsgate::logger::debug << "Found plugin " << fileName << std::endl;
             pluginHandles.push_back(handle);
@@ -85,18 +94,26 @@ void PluginManager::loadPlugin(std::string fileName){
             pluginNames.push_back(fileName);
         }
         else{
-            FreeLibrary(handle);
+            unloadPlugin(handle);
             wsgate::logger::err << "Error getting function pointer to \"queryPlugin\" in " << fileName << std::endl;
         }
     }
     else{
+#ifdef _WIN32
         DWORD lastError = GetLastError();
         wsgate::logger::err << "Error loading plugin " << fileName << " ; error code:" << lastError << std::endl;
+#else
+        wsgate::logger::err << "Error loading plugin " << fileName << " ; error message:\"" << dlerror() << "\"" << std::endl;
+#endif
     }
 }
 
 void PluginManager::unloadPlugin(LIBHANDLER handle){
-    FreeLibrary(handle);
+#ifdef _WIN32
+        FreeLibrary(handle);
+#else
+        dlclose(handle);
+#endif
 }
 
 void PluginManager::listPlugins(std::string findPath, std::vector<std::string>& pluginFileNames){
