@@ -67,7 +67,11 @@ bool PluginManager::queryPlugins(std::string query, std::map<std::string, std::s
 std::string getexepath()
 {
     char result[MAX_PATH];
-    return std::string(result, GetModuleFileName(NULL, result, MAX_PATH));
+#ifdef _WIN32
+    return std::string(result, GetCurrentDirectory(MAX_PATH, result));
+#else
+    return std::string(result, getcwd(result, MAX_PATH));
+#endif
 }
 
 void PluginManager::loadPlugin(std::string fileName){
@@ -97,11 +101,6 @@ void PluginManager::unloadPlugin(LIBHANDLER handle){
 
 void PluginManager::listPlugins(std::string findPath, std::vector<std::string>& pluginFileNames){
     std::string path(getexepath());
-    //find path delimiter
-    int n = path.length();
-    int i = n - 1;
-    while (path[i] != '\\') i--;
-    path.erase(i + 1, n);
     path += findPath;
     findPath = path;
 
