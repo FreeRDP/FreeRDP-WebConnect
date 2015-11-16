@@ -1,8 +1,7 @@
 #include "pluginManager.hpp"
-#include <windows.h>
 #include <algorithm>
-#include <boost\algorithm\string\predicate.hpp>
-#include <boost\filesystem.hpp>
+#include <boost/algorithm/string/predicate.hpp>
+#include <boost/filesystem.hpp>
 
 PluginManager* PluginManager::instance = NULL;
 
@@ -21,7 +20,7 @@ void PluginManager::shutDown(){
 void PluginManager::loadPlugins(bool orUnload){
     if (!orUnload){
         std::vector<std::string> files;
-        listPlugins("plugins\\", files);
+        listPlugins("plugins/", files);
         for (int i = 0; i < files.size(); i++){
             loadPlugin(files[i]);
         }

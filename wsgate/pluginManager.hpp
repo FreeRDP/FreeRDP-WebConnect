@@ -3,8 +3,13 @@
 
 #include "logging.hpp"
 
+#ifdef _WIN32
 #include<Windows.h>
 #define LIBHANDLER HMODULE
+#elif _UNIX
+#include<dlfcn.h>
+#define LIBHANDLER void*
+#endif
 
 #include<string>
 #include<map>
