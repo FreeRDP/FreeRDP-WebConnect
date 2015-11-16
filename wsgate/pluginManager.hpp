@@ -6,9 +6,11 @@
 #ifdef _WIN32
 #include<Windows.h>
 #define LIBHANDLER HMODULE
-#elif _UNIX
+#else
 #include<dlfcn.h>
+#include<limits.h>
 #define LIBHANDLER void*
+#define MAX_PATH PATH_MAX
 #endif
 
 #include<string>
