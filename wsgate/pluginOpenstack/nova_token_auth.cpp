@@ -15,7 +15,11 @@
  * limitations under the License.
  */
 #ifdef HAVE_CONFIG_H
+#ifdef _WIN32
+#include "../config.h"
+#else
 #include "../build/config.h"
+#endif
 #endif
 
 #include <sstream>
