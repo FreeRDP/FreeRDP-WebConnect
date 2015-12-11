@@ -1120,7 +1120,7 @@ namespace wsgate {
                 case STATE_CLOSED:
                     break;
             }
-            usleep(100);
+            usleep(1000);
         }
         log::debug << "RDP client thread terminated" << endl;
         if (STATE_CONNECTED == m_State) {
