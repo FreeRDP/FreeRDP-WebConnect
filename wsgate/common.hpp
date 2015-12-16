@@ -35,10 +35,6 @@
 #endif
 #include <string>
 
-#ifdef _WIN32
-inline void sleep(int seconds) { Sleep(seconds * 1000); }
-#endif
-
 /**
  * The namespace of the main proxy application.
  */

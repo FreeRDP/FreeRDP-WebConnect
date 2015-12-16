@@ -194,21 +194,18 @@ wsgate.RDP = new Class( {
         this._reset();
     },
     SendKey: function(comb) {
-        //Add here all the keys from the canvas
-        switch (comb) {
-            case 1:
-                code = 0x2a; //ctrl+alt+delete
-                break;
-        };
+        //code 0 : ctrl+alt+delete
+        //code 1 : alt+tab
+        //code 2 : alt+tab release
+
         if (this.sock.readyState == this.sock.OPEN) {
-            this.log.debug('send  special combination', code);
+            this.log.debug('send  special combination', comb);
             buf = new ArrayBuffer(12);
             a = new Uint32Array(buf);
             a[0] = 3; // WSOP_CS_SPECIALCOMB
-	    a[1] = code;
+            a[1] = comb;
             this.sock.send(buf);
-
-	};
+        };
     },
     SendCredentials: function() {
         var infoJSONstring = JSON.stringify(settingsGetJSON());
@@ -226,11 +223,12 @@ wsgate.RDP = new Class( {
      */
     useIME: false,
     ToggleLanguageButton: function(){
-        this.useIME = $('keyboardlanguage').get('text') == "Multilanguage keyboard";
         if(this.useIME){
-            $('keyboardlanguage').set('text','Normal keyboard');
+            this.useIME = false;
+            $('keyboardlanguage').removeClass('extracommandshold');
         }else{
-            $('keyboardlanguage').set('text','Multilanguage keyboard');
+            this.useIME = true;
+            $('keyboardlanguage').addClass('extracommandshold');
         }
     },
     /**
@@ -274,14 +272,17 @@ wsgate.RDP = new Class( {
 
         document.body.appendChild(this.textAreaInput);
 
+        //start the IME helper refresh
+        refreshIMEhelper();
+
         //make sure the textarea is always on focus
         this.textAreaInput.focus();
         this.textAreaInput.addEvent('blur', function(){
-            try{
-                setTimeout(function(){$('textareainput').focus();},20);
-            }
-            catch(err){
-            }
+            setTimeout(function(){
+                if($('textareainput')){
+                    $('textareainput').focus();
+                }
+            },20);
         });
     },
     /**
@@ -885,14 +886,22 @@ wsgate.RDP = new Class( {
     onMouseLeave: function(evt){
        for(var button in this.mouseDownStatus){
            if(this.mouseDownStatus[button]){
+               var x = (this.msie > 0 || this.trident > 0) ? evt.event.layerX - evt.event.currentTarget.offsetLeft : evt.event.layerX;
+               var y = (this.msie > 0 || this.trident > 0) ? evt.event.layerY - evt.event.currentTarget.offsetTop : evt.event.layerY;
+               var maxX = $('textareainput').getStyle('width').toInt();
+               var maxY = $('textareainput').getStyle('height').toInt();
+               if (x < 0) x = 0;
+               if (y < 0) y = 0;
+               if (x > maxX) x = maxX;
+               if (y > maxY) y = maxY;
                var which = button;
                if (this.sock.readyState == this.sock.OPEN) {
                    buf = new ArrayBuffer(16);
                    a = new Uint32Array(buf);
                    a[0] = 0; // WSOP_CS_MOUSE
                    a[1] = which;
-                   a[2] = 0;
-                   a[3] = 0;
+                   a[2] = x;
+                   a[3] = y;
                    this.sock.send(buf);
                    this.mouseDownStatus[which] = false;
                }
@@ -950,7 +959,6 @@ wsgate.RDP = new Class( {
                 if(this.FunctionalKey(evt.code)){
                     if(evt.preventDefault) evt.preventDefault();
                     if(evt.stopPropagation) evt.stopPropagation();
-
                     this.SendKeyUpDown(evt.code, 1);
                 }
             }
@@ -965,17 +973,9 @@ wsgate.RDP = new Class( {
             if(this.FunctionalKey(evt.code)){
                 if(evt.preventDefault) evt.preventDefault();
                 if(evt.stopPropagation) evt.stopPropagation();
-
                 this.SendKeyUpDown(evt.code, 0);
             }
             this.DumpTextArea(evt.code);
-            //IME helper div
-            if(this.IMEon){
-                $('IMEhelper').setStyle('visibility','visible');
-                $('IMEhelper').set('html',$('textareainput').get('value'));
-            }else{
-                $('IMEhelper').setStyle('visibility','hidden');
-            }
         }
     },
     /**
@@ -1101,8 +1101,8 @@ wsgate.RDP = new Class( {
                             $('screen').height=resolution[1];
                             this.bstore.width=resolution[0];
                             this.bstore.height=resolution[1];
-                            $('textareainput').setStyle('width', resolution[0]);
-                            $('textareainput').setStyle('height', resolution[1]);
+                            $('textareainput').setStyle('width', resolution[0]+'px');
+                            $('textareainput').setStyle('height', resolution[1]+'px');
                             break;
                     case 'C:':
                             var msg = evt.data.substr(2);
@@ -1628,4 +1628,16 @@ wsgate.dRLE16_RGBA = function(inA, inLength, width, outA) {
         }
     }
 }
-
+/**
+ * Continuos refresh for the IMEhelper
+ */
+function refreshIMEhelper(){
+    setTimeout(this.refreshIMEhelper,20);
+    //IME helper div
+    if(rdp.IMEon){
+        $('IMEhelper').setStyle('visibility','visible');
+        $('IMEhelper').set('html',$('textareainput').get('value'));
+    }else{
+        $('IMEhelper').setStyle('visibility','hidden');
+   }
+}

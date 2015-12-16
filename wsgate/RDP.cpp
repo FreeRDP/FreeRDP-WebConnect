@@ -478,32 +478,31 @@ namespace wsgate {
                             uint32_t op;
                             uint32_t code;
                         } wsmsg;
-                        
+
                         const wsmsg *m = reinterpret_cast<const wsmsg *>(data.data());
                         log::debug << "Special combination sent: " << m->code << endl;
-                        uint32_t tcode1, tcode2, tcode3  = 0;
-                        //keeping the switch logic for  further key combos
+                        std::vector< std::pair< UINT16, UINT16 > > actionList;
                         switch (m->code){
-                            case 42:    //ctrl+alt+delete
-                                tcode1 = RDP_SCANCODE_LCONTROL;
-                                tcode2 = RDP_SCANCODE_LMENU;
-                                tcode3 = RDP_SCANCODE_DELETE;
+                            case 0:    //ctrl+alt+delete
+                                actionList.push_back(std::pair< UINT16, UINT16 >(KBD_FLAGS_DOWN, RDP_SCANCODE_LCONTROL));
+                                actionList.push_back(std::pair< UINT16, UINT16 >(KBD_FLAGS_DOWN, RDP_SCANCODE_LMENU));
+                                actionList.push_back(std::pair< UINT16, UINT16 >(KBD_FLAGS_DOWN, RDP_SCANCODE_DELETE));
+                                actionList.push_back(std::pair< UINT16, UINT16 >(KBD_FLAGS_RELEASE, RDP_SCANCODE_DELETE));
+                                actionList.push_back(std::pair< UINT16, UINT16 >(KBD_FLAGS_RELEASE, RDP_SCANCODE_LMENU));
+                                actionList.push_back(std::pair< UINT16, UINT16 >(KBD_FLAGS_RELEASE, RDP_SCANCODE_LCONTROL));
                                 break;
+                            case 1:    //alt+tab
+                                actionList.push_back(std::pair< UINT16, UINT16 >(KBD_FLAGS_DOWN, RDP_SCANCODE_LMENU));
+                                actionList.push_back(std::pair< UINT16, UINT16 >(KBD_FLAGS_DOWN, RDP_SCANCODE_TAB));
+                                actionList.push_back(std::pair< UINT16, UINT16 >(KBD_FLAGS_RELEASE, RDP_SCANCODE_TAB));
+                                break;
+                            case 2:    //alt+tab release
+                                actionList.push_back(std::pair< UINT16, UINT16 >(KBD_FLAGS_RELEASE, RDP_SCANCODE_LMENU));
                         }
-                        //send down signal for the keys
-                        freerdp_input_send_keyboard_event(m_rdpInput, KBD_FLAGS_DOWN, tcode1);
-                        freerdp_input_send_keyboard_event(m_rdpInput, KBD_FLAGS_DOWN, tcode2);
 
-                        //aditional signal send/release for the delete key
-                        if (m->code == 42){
-                            freerdp_input_send_keyboard_event(m_rdpInput, KBD_FLAGS_DOWN, tcode3);
-                            freerdp_input_send_keyboard_event(m_rdpInput, KBD_FLAGS_RELEASE, tcode3);
-                        } 
-		    
-                        //send release signal for the keys
-                        freerdp_input_send_keyboard_event(m_rdpInput, KBD_FLAGS_RELEASE, tcode1);
-                        freerdp_input_send_keyboard_event(m_rdpInput, KBD_FLAGS_RELEASE, tcode2);
-
+                        for(unsigned int i=0;i<actionList.size();i++){
+                            freerdp_input_send_keyboard_event(m_rdpInput, actionList[i].first, actionList[i].second);
+                        }
                     }
                     break;
                 case WSOP_CS_MOUSE:
@@ -624,30 +623,30 @@ namespace wsgate {
             const uint32_t *op = reinterpret_cast<const uint32_t *>(data.data());
             switch (*op) {
             case WSOP_CS_CREDENTIAL_JSON:
-                std::wstring infoJSON = L"";
+                utility::string_t infoJSON;
                 for (int i = 1; i < data.length() / 4; i++){
-                    infoJSON += (wchar_t)op[i];
+                    infoJSON += (char)op[i];
                 }
                 try{
                     web::json::value jsonValue = web::json::value::parse(infoJSON);
-                    std::wstring w_host = jsonValue[L"host"].as_string();
-                    std::wstring w_pcb  = jsonValue[L"pcb"].as_string();
-                    std::wstring w_user = jsonValue[L"user"].as_string();
-                    std::wstring w_pass = jsonValue[L"pass"].as_string();
-                    std::wstring w_dtsize = jsonValue[L"dtsize"].as_string();
+                    utility::string_t w_host = jsonValue[utility::conversions::to_string_t("host")].as_string();
+                    utility::string_t w_pcb  = jsonValue[utility::conversions::to_string_t("pcb")].as_string();
+                    utility::string_t w_user = jsonValue[utility::conversions::to_string_t("user")].as_string();
+                    utility::string_t w_pass = jsonValue[utility::conversions::to_string_t("pass")].as_string();
+                    utility::string_t w_dtsize = jsonValue[utility::conversions::to_string_t("dtsize")].as_string();
 
-                    std::string size(w_dtsize.begin(), w_dtsize.end());
+                    utility::string_t size(w_dtsize.begin(), w_dtsize.end());
 
                     WsRdpParams params;
-                    params.fntlm = jsonValue[L"fntlm"].as_integer();
-                    params.nomani = jsonValue[L"nomani"].as_integer();
-                    params.nonla = jsonValue[L"nonla"].as_integer();
-                    params.notheme = jsonValue[L"notheme"].as_integer();
-                    params.notls = jsonValue[L"notls"].as_integer();
-                    params.nowallp = jsonValue[L"nowallp"].as_integer();
-                    params.nowdrag = jsonValue[L"nowdrag"].as_integer();
-                    params.perf = jsonValue[L"perf"].as_integer();
-                    params.port = jsonValue[L"port"].as_integer();
+                    params.fntlm = jsonValue[utility::conversions::to_string_t("fntlm")].as_integer();
+                    params.nomani = jsonValue[utility::conversions::to_string_t("nomani")].as_integer();
+                    params.nonla = jsonValue[utility::conversions::to_string_t("nonla")].as_integer();
+                    params.notheme = jsonValue[utility::conversions::to_string_t("notheme")].as_integer();
+                    params.notls = jsonValue[utility::conversions::to_string_t("notls")].as_integer();
+                    params.nowallp = jsonValue[utility::conversions::to_string_t("nowallp")].as_integer();
+                    params.nowdrag = jsonValue[utility::conversions::to_string_t("nowdrag")].as_integer();
+                    params.perf = jsonValue[utility::conversions::to_string_t("perf")].as_integer();
+                    params.port = jsonValue[utility::conversions::to_string_t("port")].as_integer();
 
                     if (!size.empty()) {
                         try {
@@ -899,6 +898,19 @@ namespace wsgate {
             freerdp_alpha_cursor_convert(pixels,
                     pointer->xorMaskData, pointer->andMaskData,
                     pointer->width, pointer->height, pointer->xorBpp, hclrconv);
+        }
+
+        //check if the cursor is fully transparent
+        bool transparent = true;
+        for (int y = 0; y < pointer->height; y++){
+            for (int x = 0; x < pointer->width; x++){
+                if (pixels[0 + x * 4 + y * 4 * pointer->width] != 0){
+                    transparent = false;
+                }
+            }
+        }
+        if (transparent){
+            pixels[3] = 1;
         }
 
         Png png;
