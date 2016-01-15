@@ -1,10 +1,7 @@
-FreeRDP-WebConnect 
-======
 FreeRDP-WebConnect will be a gateway for seamless access to your RDP-Sessions
-in any HTML5-compliant browser. 
-In particular it relies on the features
-* Canvas (http://www.w3.org/TR/2dcontext/) 
-* WebSockets (http://www.w3.org/TR/websockets/) 
+in any HTML5-compliant browser. In particular it relies on the
+Canvas (http://www.w3.org/TR/2dcontext/) and
+WebSockets (http://www.w3.org/TR/websockets/) feature.
 
 The server side WebSockets implementation handles current RFC6455
 (http://tools.ietf.org/html/rfc6455) only, so browsers that implement
@@ -18,18 +15,8 @@ connect as a client to any RDP session.
 Although the project is still in a very early development phase (project was started
 on April 3, 2012), it already can display an RDP session right now. 
 
-### Installation ###
-**Automated build/install script**::
-```
-setup-all.sh
-```
-**Unattended install script**
-```
+Added automated build/install script setup-all.sh
+For unattended setup, installing all prereqs and deleting conflicting packages, run the script as root, specifying the following command:
 ./setup-all.sh -f -i -d
-```
-* Force to run as root user (-f)
-* Install all dependency packages (-i)
-* Remove conflicting packages (-d)
 
-### More Details ###
-For addition details on the setup script and webconnect prereqs consult [wsgate/README](wsgate/README).
+For addition details on the setup script and webconnect prereqs consult wsgate/README.
