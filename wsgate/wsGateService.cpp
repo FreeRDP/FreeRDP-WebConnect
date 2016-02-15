@@ -15,14 +15,13 @@
 using namespace std;
 using boost::filesystem::path;
 
-extern bool g_signaled = false;
 #ifdef _WIN32
 extern bool g_service_background = true;
 extern int _service_main (int argc, char **argv);
 #endif
 
 namespace wsgate{
-
+    bool WsGateService::g_signaled = false;
     WsGateService::WsGateService()
         :NTService("FreeRDP-WebConnect", "FreeRDP WebConnect")
         {
@@ -32,23 +31,22 @@ namespace wsgate{
         }
 
     bool WsGateService::OnServiceStop(){
-        g_signaled = true;
+        WsGateService::g_signaled = true;
         return true;
     }
 
     bool WsGateService::OnServiceShutdown(){
-        g_signaled = true;
+        WsGateService::g_signaled = true;
         return true;
     }
 
     void WsGateService::RunService(){
-        g_signaled = false;
+        WsGateService::g_signaled = false;
         // On Windows, always set out working dir to ../ relatively seen from
         // the binary's path.
         path p(m_sModulePath);
         string wdir(p.branch_path().branch_path().string());
         chdir(wdir.c_str());
-        g_signaled = false;
         char *argv[] = {
             strdup("wsgate"),
             strdup("-c"),
