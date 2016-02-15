@@ -64,14 +64,13 @@ namespace wsgate{
     }
 }
 
-static bool g_signaled = false;
 #ifdef _WIN32
 static bool g_service_background = true;
 #endif
 
 static void terminate(int)
 {
-    g_signaled = true;
+    wsgate::WsGateService::g_signaled = true;
     signal(SIGINT, terminate);
     signal(SIGTERM, terminate);
 }
@@ -305,7 +304,7 @@ int main (int argc, char **argv)
         }
 
         if (daemon) {
-            while (!(srv.ShouldTerminate() || (psrv && psrv->ShouldTerminate()) || g_signaled)) {
+            while (!(srv.ShouldTerminate() || (psrv && psrv->ShouldTerminate()) || wsgate::WsGateService::g_signaled)) {
                 if (sleepInLoop) {
                     usleep(50000);
                 } else {
@@ -318,7 +317,7 @@ int main (int argc, char **argv)
         } else {
             wsgate::kbdio kbd;
             cout << "Press q to terminate ..." << endl;
-            while (!(srv.ShouldTerminate()  || (psrv && psrv->ShouldTerminate()) || g_signaled || kbd.qpressed()))
+            while (!(srv.ShouldTerminate() || (psrv && psrv->ShouldTerminate()) || wsgate::WsGateService::g_signaled || kbd.qpressed()))
             	{
                 if (sleepInLoop)
 					{
@@ -355,6 +354,7 @@ int main (int argc, char **argv)
     wsgate::WsGateService s;
     if (!s.ParseSpecialArgs(argc, argv)) {
         try {
+
             if (!s.Execute()) {
                 return _service_main(argc, argv);
             }
