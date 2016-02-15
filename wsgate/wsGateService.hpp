@@ -8,11 +8,11 @@
 namespace wsgate{
 
     class WsGateService : public NTService {
-
         public:
             WsGateService();
             bool ParseSpecialArgs(int argc, char **argv);
 
+            static bool g_signaled;
         protected:
             bool OnServiceStop();
             bool OnServiceShutdown();
