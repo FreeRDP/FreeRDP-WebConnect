@@ -157,6 +157,10 @@ case $DISTRO in
 		echo 'git, svn-devel, autotools, gcc, g++, boost, openssl-devel and libpng-devel. For tracing to work, libdwarf is also required'
 		exit 1
 		;;
+        Debian*8*)
+		apt-get -y install git-core build-essential openssl libpng-dev libboost-all-dev libpng-dev libdwarf-dev subversion subversion-tools cmake
+		exit 1
+		;;
 	*)
 		echo 'Distro not found! You shall need git, svn-devel, autotools, gcc, g++, boost, openssl-devel and libpng-devel to successfully build this package.'
 		echo 'For tracing to work, libdwarf is also required.'
