@@ -70,7 +70,9 @@ static bool g_service_background = true;
 
 static void terminate(int)
 {
+#ifdef _WIN32
     wsgate::WsGateService::g_signaled = true;
+#endif
     signal(SIGINT, terminate);
     signal(SIGTERM, terminate);
 }
@@ -304,7 +306,11 @@ int main (int argc, char **argv)
         }
 
         if (daemon) {
+#ifdef _WIN32
             while (!(srv.ShouldTerminate() || (psrv && psrv->ShouldTerminate()) || wsgate::WsGateService::g_signaled)) {
+#else
+            while (!(srv.ShouldTerminate() || (psrv && psrv->ShouldTerminate()))) {
+#endif
                 if (sleepInLoop) {
                     usleep(50000);
                 } else {
@@ -317,7 +323,11 @@ int main (int argc, char **argv)
         } else {
             wsgate::kbdio kbd;
             cout << "Press q to terminate ..." << endl;
+#ifdef _WIN32
             while (!(srv.ShouldTerminate() || (psrv && psrv->ShouldTerminate()) || wsgate::WsGateService::g_signaled || kbd.qpressed()))
+#else
+            while (!(srv.ShouldTerminate() || (psrv && psrv->ShouldTerminate()) || kbd.qpressed()))
+#endif
             	{
                 if (sleepInLoop)
 					{
