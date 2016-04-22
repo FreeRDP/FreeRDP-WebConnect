@@ -824,7 +824,7 @@ namespace wsgate{
 
                 if (pt.get_optional<int>("rdpoverride.port")) {
                     int n = pt.get<int>("rdpoverride.port");
-                    if ((0 > n) || (2 < n)) {
+                    if ((0 > n) || (65536 < n)) {
                         throw tracing::invalid_argument("Invalid port value.");
                     }
                     m_RdpOverrideParams.port = n;
