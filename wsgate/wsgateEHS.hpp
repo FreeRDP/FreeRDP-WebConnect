@@ -111,6 +111,7 @@ namespace wsgate{
             bool m_bOverrideRdpPort;
             bool m_bOverrideRdpUser;
             bool m_bOverrideRdpPass;
+            bool m_bOverrideRdpPcb;
             bool m_bOverrideRdpPerf;
             bool m_bOverrideRdpNowallp;
             bool m_bOverrideRdpNowdrag;
@@ -122,6 +123,7 @@ namespace wsgate{
             string m_sRdpOverrideHost;
             string m_sRdpOverrideUser;
             string m_sRdpOverridePass;
+            string m_sRdpOverridePcb;
             WsRdpParams m_RdpOverrideParams;
             string m_sConfigFile;
             boost::property_tree::ptree m_ptIniConfig;

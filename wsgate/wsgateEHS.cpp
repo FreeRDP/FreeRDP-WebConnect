@@ -822,6 +822,14 @@ namespace wsgate{
                     m_bOverrideRdpPass = false;
                 }
 
+                if (pt.get_optional<std::string>("rdpoverride.pcb")) {
+                    m_sRdpOverridePcb.assign(pt.get<std::string>("rdpoverride.pcb"));
+                    m_bOverrideRdpPcb = true;
+                }
+                else {
+                    m_bOverrideRdpPcb = false;
+                }
+
                 if (pt.get_optional<int>("rdpoverride.port")) {
                     int n = pt.get<int>("rdpoverride.port");
                     if ((0 > n) || (65536 < n)) {
