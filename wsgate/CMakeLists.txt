@@ -621,6 +621,9 @@ endif()
 
 include_directories(${CMAKE_CURRENT_SOURCE_DIR})
 
+#plugin should go into ./plugins/ folder
+set(LIBRARY_OUTPUT_PATH ${PROJECT_BINARY_DIR}/plugins)
+#build library for openstack
 add_library(pluginOpenstack SHARED ${PLUGINOPENSTACK_SOURCE})
 target_link_libraries(pluginOpenstack ${LIBS})
 if(WIN32)
