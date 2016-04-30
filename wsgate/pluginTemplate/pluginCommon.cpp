@@ -10,8 +10,7 @@ void split(std::string input, std::vector<std::string>& tokens, char delim){
 extern "C" {
 #ifdef _WIN32
 bool EXPORT_FUNC queryPlugin(std::string queryInput, std::map<std::string, std::string> & result)
-#endif
-#ifndef _WIN32
+#else
 bool queryPlugin(std::string queryInput, std::map<std::string, std::string> & result)
 #endif
 {
