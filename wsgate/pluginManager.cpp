@@ -118,6 +118,15 @@ void PluginManager::unloadPlugin(LIBHANDLER handle){
 
 void PluginManager::listPlugins(std::string findPath, std::vector<std::string>& pluginFileNames){
     std::string path(getexepath());
+    //check if path ends with '/' or '\\'
+#ifdef _WIN32
+    if (!boost::algorithm::ends_with(path, "\\"))
+        path += "\\";
+#else
+    if (!boost::algorithm::ends_with(path, "/"))
+        path += "/";
+#endif
+
     path += findPath;
     findPath = path;
 
