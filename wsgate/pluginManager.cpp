@@ -1,6 +1,6 @@
 #include "pluginManager.hpp"
 #include <algorithm>
-#include <boost/algorithm/string/predicate.hpp>
+#include <boost/algorithm/string.hpp>
 #include <boost/filesystem.hpp>
 
 PluginManager* PluginManager::instance = NULL;
@@ -39,13 +39,16 @@ PluginManager* PluginManager::getInstance(){
     return PluginManager::instance;
 }
 
-bool PluginManager::queryPlugins(std::string query, std::map<std::string, std::string>& output){
+bool PluginManager::queryPlugins(std::string query, std::string configFile, std::map<std::string, std::string>& output){
     bool result = false;
     //execute queries with respect to the config file
     for (int i = 0; i < pluginOrder.size(); i++){
         for (int j = 0; j < pluginNames.size(); j++){
             if (boost::algorithm::ends_with(pluginNames[j], pluginOrder[i])){
-                result |= functionPointers[j](query, output);
+                char* buffer = new char[1024];
+                result |= functionPointers[j](query.c_str(), configFile.c_str(), buffer, 1024);
+                deserialize(buffer, output);
+                delete[] buffer;
             }
         }
     }
@@ -57,11 +60,26 @@ bool PluginManager::queryPlugins(std::string query, std::map<std::string, std::s
                 found = true;
             }
         }
-        if (!found)
-            result |= functionPointers[j](query, output);
+        if (!found){
+            char* buffer = new char[1024];
+            result |= functionPointers[j](query.c_str(), configFile.c_str(), buffer, 1024);
+            deserialize(buffer, output);
+            delete[] buffer;
+        }
     }
     return result;
 }
+
+void PluginManager::deserialize(char* serialized, std::map<std::string, std::string>& output){
+    std::vector<std::string> pairs;
+    std::string input(serialized);
+
+    boost::algorithm::split(pairs, input, boost::is_any_of("\2"));
+    for (int i = 0; i < pairs.size(); i++){
+        std::cout << "bleh:" << pairs[i] << std::endl;
+    }
+}
+
 #ifdef _WIN32
 #define string2LPCSTR(str) (LPCSTR)str.c_str()
 #endif

@@ -17,13 +17,13 @@
 #include<map>
 #include<vector>
 
-typedef bool(*queryPluginFUNC)(std::string, std::map<std::string, std::string>&);
+typedef bool(*queryPluginFUNC)(const char* queryInput, const char* configFile, char* resultBuffer, int max_resultBuffer);
 
 class PluginManager {
 public:
     static PluginManager* getInstance();
     static void shutDown();
-    bool queryPlugins(std::string query, std::map<std::string, std::string>& output);
+    bool queryPlugins(std::string query, std::string configFile, std::map<std::string, std::string>& output);
     inline void setOrder(std::vector<std::string> order){ pluginOrder = order; }
 private:
     static PluginManager* instance;
@@ -31,6 +31,7 @@ private:
     void loadPlugins(bool orUnload);
     void loadPlugin(std::string fileName);
     void unloadPlugin(LIBHANDLER handle);
+    void deserialize(char* serialized, std::map<std::string, std::string>& output);
     std::vector<queryPluginFUNC> functionPointers;
     PluginManager();
     ~PluginManager();
