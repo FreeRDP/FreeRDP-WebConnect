@@ -276,8 +276,7 @@ namespace wsgate{
 
         if (boost::contains(uri, "?")){
             std::map<std::string, std::string> pluginOutput;
-            pluginOutput["configfile"] = m_sConfigFile;
-            if (PluginManager::getInstance()->queryPlugins(uri, pluginOutput)){
+            if (PluginManager::getInstance()->queryPlugins(uri, m_sConfigFile, pluginOutput)){
                 //wsgate will get auth info from the plugin
                 setCookie = false;
                 embeddedContext = CONTEXT_EMBEDDED;

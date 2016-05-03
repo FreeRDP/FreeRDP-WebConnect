@@ -117,6 +117,9 @@ bool entryPoint(std::map<std::string, std::string> formValues, std::map<std::str
                 result["rdppass"] = m_sHyperVHostPassword;
 
                 returnValue = true;
+
+                std::cout << formValues["token"] << std::endl;
+                std::cout << formValues["title"] << std::endl;
             }
             catch (std::exception& ex)
             {

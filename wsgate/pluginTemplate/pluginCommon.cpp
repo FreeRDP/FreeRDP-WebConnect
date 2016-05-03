@@ -9,15 +9,15 @@ void split(std::string input, std::vector<std::string>& tokens, char delim){
 }
 extern "C" {
 #ifdef _WIN32
-bool EXPORT_FUNC queryPlugin(std::string queryInput, std::map<std::string, std::string> & result)
+bool EXPORT_FUNC queryPlugin(const char* queryInput, const char* configFile, char* resultBuffer, int max_resultBuffer)
 #else
-bool queryPlugin(std::string queryInput, std::map<std::string, std::string> & result)
+bool queryPlugin(char* queryInput, char* configFile, char* resultBuffer, int max_resultBuffer)
 #endif
 {
     std::map<std::string, std::string> params;
     //split the link in link body and parameter body
     std::vector<std::string> trims;
-    split(queryInput, trims, '?');
+    split(std::string(queryInput), trims, '?');
     //split parameters
     std::vector<std::string> tokens;
     split(trims[1], tokens, '&');
@@ -34,6 +34,25 @@ bool queryPlugin(std::string queryInput, std::map<std::string, std::string> & re
         }
         splits.resize(0);
     }
-    return entryPoint(params, result);
+
+    std::map<std::string, std::string> result;
+    result["configfile"] = std::string(configFile);
+
+    bool success = entryPoint(params, result);
+
+    //serialize the results
+    std::string serialized;
+    for (std::map<std::string, std::string>::iterator i = result.begin(); i != result.end(); i++){
+        //each key-value pair is stored as
+        //key\1value\2
+        serialized += i->first;
+        serialized += "\1";
+        serialized += i->second;
+        serialized += "\2";
+    }
+
+    memcpy_s(resultBuffer, max_resultBuffer, serialized.c_str(), serialized.size() + 1);
+
+    return success;
 }
 }
