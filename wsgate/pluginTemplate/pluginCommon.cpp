@@ -1,4 +1,5 @@
 #include "pluginCommon.hpp"
+#include <cstring>
 
 void split(std::string input, std::vector<std::string>& tokens, char delim){
     std::stringstream stream(input);
@@ -9,9 +10,9 @@ void split(std::string input, std::vector<std::string>& tokens, char delim){
 }
 extern "C" {
 #ifdef _WIN32
-bool EXPORT_FUNC queryPlugin(const char* queryInput, const char* configFile, char* resultBuffer, int max_resultBuffer)
+bool EXPORT_FUNC queryPlugin(const char* queryInput, const char* configFile, char* resultBuffer)
 #else
-bool queryPlugin(char* queryInput, char* configFile, char* resultBuffer, int max_resultBuffer)
+bool queryPlugin(const char* queryInput, const char* configFile, char* resultBuffer)
 #endif
 {
     std::map<std::string, std::string> params;
@@ -51,7 +52,7 @@ bool queryPlugin(char* queryInput, char* configFile, char* resultBuffer, int max
         serialized += "\2";
     }
 
-    memcpy_s(resultBuffer, max_resultBuffer, serialized.c_str(), serialized.size() + 1);
+    strcpy(resultBuffer, serialized.c_str());
 
     return success;
 }

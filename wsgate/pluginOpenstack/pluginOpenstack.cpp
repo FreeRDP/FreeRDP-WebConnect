@@ -17,8 +17,7 @@ std::string m_sHyperVHostUsername;
 std::string m_sHyperVHostPassword;
 
 bool readConfigFile(std::map<std::string, std::string> & result){
-    std::string errStr;
-    std::stringstream err(errStr);
+    std::stringstream err;
     bool returnValue = false;
 
     if (result.count("configfile")){
@@ -78,16 +77,14 @@ bool readConfigFile(std::map<std::string, std::string> & result){
     else{
         err << "Plugin got no config file path" << std::endl;
     }
-    result["err"] = result["err"] + errStr;
+    result["err"] = result["err"] + err.str();
     return returnValue;
 }
 
 bool entryPoint(std::map<std::string, std::string> formValues, std::map<std::string, std::string> & result){
     bool returnValue = false;
-    std::string debugStr;
-    std::string errStr;
-    std::stringstream debug(debugStr);
-    std::stringstream err(errStr);
+    std::stringstream debug;
+    std::stringstream err;
 
     if (readConfigFile(result)){
         if (formValues.count("token") && formValues.count("title"))
@@ -117,9 +114,6 @@ bool entryPoint(std::map<std::string, std::string> formValues, std::map<std::str
                 result["rdppass"] = m_sHyperVHostPassword;
 
                 returnValue = true;
-
-                std::cout << formValues["token"] << std::endl;
-                std::cout << formValues["title"] << std::endl;
             }
             catch (std::exception& ex)
             {
@@ -130,7 +124,11 @@ bool entryPoint(std::map<std::string, std::string> formValues, std::map<std::str
     else{
         err << "Error parsing config file." << std::endl;
     }
-    result["err"] = result["err"] + errStr;
-    result["debug"] = result["debug"] + debugStr;
+
+    if (!err.str().empty())
+        result["err"] = err.str();
+
+    if (!debug.str().empty())
+        result["debug"] = debug.str();
     return returnValue;
 }
