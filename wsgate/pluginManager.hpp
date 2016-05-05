@@ -17,7 +17,7 @@
 #include<map>
 #include<vector>
 
-typedef bool(*queryPluginFUNC)(const char* queryInput, const char* configFile, char* resultBuffer, int max_resultBuffer);
+typedef bool(*queryPluginFUNC)(const char* queryInput, const char* configFile, char* resultBuffer);
 
 class PluginManager {
 public:
@@ -32,6 +32,7 @@ private:
     void loadPlugin(std::string fileName);
     void unloadPlugin(LIBHANDLER handle);
     void deserialize(char* serialized, std::map<std::string, std::string>& output);
+    void doLogging(std::string pluginName, std::map<std::string, std::string> output);
     std::vector<queryPluginFUNC> functionPointers;
     PluginManager();
     ~PluginManager();

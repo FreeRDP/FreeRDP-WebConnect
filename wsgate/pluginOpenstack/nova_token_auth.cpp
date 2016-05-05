@@ -89,6 +89,7 @@ json::value nova_console_token_auth_impl::get_auth_token_data(
     auto jsonRequestBody = json::value::object();
     auto auth = json::value::object();
     auto cred = json::value::object();
+
     cred[U("username")] = json::value::string(utility::conversions::to_string_t(osUserName));
     cred[U("password")] = json::value::string(utility::conversions::to_string_t(osPassword));
     auth[U("passwordCredentials")] = cred;
