@@ -39,16 +39,20 @@ PluginManager* PluginManager::getInstance(){
     return PluginManager::instance;
 }
 
+#define PLUGIN_BUFFER_SIZE 2048
+
 bool PluginManager::queryPlugins(std::string query, std::string configFile, std::map<std::string, std::string>& output){
     bool result = false;
     //execute queries with respect to the config file
     for (int i = 0; i < pluginOrder.size(); i++){
         for (int j = 0; j < pluginNames.size(); j++){
             if (boost::algorithm::ends_with(pluginNames[j], pluginOrder[i])){
-                char* buffer = new char[1024];
-                result |= functionPointers[j](query.c_str(), configFile.c_str(), buffer, 1024);
+                char* buffer = new char[PLUGIN_BUFFER_SIZE];
+                result |= functionPointers[j](query.c_str(), configFile.c_str(), buffer);
                 deserialize(buffer, output);
                 delete[] buffer;
+
+                doLogging(pluginNames[j], output);
             }
         }
     }
@@ -61,10 +65,12 @@ bool PluginManager::queryPlugins(std::string query, std::string configFile, std:
             }
         }
         if (!found){
-            char* buffer = new char[1024];
-            result |= functionPointers[j](query.c_str(), configFile.c_str(), buffer, 1024);
+            char* buffer = new char[PLUGIN_BUFFER_SIZE];
+            result |= functionPointers[j](query.c_str(), configFile.c_str(), buffer);
             deserialize(buffer, output);
             delete[] buffer;
+
+            doLogging(pluginNames[j], output);
         }
     }
     return result;
@@ -76,7 +82,22 @@ void PluginManager::deserialize(char* serialized, std::map<std::string, std::str
 
     boost::algorithm::split(pairs, input, boost::is_any_of("\2"));
     for (int i = 0; i < pairs.size(); i++){
-        std::cout << "bleh:" << pairs[i] << std::endl;
+        std::vector<std::string> pair;
+        boost::algorithm::split(pair, pairs[i], boost::is_any_of("\1"));
+        if (pair.size() == 2)
+        if (pair[1].length() > 0){
+            output[pair[0]] = pair[1];
+        }
+    }
+}
+
+void PluginManager::doLogging(std::string pluginName, std::map<std::string, std::string> output){
+    if (output.count("err")){
+        wsgate::logger::err << pluginName << ":" << output["err"] << std::endl;
+    }
+
+    if (output.count("debug")){
+        wsgate::logger::debug << pluginName << ":" << output["debug"] << std::endl;
     }
 }
 
