@@ -20,3 +20,16 @@ For unattended setup, installing all prereqs and deleting conflicting packages, 
 ./setup-all.sh -f -i -d
 
 For addition details on the setup script and webconnect prereqs consult wsgate/README.
+
+
+FreeRDP-WebConnect also uses a plugin system based on shared objects that will be placed in a "plugins" subdirectory
+In order to implement a new plugin, one must build a new shared library that will include the following files
+/wsgate/pluginTemplate/pluginCommon.cpp
+this facilitates the query parsing for easier use
+
+/wsgate/pluginTemplate/pluginCommon.hpp
+
+and also an implementation of entryPoint function as described in
+/wsgate/pluginTemplate/pluginExample.cpp
+
+One can also follow the pluginOpenstack for reference
