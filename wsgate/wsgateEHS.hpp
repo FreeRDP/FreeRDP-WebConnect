@@ -81,6 +81,7 @@ namespace wsgate{
             void SetPidFile(const string &name);
             void RegisterRdpSession(rdp_ptr rdp);
             void UnregisterRdpSession(rdp_ptr rdp);
+            WsRdpOverrideParams getOverrideParams();
         private:
             typedef enum {
                 TEXT,
@@ -106,23 +107,8 @@ namespace wsgate{
             SessionMap m_SessionMap;
             vector<boost::regex> m_allowedHosts;
             vector<boost::regex> m_deniedHosts;
+            WsRdpOverrideParams overrideParams;
             bool m_bOrderDenyAllow;
-            bool m_bOverrideRdpHost;
-            bool m_bOverrideRdpPort;
-            bool m_bOverrideRdpUser;
-            bool m_bOverrideRdpPass;
-            bool m_bOverrideRdpPerf;
-            bool m_bOverrideRdpNowallp;
-            bool m_bOverrideRdpNowdrag;
-            bool m_bOverrideRdpNomani;
-            bool m_bOverrideRdpNotheme;
-            bool m_bOverrideRdpNotls;
-            bool m_bOverrideRdpNonla;
-            bool m_bOverrideRdpFntlm;
-            string m_sRdpOverrideHost;
-            string m_sRdpOverrideUser;
-            string m_sRdpOverridePass;
-            WsRdpParams m_RdpOverrideParams;
             string m_sConfigFile;
             boost::property_tree::ptree m_ptIniConfig;
             bool m_bDaemon;

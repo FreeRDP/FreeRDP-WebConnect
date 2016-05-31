@@ -36,28 +36,25 @@ namespace wsgate{
         , m_allowedHosts()
         , m_deniedHosts()
         , m_bOrderDenyAllow(true)
-        , m_bOverrideRdpHost(false)
-        , m_bOverrideRdpPort(false)
-        , m_bOverrideRdpUser(false)
-        , m_bOverrideRdpPass(false)
-        , m_bOverrideRdpPerf(false)
-        , m_bOverrideRdpNowallp(false)
-        , m_bOverrideRdpNowdrag(false)
-        , m_bOverrideRdpNomani(false)
-        , m_bOverrideRdpNotheme(false)
-        , m_bOverrideRdpNotls(false)
-        , m_bOverrideRdpNonla(false)
-        , m_bOverrideRdpFntlm(false)
-        , m_sRdpOverrideHost()
-        , m_sRdpOverrideUser()
-        , m_sRdpOverridePass()
-        , m_RdpOverrideParams()
         , m_sConfigFile()
         , m_ptIniConfig()
         , m_bDaemon(false)
         , m_bRedirect(false)
         , m_StaticCache()
         {
+            overrideParams.m_bOverrideRdpHost = false;
+            overrideParams.m_bOverrideRdpPort = false;
+            overrideParams.m_bOverrideRdpUser = false;
+            overrideParams.m_bOverrideRdpPass = false;
+            overrideParams.m_bOverrideRdpPcb = false;
+            overrideParams.m_bOverrideRdpPerf = false;
+            overrideParams.m_bOverrideRdpNowallp = false;
+            overrideParams.m_bOverrideRdpNowdrag = false;
+            overrideParams.m_bOverrideRdpNomani = false;
+            overrideParams.m_bOverrideRdpNotheme = false;
+            overrideParams.m_bOverrideRdpNotls = false;
+            overrideParams.m_bOverrideRdpNonla = false;
+            overrideParams.m_bOverrideRdpFntlm = false;
         }
 
     WsGate::~WsGate()
@@ -93,14 +90,14 @@ namespace wsgate{
 
     void WsGate::CheckForPredefined(string& rdpHost, string& rdpUser, string& rdpPass)
     {
-        if (m_bOverrideRdpHost)
-            rdpHost.assign(m_sRdpOverrideHost);
+        if (this->overrideParams.m_bOverrideRdpHost)
+            rdpHost.assign(this->overrideParams.m_sRdpOverrideHost);
 
-        if (m_bOverrideRdpUser)
-            rdpUser.assign(m_sRdpOverrideUser);
+        if (this->overrideParams.m_bOverrideRdpUser)
+            rdpUser.assign(this->overrideParams.m_sRdpOverrideUser);
 
-        if (m_bOverrideRdpPass)
-            rdpPass.assign(m_sRdpOverridePass);
+        if (this->overrideParams.m_bOverrideRdpPass)
+            rdpPass.assign(this->overrideParams.m_sRdpOverridePass);
     }
 
     bool WsGate::ConnectionIsAllowed(string rdphost)
@@ -317,14 +314,14 @@ namespace wsgate{
             rdpport,
             1024,
             768,
-            m_bOverrideRdpPerf ? m_RdpOverrideParams.perf : nFormValue(request, "perf", 0),
-            m_bOverrideRdpFntlm ? m_RdpOverrideParams.fntlm : nFormValue(request, "fntlm", 0),
-            m_bOverrideRdpNotls ? m_RdpOverrideParams.notls : nFormValue(request, "notls", 0),
-            m_bOverrideRdpNonla ? m_RdpOverrideParams.nonla : nFormValue(request, "nonla", 0),
-            m_bOverrideRdpNowallp ? m_RdpOverrideParams.nowallp : nFormValue(request, "nowallp", 0),
-            m_bOverrideRdpNowdrag ? m_RdpOverrideParams.nowdrag : nFormValue(request, "nowdrag", 0),
-            m_bOverrideRdpNomani ? m_RdpOverrideParams.nomani : nFormValue(request, "nomani", 0),
-            m_bOverrideRdpNotheme ? m_RdpOverrideParams.notheme : nFormValue(request, "notheme", 0),
+            this->overrideParams.m_bOverrideRdpPerf ? this->overrideParams.m_RdpOverrideParams.perf : nFormValue(request, "perf", 0),
+            this->overrideParams.m_bOverrideRdpFntlm ? this->overrideParams.m_RdpOverrideParams.fntlm : nFormValue(request, "fntlm", 0),
+            this->overrideParams.m_bOverrideRdpNotls ? this->overrideParams.m_RdpOverrideParams.notls : nFormValue(request, "notls", 0),
+            this->overrideParams.m_bOverrideRdpNonla ? this->overrideParams.m_RdpOverrideParams.nonla : nFormValue(request, "nonla", 0),
+            this->overrideParams.m_bOverrideRdpNowallp ? this->overrideParams.m_RdpOverrideParams.nowallp : nFormValue(request, "nowallp", 0),
+            this->overrideParams.m_bOverrideRdpNowdrag ? this->overrideParams.m_RdpOverrideParams.nowdrag : nFormValue(request, "nowdrag", 0),
+            this->overrideParams.m_bOverrideRdpNomani ? this->overrideParams.m_RdpOverrideParams.nomani : nFormValue(request, "nomani", 0),
+            this->overrideParams.m_bOverrideRdpNotheme ? this->overrideParams.m_RdpOverrideParams.notheme : nFormValue(request, "notheme", 0),
         };
 
         CheckForPredefined(rdphost, rdpuser, rdppass);
@@ -555,23 +552,23 @@ namespace wsgate{
             }
             else
             {
-                tmp.assign(m_bOverrideRdpUser ? "<predefined>" : request->Cookies("lastuser"));
+                tmp.assign(this->overrideParams.m_bOverrideRdpUser ? "<predefined>" : request->Cookies("lastuser"));
                 replace_all(body, "%COOKIE_LASTUSER%", tmp);
-                tmp.assign(m_bOverrideRdpUser ? "disabled=\"disabled\"" : "");
+                tmp.assign(this->overrideParams.m_bOverrideRdpUser ? "disabled=\"disabled\"" : "");
                 replace_all(body, "%DISABLED_USER%", tmp);
-                tmp.assign(m_bOverrideRdpPass ? "SomthingUseless" : base64_decode(request->Cookies("lastpass")));
+                tmp.assign(this->overrideParams.m_bOverrideRdpPass ? "SomthingUseless" : base64_decode(request->Cookies("lastpass")));
                 replace_all(body, "%COOKIE_LASTPASS%", tmp);
-                tmp.assign(m_bOverrideRdpPass ? "disabled=\"disabled\"" : "");
+                tmp.assign(this->overrideParams.m_bOverrideRdpPass ? "disabled=\"disabled\"" : "");
                 replace_all(body, "%DISABLED_PASS%", tmp);
 
-                tmp.assign(m_bOverrideRdpHost ? "<predefined>" : request->Cookies("lasthost"));
+                tmp.assign(this->overrideParams.m_bOverrideRdpHost ? "<predefined>" : request->Cookies("lasthost"));
                 replace_all(body, "%COOKIE_LASTHOST%", tmp);
-                tmp.assign(m_bOverrideRdpHost ? "disabled=\"disabled\"" : "");
+                tmp.assign(this->overrideParams.m_bOverrideRdpHost ? "disabled=\"disabled\"" : "");
                 replace_all(body, "%DISABLED_HOST%", tmp);
 
-                tmp.assign(request->Cookies("lastpcb"));
+                tmp.assign(this->overrideParams.m_bOverrideRdpPcb ? "<predefined>" : request->Cookies("lastpcb"));
                 replace_all(body, "%COOKIE_LASTPCB%", tmp);
-                tmp.assign("");
+                tmp.assign(this->overrideParams.m_bOverrideRdpPcb ? "disabled=\"disabled\"" : "");
                 replace_all(body, "%DISABLED_PCB%", tmp);
             }
 
@@ -579,21 +576,21 @@ namespace wsgate{
             replace_all(body, "%VERSION%", tmp);
 
             //The new Port Selector
-            if(m_bOverrideRdpPort) {
+            if (this->overrideParams.m_bOverrideRdpPort) {
                 replace_all(body, "%DISABLED_PORT%", "disabled=\"disabled\"");
             } else {
                 replace_all(body, "%DISABLED_PORT%", "");
             }
 
-            tmp.assign(m_bOverrideRdpPort ? boost::lexical_cast<string>(m_RdpOverrideParams.port) : "3389");
+            tmp.assign(this->overrideParams.m_bOverrideRdpPort ? boost::lexical_cast<string>(this->overrideParams.m_RdpOverrideParams.port) : "3389");
             replace_all(body, "%DEFAULT_PORT%", tmp);
 
             //The Desktop Resolution
-            if (m_bOverrideRdpPerf) {
+            if (this->overrideParams.m_bOverrideRdpPerf) {
                 replace_all(body, "%DISABLED_PERF%", "disabled=\"disabled\"");
-                replace_all(body, "%SELECTED_PERF0%", (0 == m_RdpOverrideParams.perf) ? "selected" : "");
-                replace_all(body, "%SELECTED_PERF1%", (1 == m_RdpOverrideParams.perf) ? "selected" : "");
-                replace_all(body, "%SELECTED_PERF2%", (2 == m_RdpOverrideParams.perf) ? "selected" : "");
+                replace_all(body, "%SELECTED_PERF0%", (0 == this->overrideParams.m_RdpOverrideParams.perf) ? "selected" : "");
+                replace_all(body, "%SELECTED_PERF1%", (1 == this->overrideParams.m_RdpOverrideParams.perf) ? "selected" : "");
+                replace_all(body, "%SELECTED_PERF2%", (2 == this->overrideParams.m_RdpOverrideParams.perf) ? "selected" : "");
             } else {
                 replace_all(body, "%DISABLED_PERF%", "");
                 replace_all(body, "%SELECTED_PERF0%", "");
@@ -602,49 +599,49 @@ namespace wsgate{
             }
 
 
-            if (m_bOverrideRdpFntlm) {
+            if (this->overrideParams.m_bOverrideRdpFntlm) {
                 replace_all(body, "%DISABLED_FNTLM%", "disabled=\"disabled\"");
-                replace_all(body, "%SELECTED_FNTLM0%", (0 == m_RdpOverrideParams.fntlm) ? "selected" : "");
-                replace_all(body, "%SELECTED_FNTLM1%", (1 == m_RdpOverrideParams.fntlm) ? "selected" : "");
-                replace_all(body, "%SELECTED_FNTLM2%", (2 == m_RdpOverrideParams.fntlm) ? "selected" : "");
+                replace_all(body, "%SELECTED_FNTLM0%", (0 == this->overrideParams.m_RdpOverrideParams.fntlm) ? "selected" : "");
+                replace_all(body, "%SELECTED_FNTLM1%", (1 == this->overrideParams.m_RdpOverrideParams.fntlm) ? "selected" : "");
+                replace_all(body, "%SELECTED_FNTLM2%", (2 == this->overrideParams.m_RdpOverrideParams.fntlm) ? "selected" : "");
             } else {
                 replace_all(body, "%DISABLED_FNTLM%", "");
                 replace_all(body, "%SELECTED_FNTLM0%", "");
                 replace_all(body, "%SELECTED_FNTLM1%", "");
                 replace_all(body, "%SELECTED_FNTLM2%", "");
             }
-            if (m_bOverrideRdpNowallp) {
-                tmp.assign("disabled=\"disabled\"").append((m_RdpOverrideParams.nowallp) ? " checked=\"checked\"" : "");
+            if (this->overrideParams.m_bOverrideRdpNowallp) {
+                tmp.assign("disabled=\"disabled\"").append((this->overrideParams.m_RdpOverrideParams.nowallp) ? " checked=\"checked\"" : "");
             } else {
                 tmp.assign("");
             }
             replace_all(body, "%CHECKED_NOWALLP%", tmp);
-            if (m_bOverrideRdpNowdrag) {
-                tmp.assign("disabled=\"disabled\"").append((m_RdpOverrideParams.nowdrag) ? " checked=\"checked\"" : "");
+            if (this->overrideParams.m_bOverrideRdpNowdrag) {
+                tmp.assign("disabled=\"disabled\"").append((this->overrideParams.m_RdpOverrideParams.nowdrag) ? " checked=\"checked\"" : "");
             } else {
                 tmp.assign("");
             }
             replace_all(body, "%CHECKED_NOWDRAG%", tmp);
-            if (m_bOverrideRdpNomani) {
-                tmp.assign("disabled=\"disabled\"").append((m_RdpOverrideParams.nomani) ? " checked=\"checked\"" : "");
+            if (this->overrideParams.m_bOverrideRdpNomani) {
+                tmp.assign("disabled=\"disabled\"").append((this->overrideParams.m_RdpOverrideParams.nomani) ? " checked=\"checked\"" : "");
             } else {
                 tmp.assign("");
             }
             replace_all(body, "%CHECKED_NOMANI%", tmp);
-            if (m_bOverrideRdpNotheme) {
-                tmp.assign("disabled=\"disabled\"").append((m_RdpOverrideParams.notheme) ? " checked=\"checked\"" : "");
+            if (this->overrideParams.m_bOverrideRdpNotheme) {
+                tmp.assign("disabled=\"disabled\"").append((this->overrideParams.m_RdpOverrideParams.notheme) ? " checked=\"checked\"" : "");
             } else {
                 tmp.assign("");
             }
             replace_all(body, "%CHECKED_NOTHEME%", tmp);
-            if (m_bOverrideRdpNotls) {
-                tmp.assign("disabled=\"disabled\"").append((m_RdpOverrideParams.notls) ? " checked=\"checked\"" : "");
+            if (this->overrideParams.m_bOverrideRdpNotls) {
+                tmp.assign("disabled=\"disabled\"").append((this->overrideParams.m_RdpOverrideParams.notls) ? " checked=\"checked\"" : "");
             } else {
                 tmp.assign("");
             }
             replace_all(body, "%CHECKED_NOTLS%", tmp);
-            if (m_bOverrideRdpNonla) {
-                tmp.assign("disabled=\"disabled\"").append((m_RdpOverrideParams.nonla) ? " checked=\"checked\"" : "");
+            if (this->overrideParams.m_bOverrideRdpNonla) {
+                tmp.assign("disabled=\"disabled\"").append((this->overrideParams.m_RdpOverrideParams.nonla) ? " checked=\"checked\"" : "");
             } else {
                 tmp.assign("");
             }
@@ -804,33 +801,41 @@ namespace wsgate{
                 }
 
                 if (pt.get_optional<std::string>("rdpoverride.host")) {
-                    m_sRdpOverrideHost.assign(pt.get<std::string>("rdpoverride.host"));
-                    m_bOverrideRdpHost = true;
+                    this->overrideParams.m_sRdpOverrideHost.assign(pt.get<std::string>("rdpoverride.host"));
+                    this->overrideParams.m_bOverrideRdpHost = true;
                 } else {
-                    m_bOverrideRdpHost = false;
+                    this->overrideParams.m_bOverrideRdpHost = false;
                 }
                 if (pt.get_optional<std::string>("rdpoverride.user")) {
-                    m_sRdpOverrideUser.assign(pt.get<std::string>("rdpoverride.user"));
-                    m_bOverrideRdpUser = true;
+                    this->overrideParams.m_sRdpOverrideUser.assign(pt.get<std::string>("rdpoverride.user"));
+                    this->overrideParams.m_bOverrideRdpUser = true;
                 } else {
-                    m_bOverrideRdpUser = false;
+                    this->overrideParams.m_bOverrideRdpUser = false;
                 }
                 if (pt.get_optional<std::string>("rdpoverride.pass")) {
-                    m_sRdpOverridePass.assign(pt.get<std::string>("rdpoverride.pass"));
-                    m_bOverrideRdpPass = true;
+                    this->overrideParams.m_sRdpOverridePass.assign(pt.get<std::string>("rdpoverride.pass"));
+                    this->overrideParams.m_bOverrideRdpPass = true;
                 } else {
-                    m_bOverrideRdpPass = false;
+                    this->overrideParams.m_bOverrideRdpPass = false;
+                }
+
+                if (pt.get_optional<std::string>("rdpoverride.pcb")) {
+                    this->overrideParams.m_sRdpOverridePcb.assign(pt.get<std::string>("rdpoverride.pcb"));
+                    this->overrideParams.m_bOverrideRdpPcb = true;
+                }
+                else {
+                    this->overrideParams.m_bOverrideRdpPcb = false;
                 }
 
                 if (pt.get_optional<int>("rdpoverride.port")) {
                     int n = pt.get<int>("rdpoverride.port");
-                    if ((0 > n) || (2 < n)) {
+                    if ((0 > n) || (65536 < n)) {
                         throw tracing::invalid_argument("Invalid port value.");
                     }
-                    m_RdpOverrideParams.port = n;
-                    m_bOverrideRdpPort = true;
+                    this->overrideParams.m_RdpOverrideParams.port = n;
+                    this->overrideParams.m_bOverrideRdpPort = true;
                 } else {
-                    m_bOverrideRdpPort = false;
+                    this->overrideParams.m_bOverrideRdpPort = false;
                 }
 
                 if (pt.get_optional<int>("rdpoverride.performance")) {
@@ -838,56 +843,56 @@ namespace wsgate{
                     if ((0 > n) || (2 < n)) {
                         throw tracing::invalid_argument("Invalid performance value.");
                     }
-                    m_RdpOverrideParams.perf = n;
-                    m_bOverrideRdpPerf = true;
+                    this->overrideParams.m_RdpOverrideParams.perf = n;
+                    this->overrideParams.m_bOverrideRdpPerf = true;
                 } else {
-                    m_bOverrideRdpPerf = false;
+                    this->overrideParams.m_bOverrideRdpPerf = false;
                 }
                 if (pt.get_optional<int>("rdpoverride.forcentlm")) {
                     int n = pt.get<int>("rdpoverride.forcentlm");
                     if ((0 > n) || (2 < n)) {
                         throw tracing::invalid_argument("Invalid forcentlm value.");
                     }
-                    m_RdpOverrideParams.fntlm = n;
-                    m_bOverrideRdpFntlm = true;
+                    this->overrideParams.m_RdpOverrideParams.fntlm = n;
+                    this->overrideParams.m_bOverrideRdpFntlm = true;
                 } else {
-                    m_bOverrideRdpFntlm = false;
+                    this->overrideParams.m_bOverrideRdpFntlm = false;
                 }
                 if (pt.get_optional<std::string>("rdpoverride.nowallpaper")) {
-                    m_RdpOverrideParams.nowallp = str2bint(pt.get<std::string>("rdpoverride.nowallpaper"));
-                    m_bOverrideRdpNowallp = true;
+                    this->overrideParams.m_RdpOverrideParams.nowallp = str2bint(pt.get<std::string>("rdpoverride.nowallpaper"));
+                    this->overrideParams.m_bOverrideRdpNowallp = true;
                 } else {
-                    m_bOverrideRdpNowallp = false;
+                    this->overrideParams.m_bOverrideRdpNowallp = false;
                 }
                 if (pt.get_optional<std::string>("rdpoverride.nofullwindowdrag")) {
-                    m_RdpOverrideParams.nowdrag = str2bint(pt.get<std::string>("rdpoverride.nofullwindowdrag"));
-                    m_bOverrideRdpNowdrag = true;
+                    this->overrideParams.m_RdpOverrideParams.nowdrag = str2bint(pt.get<std::string>("rdpoverride.nofullwindowdrag"));
+                    this->overrideParams.m_bOverrideRdpNowdrag = true;
                 } else {
-                    m_bOverrideRdpNowdrag = false;
+                    this->overrideParams.m_bOverrideRdpNowdrag = false;
                 }
                 if (pt.get_optional<std::string>("rdpoverride.nomenuanimation")) {
-                    m_RdpOverrideParams.nomani = str2bint(pt.get<std::string>("rdpoverride.nomenuanimation"));
-                    m_bOverrideRdpNomani = true;
+                    this->overrideParams.m_RdpOverrideParams.nomani = str2bint(pt.get<std::string>("rdpoverride.nomenuanimation"));
+                    this->overrideParams.m_bOverrideRdpNomani = true;
                 } else {
-                    m_bOverrideRdpNomani = false;
+                    this->overrideParams.m_bOverrideRdpNomani = false;
                 }
                 if (pt.get_optional<std::string>("rdpoverride.notheming")) {
-                    m_RdpOverrideParams.notheme = str2bint(pt.get<std::string>("rdpoverride.notheming"));
-                    m_bOverrideRdpNotheme = true;
+                    this->overrideParams.m_RdpOverrideParams.notheme = str2bint(pt.get<std::string>("rdpoverride.notheming"));
+                    this->overrideParams.m_bOverrideRdpNotheme = true;
                 } else {
-                    m_bOverrideRdpNotheme = false;
+                    this->overrideParams.m_bOverrideRdpNotheme = false;
                 }
                 if (pt.get_optional<std::string>("rdpoverride.notls")) {
-                    m_RdpOverrideParams.notls = str2bint(pt.get<std::string>("rdpoverride.notls"));
-                    m_bOverrideRdpNotls = true;
+                    this->overrideParams.m_RdpOverrideParams.notls = str2bint(pt.get<std::string>("rdpoverride.notls"));
+                    this->overrideParams.m_bOverrideRdpNotls = true;
                 } else {
-                    m_bOverrideRdpNotls = false;
+                    this->overrideParams.m_bOverrideRdpNotls = false;
                 }
                 if (pt.get_optional<std::string>("rdpoverride.nonla")) {
-                    m_RdpOverrideParams.nonla = str2bint(pt.get<std::string>("rdpoverride.nonla"));
-                    m_bOverrideRdpNonla = true;
+                    this->overrideParams.m_RdpOverrideParams.nonla = str2bint(pt.get<std::string>("rdpoverride.nonla"));
+                    this->overrideParams.m_bOverrideRdpNonla = true;
                 } else {
-                    m_bOverrideRdpNonla = false;
+                    this->overrideParams.m_bOverrideRdpNonla = false;
                 }
                 if (pt.get_optional<std::string>("global.hostname")) {
                     m_sHostname.assign(pt.get<std::string>("global.hostname"));
@@ -1070,5 +1075,9 @@ namespace wsgate{
         ostringstream oss;
         oss << hex << rdp.get();
         m_SessionMap.erase(oss.str());
+    }
+
+    WsRdpOverrideParams WsGate::getOverrideParams(){
+        return this->overrideParams;
     }
 }
