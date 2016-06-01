@@ -61,6 +61,7 @@ find_path(CASABLANCA_INCLUDE_DIR
 	  include/casablanca/cpprest
 	  include/casablanca/pplx
 	  include/casablanca/compat
+	  build/native/include
 )
 
 if(WIN32 AND NOT CYGWIN)
@@ -69,7 +70,7 @@ if(WIN32 AND NOT CYGWIN)
 		# check msvc version and add to suffix list
 		set(MSVC_SUFFIX)
 		if(MSVC12)
-			set(MSVC_SUFFIX "120_2_0.lib")
+			set(MSVC_SUFFIX "120_2_8.lib")
 		elseif(MSVC11)
 			set(MSVC_SUFFIX "110.lib")
 		elseif(MSVC10)
@@ -102,6 +103,7 @@ if(WIN32 AND NOT CYGWIN)
 			"lib/casablanca"
 			"lib/Release"
 			"lib/${BITNESS}/Release"
+			"lib/native/v120/windesktop/msvcstl/dyn/rt-dyn/${BITNESS}/Release"
 		)
 
 	endif(MSVC)
