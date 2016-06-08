@@ -65,10 +65,9 @@ bool PluginManager::queryPlugins(std::string query, std::string configFile, std:
             }
         }
         if (!found){
-            char* buffer = new char[PLUGIN_BUFFER_SIZE];
+            char buffer[PLUGIN_BUFFER_SIZE];
             result |= functionPointers[j](query.c_str(), configFile.c_str(), buffer);
             deserialize(buffer, output);
-            delete[] buffer;
 
             doLogging(pluginNames[j], output);
         }
