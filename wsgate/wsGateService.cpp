@@ -42,17 +42,16 @@ namespace wsgate{
     }
 
     void WsGateService::RunService(){
-        g_signaled = false;
-        // On Windows, always set out working dir to ../ relatively seen from
-        // the binary's path.
+        //change path to the running binary
         path p(m_sModulePath);
-        string wdir(p.branch_path().branch_path().string());
-        chdir(wdir.c_str());
+        chdir(p.branch_path().string().c_str());
+        
         g_signaled = false;
+        
         char *argv[] = {
             strdup("wsgate"),
             strdup("-c"),
-            strdup("etc/wsgate.ini"),
+            strdup("../etc/wsgate.ini"),
             NULL
         };
         int r = _service_main(3, argv);
