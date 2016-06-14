@@ -389,7 +389,7 @@ namespace wsgate {
             m_rdpSettings->PreconnectionBlob = strdup(pcb.c_str());
         }
 
-		m_rdpSettings->SoftwareGdi = true;
+        m_rdpSettings->SoftwareGdi = true;
         m_rdpSettings->DesktopWidth = params.width;
         m_rdpSettings->DesktopHeight = params.height;
 
@@ -847,8 +847,8 @@ namespace wsgate {
         p.size = sizeof(MyPointer);
         p.New = reinterpret_cast<pPointer_New>(cbPointer_New);
         p.Free = reinterpret_cast<pPointer_Free>(cbPointer_Free);
-        p.Set =reinterpret_cast<pPointer_Set>(cbPointer_Set);
-        p.SetNull =reinterpret_cast<pPointer_SetNull>(cbPointer_SetNull);
+        p.Set = reinterpret_cast<pPointer_Set>(cbPointer_Set);
+        p.SetNull = reinterpret_cast<pPointer_SetNull>(cbPointer_SetNull);
         p.SetDefault = reinterpret_cast<pPointer_SetDefault>(cbPointer_SetDefault);
         graphics_register_pointer(rdp->context->graphics, &p);
         pointer_cache_register_callbacks(rdp->update);

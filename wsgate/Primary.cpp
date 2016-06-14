@@ -40,7 +40,7 @@ namespace wsgate {
 
     void Primary::Register(freerdp *rdp) {
         log::debug << __PRETTY_FUNCTION__ << endl;
-        rdp->update->primary->DstBlt =reinterpret_cast<pDstBlt>(cbDstBlt);
+        rdp->update->primary->DstBlt = reinterpret_cast<pDstBlt>(cbDstBlt);
         rdp->update->primary->PatBlt = reinterpret_cast<pPatBlt>(cbPatBlt);
         rdp->update->primary->ScrBlt = reinterpret_cast<pScrBlt>(cbScrBlt);
         rdp->update->primary->OpaqueRect = reinterpret_cast<pOpaqueRect>(cbOpaqueRect);
