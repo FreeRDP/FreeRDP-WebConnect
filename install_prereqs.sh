@@ -52,10 +52,9 @@ case $DISTRO in
 		yum install -y gcc-c++ autoconf automake libtool cmake svn svn2cl \
 		openssl-devel boost-devel libpng-devel elfutils-devel
 		;;
-	SUSE*)
-		echo 'SUSE not yet supported! Please install prereqs by hand:'
-		echo 'git, svn-devel, autotools, gcc, g++, boost, openssl-devel and libpng-devel. For tracing to work, libdwarf is also required'
-		exit 1
+	*SUSE*)
+		echo 'SUSE detected.Installing required packages...'
+		zypper --non-interactive install gcc-c++ make cmake openssl-devel zlib-devel boost-devel libpng-devel
 		;;
 	Red\sHat\sEnterprise\sLinux\sServer*7*|CentOS*7*)
 		echo 'CentOS detected. Installing required packages...'

@@ -300,6 +300,11 @@ set(CMAKE_EXTRA_INCLUDE_FILES)
 # linked libraries list
 SET(LIBS)
 
+#if UNIX add DL library for dynamic linking
+if(UNIX)
+	set(LIBS ${LIBS} dl)
+endif()
+
 
 # if win32 use PTHREADS_WIN32
 if(WIN32)
@@ -345,6 +350,12 @@ include_directories(${PNG_INCLUDE_DIR})
 # add png to libs list
 set(LIBS ${LIBS} ${PNG_LIBRARIES})
 
+# find casablanca
+find_package(Casablanca REQUIRED)
+include_directories(${CASABLANCA_INCLUDE_DIR})
+# add casablanca to libs list
+set(LIBS ${LIBS} ${CASABLANCA_LIBRARIES})
+
 # find freerdp
 find_package(FreeRDP REQUIRED)
 include_directories(${FREERDP_INCLUDE_DIR})
@@ -364,13 +375,6 @@ include_directories(${EHS_INCLUDE_DIR})
 set(HAVE_EHS_H 1)
 # add ehs to libs list
 set(LIBS ${LIBS} ${EHS_LIBRARIES})
-
-# find casablanca
-find_package(Casablanca REQUIRED)
-include_directories(${CASABLANCA_INCLUDE_DIR})
-# add casablanca to libs list
-set(LIBS ${LIBS} ${CASABLANCA_LIBRARIES})
-
 
 CHECK_FUNCTION_EXISTS(memset HAVE_MEMSET)
 CHECK_FUNCTION_EXISTS(select HAVE_SELECT)
@@ -591,13 +595,13 @@ set(WSGATE_SOURCES base64.cpp btexception.cpp logging.cpp sha1.cpp
 			wsgate_main.cpp RDP.cpp Update.cpp Primary.cpp
 			myBindHelper.cpp myWsHandler.cpp myrawsocket.cpp
 			wsendpoint.cpp wsgateEHS.cpp wshandler.cpp
-			Png.cpp nova_token_auth.cpp)
+			Png.cpp pluginManager.cpp)
 
 if (WIN32)
 	set(WSGATE_SOURCES "${WSGATE_SOURCES}" NTService.cpp wsGateService.cpp)
 	# in order for header files to appear in VS solution, add them to the sources list
 	set(WSGATE_SOURCES "${WSGATE_SOURCES}" ${CMAKE_CURRENT_BINARY_DIR}/config.h base64.hpp btexception.hpp common.hpp
-	 				logging.hpp myrawsocket.hpp nova_token_auth.hpp NTService.hpp 
+	 				logging.hpp myrawsocket.hpp pluginManager.hpp NTService.hpp 
 	 				Png.hpp Primary.hpp rdpcommon.hpp RDP.hpp sha1.hpp Update.hpp
 	 				wscommon.hpp wsendpoint.hpp wsframe.hpp wsgate.hpp wshandler.hpp
 					myBindHelper.hpp myWsHandler.hpp wsGateService.hpp wsgateEHS.hpp
@@ -607,3 +611,21 @@ endif()
 add_executable(wsgate ${WSGATE_SOURCES})
 
 target_link_libraries(wsgate ${LIBS})
+
+#pluginOpenstack
+set(PLUGINOPENSTACK_SOURCE ${CMAKE_CURRENT_SOURCE_DIR}/pluginOpenstack/nova_token_auth.cpp ${CMAKE_CURRENT_SOURCE_DIR}/pluginOpenstack/pluginOpenstack.cpp ${CMAKE_CURRENT_SOURCE_DIR}/pluginTemplate/pluginCommon.cpp)
+
+if(WIN32)
+    set(PLUGINOPENSTACK_SOURCE ${PLUGINOPENSTACK_SOURCE} pluginOpenstack/nova_token_auth.hpp pluginTemplate/pluginCommon.hpp config.h)
+endif()
+
+include_directories(${CMAKE_CURRENT_SOURCE_DIR})
+
+#plugin should go into ./plugins/ folder
+set(LIBRARY_OUTPUT_PATH ${PROJECT_BINARY_DIR}/plugins)
+#build library for openstack
+add_library(pluginOpenstack SHARED ${PLUGINOPENSTACK_SOURCE})
+target_link_libraries(pluginOpenstack ${LIBS})
+if(WIN32)
+    set_target_properties(pluginOpenstack PROPERTIES LINKER_LANGUAGE C++ COMPILE_FLAGS "${CMAKE_CXX_FLAGS}")
+endif()

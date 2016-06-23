@@ -1,5 +1,6 @@
 #include "wsgateEHS.hpp"
 #include "wsgate.hpp"
+#include "pluginManager.hpp"
 
 namespace wsgate{
     WsGate::MimeType WsGate::simpleMime(const string & filename)
@@ -273,39 +274,18 @@ namespace wsgate{
         bool setCookie = true;
         EmbeddedContext embeddedContext = CONTEXT_PLAIN;
 
-        if(boost::starts_with(uri, "/wsgate?token="))
-        {
-            // OpenStack console authentication
-            setCookie = false;
-            try
-            {
-                log::info << "Starting OpenStack token authentication" << endl;
-
-                string tokenId = request->FormValues("token").m_sBody;
-
-                nova_console_token_auth* token_auth = nova_console_token_auth_factory::get_instance();
-
-                nova_console_info info = token_auth->get_console_info(m_sOpenStackAuthUrl, m_sOpenStackUsername,
-                                                                        m_sOpenStackPassword, m_sOpenStackTenantName,
-                                                                        tokenId);
-
-                log::info << "Host: " << info.host << " Port: " << info.port
-                            << " Internal access path: " << info.internal_access_path
-                            << endl;
-
-                rdphost = info.host;
-                rdpport = info.port;
-                rdppcb = info.internal_access_path;
-
-                rdpuser = m_sHyperVHostUsername;
-                rdppass = m_sHyperVHostPassword;
-
+        if (boost::contains(uri, "?")){
+            std::map<std::string, std::string> pluginOutput;
+            if (PluginManager::getInstance()->queryPlugins(uri, m_sConfigFile, pluginOutput)){
+                //wsgate will get auth info from the plugin
+                setCookie = false;
                 embeddedContext = CONTEXT_EMBEDDED;
-            }
-            catch(exception& ex)
-            {
-                log::err << "OpenStack token authentication failed: " << ex.what() << endl;
-                return HTTPRESPONSECODE_400_BADREQUEST;
+
+                rdphost = pluginOutput["rdphost"];
+                rdpport = std::stoi(pluginOutput["rdpport"]);
+                rdppcb = pluginOutput["rdppcb"];
+                rdpuser = pluginOutput["rdpuser"];
+                rdppass = pluginOutput["rdppass"];
             }
         }
 
@@ -928,6 +908,13 @@ namespace wsgate{
                     m_sHyperVHostPassword.assign(pt.get<std::string>("hyperv.hostpassword"));
                 } else {
                     m_sHyperVHostPassword.clear();
+                }
+
+                if (pt.get_optional<std::string>("plugins.order")){
+                    std::string str = pt.get<std::string>("plugins.order");
+                    std::vector<std::string> order;
+                    boost::split(order, str, boost::is_any_of(";"));
+                    PluginManager::getInstance()->setOrder(order);
                 }
             } catch (const tracing::invalid_argument & e) {
                 cerr << e.what() << endl;

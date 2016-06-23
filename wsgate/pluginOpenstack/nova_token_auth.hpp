@@ -14,7 +14,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 #ifndef _NOVA_TOKEN_AUTH_
 #define _NOVA_TOKEN_AUTH_
 
