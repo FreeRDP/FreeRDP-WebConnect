@@ -127,6 +127,8 @@ utility::string_t nova_console_token_auth_impl::get_nova_url(web::json::value to
     for (auto serviceCatalog : token_data[U("access")][U("serviceCatalog")].as_array())
         if (serviceCatalog[U("name")].as_string() == U("nova"))
             return serviceCatalog[U("endpoints")][0][U("adminURL")].as_string();
+
+    throw std::runtime_error("Nova endpoint not found");
 }
 
 nova_console_info nova_console_token_auth_impl::get_console_info(
