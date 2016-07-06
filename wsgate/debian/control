@@ -2,7 +2,7 @@ Source: wsgate
 Section: net
 Priority: extra
 Maintainer: Fritz Elfert <wsgate@fritz-elfert.de>
-Build-Depends: debhelper (>= 8.0.0), autotools-dev, g++, libehs-dev, libfreerdp-dev, libssl-dev, libdw-dev, libboost-dev, libboost-regex-dev, libboost-filesystem-dev, libboost-program-options-dev, libboost-system-dev, libpcre3-dev, libpng-dev, libtool, doxygen, graphviz, openjdk-6-jre-headless
+Build-Depends: debhelper (>= 8.0.0), autotools-dev, g++, libehs-dev, libfreerdp-dev, libssl-dev, libdw-dev, libboost-dev, libboost-regex-dev, libboost-filesystem-dev, libboost-program-options-dev, libboost-system-dev, libpcre3-dev, libpng-dev, libtool, doxygen, graphviz, openjdk-6-jre-headless, libcpprest-dev
 Standards-Version: 3.9.2
 Homepage: https://github.com/FreeRDP/FreeRDP-WebConnect
 #Vcs-Git: git://git.debian.org/collab-maint/wsgate.git
