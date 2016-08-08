@@ -115,6 +115,7 @@ namespace wsgate{
             string m_sOpenStackUsername;
             string m_sOpenStackPassword;
             string m_sOpenStackTenantName;
+            string m_sOpenStackKeystoneVersion;
             string m_sHyperVHostUsername;
             string m_sHyperVHostPassword;
 

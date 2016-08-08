@@ -287,7 +287,7 @@ namespace wsgate{
 
                 nova_console_info info = token_auth->get_console_info(m_sOpenStackAuthUrl, m_sOpenStackUsername,
                                                                         m_sOpenStackPassword, m_sOpenStackTenantName,
-                                                                        tokenId);
+                                                                        tokenId, m_sOpenStackKeystoneVersion);
 
                 log::info << "Host: " << info.host << " Port: " << info.port
                             << " Internal access path: " << info.internal_access_path
@@ -918,6 +918,12 @@ namespace wsgate{
                     m_sOpenStackTenantName.assign(pt.get<std::string>("openstack.tenantname"));
                 } else {
                     m_sOpenStackTenantName.clear();
+                }
+                if (pt.get_optional<std::string>("openstack.keystoneversion")) {
+                    m_sOpenStackKeystoneVersion.assign(pt.get<std::string>("openstack.keystoneversion"));
+                }
+                else {
+                    m_sOpenStackKeystoneVersion = KEYSTONE_V2;
                 }
                 if (pt.get_optional<std::string>("hyperv.hostusername")) {
                     m_sHyperVHostUsername.assign(pt.get<std::string>("hyperv.hostusername"));
