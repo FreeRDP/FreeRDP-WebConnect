@@ -279,6 +279,7 @@ namespace wsgate{
             if (PluginManager::getInstance()->queryPlugins(uri, m_sConfigFile, pluginOutput)){
                 //wsgate will get auth info from the plugin
                 setCookie = false;
+
                 embeddedContext = CONTEXT_EMBEDDED;
 
                 rdphost = pluginOutput["rdphost"];
@@ -878,26 +879,6 @@ namespace wsgate{
                     m_sHostname.assign(pt.get<std::string>("global.hostname"));
                 } else {
                     m_sHostname.clear();
-                }
-                if (pt.get_optional<std::string>("openstack.authurl")) {
-                    m_sOpenStackAuthUrl.assign(pt.get<std::string>("openstack.authurl"));
-                } else {
-                    m_sOpenStackAuthUrl.clear();
-                }
-                if (pt.get_optional<std::string>("openstack.username")) {
-                    m_sOpenStackUsername.assign(pt.get<std::string>("openstack.username"));
-                } else {
-                    m_sOpenStackUsername.clear();
-                }
-                if (pt.get_optional<std::string>("openstack.password")) {
-                    m_sOpenStackPassword.assign(pt.get<std::string>("openstack.password"));
-                } else {
-                    m_sOpenStackPassword.clear();
-                }
-                if (pt.get_optional<std::string>("openstack.tenantname")) {
-                    m_sOpenStackTenantName.assign(pt.get<std::string>("openstack.tenantname"));
-                } else {
-                    m_sOpenStackTenantName.clear();
                 }
                 if (pt.get_optional<std::string>("hyperv.hostusername")) {
                     m_sHyperVHostUsername.assign(pt.get<std::string>("hyperv.hostusername"));

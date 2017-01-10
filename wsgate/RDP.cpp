@@ -30,9 +30,10 @@
 #include "Update.hpp"
 #include "Primary.hpp"
 #include "Png.hpp"
-#include <cpprest/json.h>
 #include <boost/algorithm/string.hpp>
 #include <boost/lexical_cast.hpp>
+#include <boost/property_tree/json_parser.hpp>
+#include <boost/property_tree/ptree.hpp>
 #include "myrawsocket.hpp"
 #include "base64.hpp"
 
@@ -623,30 +624,29 @@ namespace wsgate {
             const uint32_t *op = reinterpret_cast<const uint32_t *>(data.data());
             switch (*op) {
             case WSOP_CS_CREDENTIAL_JSON:
-                utility::string_t infoJSON;
+                std::stringstream stream;
                 for (int i = 1; i < data.length() / 4; i++){
-                    infoJSON += (char)op[i];
+                    stream << (char)op[i];
                 }
                 try{
-                    web::json::value jsonValue = web::json::value::parse(infoJSON);
-                    utility::string_t w_host = jsonValue[utility::conversions::to_string_t("host")].as_string();
-                    utility::string_t w_pcb  = jsonValue[utility::conversions::to_string_t("pcb")].as_string();
-                    utility::string_t w_user = jsonValue[utility::conversions::to_string_t("user")].as_string();
-                    utility::string_t w_pass = jsonValue[utility::conversions::to_string_t("pass")].as_string();
-                    utility::string_t w_dtsize = jsonValue[utility::conversions::to_string_t("dtsize")].as_string();
-
-                    utility::string_t size(w_dtsize.begin(), w_dtsize.end());
+                    boost::property_tree::ptree pt;
+                    boost::property_tree::read_json(stream, pt);
+                    std::string host = pt.get<std::string>("host");
+                    std::string pcb = pt.get<std::string>("pcb");
+                    std::string user = pt.get<std::string>("user");
+                    std::string pass = pt.get<std::string>("pass");
+                    std::string size = pt.get<std::string>("dtsize");
 
                     WsRdpParams params;
-                    params.fntlm = jsonValue[utility::conversions::to_string_t("fntlm")].as_integer();
-                    params.nomani = jsonValue[utility::conversions::to_string_t("nomani")].as_integer();
-                    params.nonla = jsonValue[utility::conversions::to_string_t("nonla")].as_integer();
-                    params.notheme = jsonValue[utility::conversions::to_string_t("notheme")].as_integer();
-                    params.notls = jsonValue[utility::conversions::to_string_t("notls")].as_integer();
-                    params.nowallp = jsonValue[utility::conversions::to_string_t("nowallp")].as_integer();
-                    params.nowdrag = jsonValue[utility::conversions::to_string_t("nowdrag")].as_integer();
-                    params.perf = jsonValue[utility::conversions::to_string_t("perf")].as_integer();
-                    params.port = jsonValue[utility::conversions::to_string_t("port")].as_integer();
+                    params.fntlm = pt.get<int>("fntlm");
+                    params.nomani = pt.get<int>("nomani");
+                    params.nonla = pt.get<int>("nonla");
+                    params.notheme = pt.get<int>("notheme");
+                    params.notls = pt.get<int>("notls");
+                    params.nowallp = pt.get<int>("nowallp");
+                    params.nowdrag = pt.get<int>("nowdrag");
+                    params.perf = pt.get<int>("perf");
+                    params.port = pt.get<int>("port");
 
                     if (!size.empty()) {
                         try {
@@ -662,11 +662,7 @@ namespace wsgate {
                             params.height = 768;
                         }
                     }
-                    this->m_rsh->PrepareRDP(std::string(w_host.begin(), w_host.end()),
-                                            std::string(w_pcb.begin() , w_pcb.end()),
-                                            std::string(w_user.begin(), w_user.end()),
-                                            std::string(w_pass.begin(), w_pass.end()),
-                                            params);
+                    this->m_rsh->PrepareRDP(host, pcb, user, pass, params);
                 }
                 catch (exception &e){
                     log::err << "Error starting RDP session:" << e.what() << std::endl;
@@ -1120,7 +1116,7 @@ namespace wsgate {
                 case STATE_CLOSED:
                     break;
             }
-            usleep(100);
+            usleep(1000);
         }
         log::debug << "RDP client thread terminated" << endl;
         if (STATE_CONNECTED == m_State) {
