@@ -20,6 +20,7 @@
 #include <cpprest/json.h>
 
 #include "nova_token_auth.hpp"
+#include <iostream>
 
 using namespace pplx;
 using namespace std;
@@ -39,12 +40,14 @@ private:
     std::pair<std::string, std::string> get_auth_token_data_v2(std::string osAuthUrl,
                                                                            std::string osUserName,
                                                                            std::string osPassword,
-                                                                           std::string osTenantName);
+                                                                           std::string osTenantName,
+                                                                           std::string osRegion);
 
     std::pair<std::string, std::string> get_auth_token_data_v3(std::string osAuthUrl,
                                                                            std::string osUserName,
                                                                            std::string osPassword,
-                                                                           std::string osTenantName);
+                                                                           std::string osTenantName,
+                                                                           std::string osRegion);
 
     web::json::value get_console_token_data(std::string authToken,
                                             std::string novaUrl,
@@ -56,7 +59,8 @@ public:
                                                std::string osPassword,
                                                std::string osTenantName,
                                                std::string consoleToken,
-                                               std::string keystoneVersion);
+                                               std::string keystoneVersion,
+                                               std::string osRegion);
 };
 
 
@@ -88,7 +92,8 @@ json::value nova_console_token_auth_impl::get_json_from_response(
 
 std::pair<std::string, std::string> nova_console_token_auth_impl::get_auth_token_data_v2(
     string osAuthUrl, string osUserName,
-    string osPassword, string osTenantName)
+    string osPassword, string osTenantName,
+    string osRegion)
 {
     auto jsonRequestBody = json::value::object();
     auto auth = json::value::object();
@@ -114,8 +119,19 @@ std::pair<std::string, std::string> nova_console_token_auth_impl::get_auth_token
 
     //get the nova api endpoint
     for (auto serviceCatalog : response_json[U("access")][U("serviceCatalog")].as_array())
-        if (serviceCatalog[U("name")].as_string() == U("nova"))
-            novaUrl = serviceCatalog[U("endpoints")][0][U("adminURL")].as_string();
+        if (serviceCatalog[U("name")].as_string() == U("nova")){
+            if (osRegion.empty()){
+                novaUrl = serviceCatalog[U("endpoints")][0][U("adminURL")].as_string();
+            }
+            else{
+                for (auto endpoint : serviceCatalog[U("endpoints")].as_array()){
+                    if (endpoint[U("region")].as_string() == to_string_t(osRegion)){
+                        novaUrl = endpoint[U("adminURL")].as_string();
+                    }
+                }
+            }
+        }
+            
 
     return std::pair<std::string, std::string>(
         to_utf8string(authToken),
@@ -124,7 +140,8 @@ std::pair<std::string, std::string> nova_console_token_auth_impl::get_auth_token
 
 std::pair<std::string, std::string> nova_console_token_auth_impl::get_auth_token_data_v3(
     string osAuthUrl, string osUserName,
-    string osPassword, string osTenantName)
+    string osPassword, string osTenantName,
+    string osRegion)
 {
     auto jsonRequestBody = json::value::object();
     auto auth = json::value::object();
@@ -174,8 +191,10 @@ std::pair<std::string, std::string> nova_console_token_auth_impl::get_auth_token
     for (auto serviceCatalog : response_json[U("token")][U("catalog")].as_array())
         if (serviceCatalog[U("name")].as_string() == U("nova"))
             for (auto endpoint : serviceCatalog[U("endpoints")].as_array())
-                if (endpoint[U("interface")].as_string() == U("admin"))
-                    novaUrl = endpoint[U("url")].as_string();
+                if (endpoint[U("interface")].as_string() == U("admin") &&
+                    (endpoint[U("region")].as_string() == to_string_t(osRegion) || osRegion.empty())){
+                        novaUrl = endpoint[U("url")].as_string();
+                }
 
     return std::pair<std::string, std::string>(
         to_utf8string(authToken),
@@ -202,7 +221,8 @@ json::value nova_console_token_auth_impl::get_console_token_data(
 nova_console_info nova_console_token_auth_impl::get_console_info(
     std::string osAuthUrl, std::string osUserName,
     std::string osPassword, std::string osTenantName,
-    std::string consoleToken, std::string keystoneVersion)
+    std::string consoleToken, std::string keystoneVersion,
+    std::string osRegion)
 {
     std::string authToken;
     std::string novaUrl;
@@ -211,13 +231,15 @@ nova_console_info nova_console_token_auth_impl::get_console_info(
         std::tie(authToken, novaUrl) = get_auth_token_data_v2(osAuthUrl,
                                                               osUserName,
                                                               osPassword,
-                                                              osTenantName);
+                                                              osTenantName,
+                                                              osRegion);
     }
     else if (keystoneVersion == KEYSTONE_V3){
         std::tie(authToken, novaUrl) = get_auth_token_data_v3(osAuthUrl,
                                                               osUserName,
                                                               osPassword,
-                                                              osTenantName);
+                                                              osTenantName,
+                                                              osRegion);
     }
     else{
         throw std::invalid_argument("Unknown Keystone version");
