@@ -69,7 +69,8 @@ namespace wsgate {
                                                    std::string osPassword,
                                                    std::string osTenantName,
                                                    std::string consoleToken,
-                                                   std::string keystoneVersion) = 0;
+                                                   std::string keystoneVersion,
+                                                   std::string osRegion) = 0;
     };
 
 

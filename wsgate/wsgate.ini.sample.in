@@ -156,6 +156,7 @@ nofullwindowdrag = true
 #username = admin
 #password = secret
 #tenantname = admin
+#region = optional region
 
 [hyperv]
 
