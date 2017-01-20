@@ -626,6 +626,3 @@ set(LIBRARY_OUTPUT_PATH ${PROJECT_BINARY_DIR}/plugins)
 #build library for openstack
 add_library(pluginOpenstack SHARED ${PLUGINOPENSTACK_SOURCE})
 target_link_libraries(pluginOpenstack ${LIBS})
-if(WIN32)
-    set_target_properties(pluginOpenstack PROPERTIES LINKER_LANGUAGE C++ COMPILE_FLAGS "${CMAKE_CXX_FLAGS}")
-endif()
