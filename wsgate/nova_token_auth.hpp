@@ -21,6 +21,9 @@
 #include <exception>
 #include <string>
 
+#define KEYSTONE_V2 "v2.0"
+#define KEYSTONE_V3 "v3"
+
 namespace wsgate {
 
     class http_exception: public std::exception {
@@ -66,7 +69,9 @@ namespace wsgate {
                                                    std::string osUserName,
                                                    std::string osPassword,
                                                    std::string osTenantName,
-                                                   std::string consoleToken) = 0;
+                                                   std::string consoleToken,
+                                                   std::string keystoneVersion,
+                                                   std::string osRegion) = 0;
     };
 
 

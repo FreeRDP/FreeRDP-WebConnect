@@ -151,9 +151,12 @@ nofullwindowdrag = true
 [openstack]
 
 #authurl = http://10.0.0.1:5000/v2.0
+#Specify the version for keystone
+#keystoneversion = v2.0 or v3
 #username = admin
 #password = secret
 #tenantname = admin
+#region = optional region
 
 [hyperv]
 
