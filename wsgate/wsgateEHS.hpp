@@ -34,7 +34,6 @@
 #include "logging.hpp"
 #include "wsendpoint.hpp"
 #include "myrawsocket.hpp"
-#include "nova_token_auth.hpp"
 
 using namespace std;
 using boost::algorithm::iequals;
@@ -136,3 +135,4 @@ namespace wsgate{
 }
 
 #endif
+
