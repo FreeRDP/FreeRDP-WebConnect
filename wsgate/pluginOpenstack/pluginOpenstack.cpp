@@ -14,6 +14,7 @@ std::string m_sOpenStackUsername;
 std::string m_sOpenStackPassword;
 std::string m_sOpenStackTenantName;
 std::string m_sOpenStackKeystoneVersion;
+std::string m_sOpenStackRegion;
 std::string m_sHyperVHostUsername;
 std::string m_sHyperVHostPassword;
 
@@ -57,6 +58,24 @@ bool readConfigFile(std::map<std::string, std::string> & result){
                 else {
                     m_sOpenStackKeystoneVersion = KEYSTONE_V2;
                 }
+                if (pt.get_optional<std::string>("openstack.region")) {
+                    m_sOpenStackRegion.assign(pt.get<std::string>("openstack.region"));
+                }
+                else {
+                    m_sOpenStackRegion.clear();
+                }
+                if (pt.get_optional<std::string>("hyperv.hostusername")) {
+                    m_sHyperVHostUsername.assign(pt.get<std::string>("hyperv.hostusername"));
+                }
+                else {
+                    m_sHyperVHostUsername.clear();
+                }
+                if (pt.get_optional<std::string>("hyperv.hostpassword")) {
+                    m_sHyperVHostPassword.assign(pt.get<std::string>("hyperv.hostpassword"));
+                }
+                else {
+                    m_sHyperVHostPassword.clear();
+                }
                 returnValue = true;
             }
             catch (const std::exception & e) {
@@ -95,7 +114,7 @@ bool entryPoint(std::map<std::string, std::string> formValues, std::map<std::str
 
                 nova_console_info info = token_auth->get_console_info(m_sOpenStackAuthUrl, m_sOpenStackUsername,
                     m_sOpenStackPassword, m_sOpenStackTenantName,
-                    tokenId, m_sOpenStackKeystoneVersion);
+                    tokenId, m_sOpenStackKeystoneVersion, m_sOpenStackRegion);
 
                 debug << "Host: " << info.host << " Port: " << info.port
                     << " Internal access path: " << info.internal_access_path

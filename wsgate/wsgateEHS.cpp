@@ -880,16 +880,6 @@ namespace wsgate{
                 } else {
                     m_sHostname.clear();
                 }
-                if (pt.get_optional<std::string>("hyperv.hostusername")) {
-                    m_sHyperVHostUsername.assign(pt.get<std::string>("hyperv.hostusername"));
-                } else {
-                    m_sHyperVHostUsername.clear();
-                }
-                if (pt.get_optional<std::string>("hyperv.hostpassword")) {
-                    m_sHyperVHostPassword.assign(pt.get<std::string>("hyperv.hostpassword"));
-                } else {
-                    m_sHyperVHostPassword.clear();
-                }
 
                 if (pt.get_optional<std::string>("plugins.order")){
                     std::string str = pt.get<std::string>("plugins.order");
