@@ -41,18 +41,18 @@ namespace wsgate {
 
     void Update::Register(freerdp *rdp) {
         log::debug << __PRETTY_FUNCTION__ << endl;
-        rdp->update->BeginPaint = cbBeginPaint;
-        rdp->update->EndPaint = cbEndPaint;
-        rdp->update->SetBounds = cbSetBounds;
-        rdp->update->Synchronize = cbSynchronize;
-        rdp->update->DesktopResize = cbDesktopResize;
-        rdp->update->BitmapUpdate = cbBitmapUpdate;
-        rdp->update->Palette = cbPalette;
-        rdp->update->PlaySound = cbPlaySound;
-        rdp->update->SurfaceBits = cbSurfaceBits;
+        rdp->update->BeginPaint = reinterpret_cast<pBeginPaint>(cbBeginPaint);
+        rdp->update->EndPaint = reinterpret_cast<pEndPaint>(cbEndPaint);
+        rdp->update->SetBounds = reinterpret_cast<pSetBounds>(cbSetBounds);
+        rdp->update->Synchronize = reinterpret_cast<pSynchronize>(cbSynchronize);
+        rdp->update->DesktopResize = reinterpret_cast<pDesktopResize>(cbDesktopResize);
+        rdp->update->BitmapUpdate = reinterpret_cast<pBitmapUpdate>(cbBitmapUpdate);
+        rdp->update->Palette = reinterpret_cast<pPalette>(cbPalette);
+        rdp->update->PlaySound = reinterpret_cast<pPlaySound>(cbPlaySound);
+        rdp->update->SurfaceBits = reinterpret_cast<pSurfaceBits>(cbSurfaceBits);
 
-        rdp->update->RefreshRect = cbRefreshRect;
-        rdp->update->SuppressOutput = cbSuppressOutput;
+        rdp->update->RefreshRect = reinterpret_cast<pRefreshRect>(cbRefreshRect);
+        rdp->update->SuppressOutput = reinterpret_cast<pSuppressOutput>(cbSuppressOutput);
     }
 
     void Update::BeginPaint(rdpContext*) {

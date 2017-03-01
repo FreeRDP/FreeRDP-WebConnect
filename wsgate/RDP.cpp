@@ -345,7 +345,7 @@ namespace wsgate {
         m_freerdp->ContextNew = cbContextNew;
         m_freerdp->ContextFree = cbContextFree;
         m_freerdp->Authenticate = cbAuthenticate;
-        m_freerdp->VerifyCertificate = cbVerifyCertificate;
+        m_freerdp->VerifyCertificate = reinterpret_cast<pVerifyCertificate>(cbVerifyCertificate);
 
         freerdp_context_new(m_freerdp);
         reinterpret_cast<wsgContext *>(m_freerdp->context)->pRDP = this;
@@ -390,6 +390,7 @@ namespace wsgate {
             m_rdpSettings->PreconnectionBlob = strdup(pcb.c_str());
         }
 
+        m_rdpSettings->SoftwareGdi = true;
         m_rdpSettings->DesktopWidth = params.width;
         m_rdpSettings->DesktopHeight = params.height;
 
@@ -840,11 +841,11 @@ namespace wsgate {
         rdpPointer p;
         memset(&p, 0, sizeof(p));
         p.size = sizeof(MyPointer);
-        p.New = cbPointer_New;
-        p.Free = cbPointer_Free;
-        p.Set = cbPointer_Set;
-        p.SetNull = cbPointer_SetNull;
-        p.SetDefault = cbPointer_SetDefault;
+        p.New = reinterpret_cast<pPointer_New>(cbPointer_New);
+        p.Free = reinterpret_cast<pPointer_Free>(cbPointer_Free);
+        p.Set = reinterpret_cast<pPointer_Set>(cbPointer_Set);
+        p.SetNull = reinterpret_cast<pPointer_SetNull>(cbPointer_SetNull);
+        p.SetDefault = reinterpret_cast<pPointer_SetDefault>(cbPointer_SetDefault);
         graphics_register_pointer(rdp->context->graphics, &p);
         pointer_cache_register_callbacks(rdp->update);
 

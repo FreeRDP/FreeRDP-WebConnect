@@ -40,28 +40,28 @@ namespace wsgate {
 
     void Primary::Register(freerdp *rdp) {
         log::debug << __PRETTY_FUNCTION__ << endl;
-        rdp->update->primary->DstBlt = cbDstBlt;
-        rdp->update->primary->PatBlt = cbPatBlt;
-        rdp->update->primary->ScrBlt = cbScrBlt;
-        rdp->update->primary->OpaqueRect = cbOpaqueRect;
-        rdp->update->primary->DrawNineGrid = cbDrawNineGrid;
-        rdp->update->primary->MultiDstBlt = cbMultiDstBlt;
-        rdp->update->primary->MultiPatBlt = cbMultiPatBlt;
-        rdp->update->primary->MultiScrBlt = cbMultiScrBlt;
-        rdp->update->primary->MultiOpaqueRect = cbMultiOpaqueRect;
-        rdp->update->primary->MultiDrawNineGrid = cbMultiDrawNineGrid;
-        rdp->update->primary->LineTo = cbLineTo;
-        rdp->update->primary->Polyline = cbPolyline;
-        rdp->update->primary->MemBlt = cbMemBlt;
-        rdp->update->primary->Mem3Blt = cbMem3Blt;
-        rdp->update->primary->SaveBitmap = cbSaveBitmap;
-        rdp->update->primary->GlyphIndex = cbGlyphIndex;
-        rdp->update->primary->FastIndex = cbFastIndex;
-        rdp->update->primary->FastGlyph = cbFastGlyph;
-        rdp->update->primary->PolygonSC = cbPolygonSC;
-        rdp->update->primary->PolygonCB = cbPolygonCB;
-        rdp->update->primary->EllipseSC = cbEllipseSC;
-        rdp->update->primary->EllipseCB = cbEllipseCB;
+        rdp->update->primary->DstBlt = reinterpret_cast<pDstBlt>(cbDstBlt);
+        rdp->update->primary->PatBlt = reinterpret_cast<pPatBlt>(cbPatBlt);
+        rdp->update->primary->ScrBlt = reinterpret_cast<pScrBlt>(cbScrBlt);
+        rdp->update->primary->OpaqueRect = reinterpret_cast<pOpaqueRect>(cbOpaqueRect);
+        rdp->update->primary->DrawNineGrid = reinterpret_cast<pDrawNineGrid>(cbDrawNineGrid);
+        rdp->update->primary->MultiDstBlt = reinterpret_cast<pMultiDstBlt>(cbMultiDstBlt);
+        rdp->update->primary->MultiPatBlt = reinterpret_cast<pMultiPatBlt>(cbMultiPatBlt);
+        rdp->update->primary->MultiScrBlt = reinterpret_cast<pMultiScrBlt>(cbMultiScrBlt);
+        rdp->update->primary->MultiOpaqueRect = reinterpret_cast<pMultiOpaqueRect>(cbMultiOpaqueRect);
+        rdp->update->primary->MultiDrawNineGrid = reinterpret_cast<pMultiDrawNineGrid>(cbMultiDrawNineGrid);
+        rdp->update->primary->LineTo = reinterpret_cast<pLineTo>(cbLineTo);
+        rdp->update->primary->Polyline = reinterpret_cast<pPolyline>(cbPolyline);
+        rdp->update->primary->MemBlt = reinterpret_cast<pMemBlt>(cbMemBlt);
+        rdp->update->primary->Mem3Blt = reinterpret_cast<pMem3Blt>(cbMem3Blt);
+        rdp->update->primary->SaveBitmap = reinterpret_cast<pSaveBitmap>(cbSaveBitmap);
+        rdp->update->primary->GlyphIndex = reinterpret_cast<pGlyphIndex>(cbGlyphIndex);
+        rdp->update->primary->FastIndex = reinterpret_cast<pFastIndex>(cbFastIndex);
+        rdp->update->primary->FastGlyph = reinterpret_cast<pFastGlyph>(cbFastGlyph);
+        rdp->update->primary->PolygonSC = reinterpret_cast<pPolygonSC>(cbPolygonSC);
+        rdp->update->primary->PolygonCB = reinterpret_cast<pPolygonCB>(cbPolygonCB);
+        rdp->update->primary->EllipseSC = reinterpret_cast<pEllipseSC>(cbEllipseSC);
+        rdp->update->primary->EllipseCB = reinterpret_cast<pEllipseCB>(cbEllipseCB);
     }
 
     void Primary::DstBlt(rdpContext*, DSTBLT_ORDER*) {
