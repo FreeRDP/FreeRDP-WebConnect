@@ -287,6 +287,7 @@ namespace wsgate{
 
                 nova_console_info info = token_auth->get_console_info(m_sOpenStackAuthUrl, m_sOpenStackUsername,
                                                                         m_sOpenStackPassword, m_sOpenStackTenantName,
+                                                                        m_sOpenStackProjectId,
                                                                         tokenId, m_sOpenStackKeystoneVersion, m_sOpenStackRegion);
 
                 log::info << "Host: " << info.host << " Port: " << info.port
@@ -918,6 +919,12 @@ namespace wsgate{
                     m_sOpenStackTenantName.assign(pt.get<std::string>("openstack.tenantname"));
                 } else {
                     m_sOpenStackTenantName.clear();
+                }
+                if (pt.get_optional<std::string>("openstack.projectid")) {
+                    m_sOpenStackProjectId.assign(pt.get<std::string>("openstack.projectid"));
+                }
+                else {
+                    m_sOpenStackProjectId.clear();
                 }
                 if (pt.get_optional<std::string>("openstack.keystoneversion")) {
                     m_sOpenStackKeystoneVersion.assign(pt.get<std::string>("openstack.keystoneversion"));

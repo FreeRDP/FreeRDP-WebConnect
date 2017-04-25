@@ -47,6 +47,7 @@ private:
                                                                            std::string osUserName,
                                                                            std::string osPassword,
                                                                            std::string osTenantName,
+                                                                           std::string osProjectID,
                                                                            std::string osRegion);
 
     web::json::value get_console_token_data(std::string authToken,
@@ -58,6 +59,7 @@ public:
                                                std::string osUserName,
                                                std::string osPassword,
                                                std::string osTenantName,
+                                               std::string osProjectID,
                                                std::string consoleToken,
                                                std::string keystoneVersion,
                                                std::string osRegion);
@@ -141,6 +143,7 @@ std::pair<std::string, std::string> nova_console_token_auth_impl::get_auth_token
 std::pair<std::string, std::string> nova_console_token_auth_impl::get_auth_token_data_v3(
     string osAuthUrl, string osUserName,
     string osPassword, string osTenantName,
+    string osProjectID,
     string osRegion)
 {
     auto jsonRequestBody = json::value::object();
@@ -164,7 +167,14 @@ std::pair<std::string, std::string> nova_console_token_auth_impl::get_auth_token
 
     auto scope = json::value::object();
     auto project = json::value::object();
-    project[U("name")] = json::value::string(to_string_t(osTenantName));
+    if (!osTenantName.empty())
+    {
+        project[U("name")] = json::value::string(to_string_t(osTenantName));
+    }
+    if (!osProjectID.empty())
+    {
+        project[U("id")] = json::value::string(to_string_t(osProjectID));
+    }
     project[U("domain")] = domain;
     scope[U("project")] = project;
 
@@ -221,6 +231,7 @@ json::value nova_console_token_auth_impl::get_console_token_data(
 nova_console_info nova_console_token_auth_impl::get_console_info(
     std::string osAuthUrl, std::string osUserName,
     std::string osPassword, std::string osTenantName,
+    std::string osProjectID,
     std::string consoleToken, std::string keystoneVersion,
     std::string osRegion)
 {
@@ -239,6 +250,7 @@ nova_console_info nova_console_token_auth_impl::get_console_info(
                                                               osUserName,
                                                               osPassword,
                                                               osTenantName,
+                                                              osProjectID,
                                                               osRegion);
     }
     else{
