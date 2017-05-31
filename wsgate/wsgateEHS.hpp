@@ -114,8 +114,12 @@ namespace wsgate{
             string m_sOpenStackAuthUrl;
             string m_sOpenStackUsername;
             string m_sOpenStackPassword;
-            string m_sOpenStackTenantName;
+            string m_sOpenStackProjectName;
             string m_sOpenStackProjectId;
+            string m_sOpenStackProjectDomainName;
+            string m_sOpenStackUserDomainName;
+            string m_sOpenStackProjectDomainId;
+            string m_sOpenStackUserDomainId;
             string m_sOpenStackKeystoneVersion;
             string m_sOpenStackRegion;
             string m_sHyperVHostUsername;

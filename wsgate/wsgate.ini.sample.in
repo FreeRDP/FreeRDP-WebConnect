@@ -157,6 +157,10 @@ nofullwindowdrag = true
 #password = secret
 #tenantname = admin
 #projectid = openstack project id
+#projectdomainid = project domain id, if ommited project domain name is used instead
+#userdomainid = user domain id, if ommited user domain name is used instead
+#projectdomainname = project domain name, if ommited "default" is used
+#userdomainname = user domain name, if ommited "default" is used
 #region = optional region
 
 [hyperv]

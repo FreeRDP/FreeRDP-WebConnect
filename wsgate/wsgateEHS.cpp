@@ -286,8 +286,10 @@ namespace wsgate{
                 nova_console_token_auth* token_auth = nova_console_token_auth_factory::get_instance();
 
                 nova_console_info info = token_auth->get_console_info(m_sOpenStackAuthUrl, m_sOpenStackUsername,
-                                                                        m_sOpenStackPassword, m_sOpenStackTenantName,
+                                                                        m_sOpenStackPassword, m_sOpenStackProjectName,
                                                                         m_sOpenStackProjectId,
+                                                                        m_sOpenStackProjectDomainName, m_sOpenStackUserDomainName,
+                                                                        m_sOpenStackProjectDomainId, m_sOpenStackUserDomainId,
                                                                         tokenId, m_sOpenStackKeystoneVersion, m_sOpenStackRegion);
 
                 log::info << "Host: " << info.host << " Port: " << info.port
@@ -916,15 +918,45 @@ namespace wsgate{
                     m_sOpenStackPassword.clear();
                 }
                 if (pt.get_optional<std::string>("openstack.tenantname")) {
-                    m_sOpenStackTenantName.assign(pt.get<std::string>("openstack.tenantname"));
+                    m_sOpenStackProjectName.assign(pt.get<std::string>("openstack.tenantname"));
                 } else {
-                    m_sOpenStackTenantName.clear();
+                    m_sOpenStackProjectName.clear();
+                }
+                if (pt.get_optional<std::string>("openstack.projectname")) {
+                    m_sOpenStackProjectName.assign(pt.get<std::string>("openstack.projectname"));
+                }
+                else {
+                    m_sOpenStackProjectName.clear();
                 }
                 if (pt.get_optional<std::string>("openstack.projectid")) {
                     m_sOpenStackProjectId.assign(pt.get<std::string>("openstack.projectid"));
                 }
                 else {
                     m_sOpenStackProjectId.clear();
+                }
+                if (pt.get_optional<std::string>("openstack.projectdomainname")) {
+                    m_sOpenStackProjectDomainName.assign(pt.get<std::string>("openstack.projectdomainname"));
+                }
+                else {
+                    m_sOpenStackProjectDomainName.assign("default");
+                }
+                if (pt.get_optional<std::string>("openstack.userdomainname")) {
+                    m_sOpenStackUserDomainName.assign(pt.get<std::string>("openstack.userdomainname"));
+                }
+                else {
+                    m_sOpenStackUserDomainName.assign("default");
+                }
+                if (pt.get_optional<std::string>("openstack.projectdomainid")) {
+                    m_sOpenStackProjectDomainId.assign(pt.get<std::string>("openstack.projectdomainid"));
+                }
+                else {
+                    m_sOpenStackProjectDomainId.clear();
+                }
+                if (pt.get_optional<std::string>("openstack.userdomainid")) {
+                    m_sOpenStackUserDomainId.assign(pt.get<std::string>("openstack.userdomainid"));
+                }
+                else {
+                    m_sOpenStackUserDomainId.clear();
                 }
                 if (pt.get_optional<std::string>("openstack.keystoneversion")) {
                     m_sOpenStackKeystoneVersion.assign(pt.get<std::string>("openstack.keystoneversion"));
