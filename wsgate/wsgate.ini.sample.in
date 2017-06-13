@@ -156,6 +156,7 @@ nofullwindowdrag = true
 #username = admin
 #password = secret
 #tenantname = admin
+#projectid = openstack project id
 #region = optional region
 
 [hyperv]
