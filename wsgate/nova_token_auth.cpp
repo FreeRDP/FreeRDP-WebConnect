@@ -40,13 +40,18 @@ private:
     std::pair<std::string, std::string> get_auth_token_data_v2(std::string osAuthUrl,
                                                                            std::string osUserName,
                                                                            std::string osPassword,
-                                                                           std::string osTenantName,
+                                                                           std::string osProjectName,
                                                                            std::string osRegion);
 
     std::pair<std::string, std::string> get_auth_token_data_v3(std::string osAuthUrl,
                                                                            std::string osUserName,
                                                                            std::string osPassword,
-                                                                           std::string osTenantName,
+                                                                           std::string osProjectName,
+                                                                           std::string osProjectId,
+                                                                           std::string osProjectDomainName,
+                                                                           std::string osUserDomainName,
+                                                                           std::string osProjectDomainId,
+                                                                           std::string osUserDomainId,
                                                                            std::string osRegion);
 
     web::json::value get_console_token_data(std::string authToken,
@@ -57,7 +62,12 @@ public:
     virtual nova_console_info get_console_info(std::string osAuthUrl,
                                                std::string osUserName,
                                                std::string osPassword,
-                                               std::string osTenantName,
+                                               std::string osProjectName,
+                                               std::string osProjectId,
+                                               std::string osProjectDomainName,
+                                               std::string osUserDomainName,
+                                               std::string osProjectDomainId,
+                                               std::string osUserDomainId,
                                                std::string consoleToken,
                                                std::string keystoneVersion,
                                                std::string osRegion);
@@ -92,7 +102,7 @@ json::value nova_console_token_auth_impl::get_json_from_response(
 
 std::pair<std::string, std::string> nova_console_token_auth_impl::get_auth_token_data_v2(
     string osAuthUrl, string osUserName,
-    string osPassword, string osTenantName,
+    string osPassword, string osProjectName,
     string osRegion)
 {
     auto jsonRequestBody = json::value::object();
@@ -101,7 +111,7 @@ std::pair<std::string, std::string> nova_console_token_auth_impl::get_auth_token
     cred[U("username")] = json::value::string(to_string_t(osUserName));
     cred[U("password")] = json::value::string(to_string_t(osPassword));
     auth[U("passwordCredentials")] = cred;
-    auth[U("tenantName")] = json::value::string(to_string_t(osTenantName));
+    auth[U("tenantName")] = json::value::string(to_string_t(osProjectName));
     jsonRequestBody[U("auth")] = auth;
     http::http_request request(http::methods::POST);
     request.set_request_uri(U("tokens"));
@@ -140,7 +150,10 @@ std::pair<std::string, std::string> nova_console_token_auth_impl::get_auth_token
 
 std::pair<std::string, std::string> nova_console_token_auth_impl::get_auth_token_data_v3(
     string osAuthUrl, string osUserName,
-    string osPassword, string osTenantName,
+    string osPassword, string osProjectName,
+    string osProjectId,
+    string osProjectDomainName, string osUserDomainName,
+    string osProjectDomainId, string osUserDomainId,
     string osRegion)
 {
     auto jsonRequestBody = json::value::object();
@@ -154,18 +167,37 @@ std::pair<std::string, std::string> nova_console_token_auth_impl::get_auth_token
     user[U("name")] = json::value::string(to_string_t(osUserName));
     user[U("password")] = json::value::string(to_string_t(osPassword));
 
-    auto domain = json::value::object();
-    domain[U("id")] = json::value::string(to_string_t("default"));
-
-    user[U("domain")] = domain;
+    auto userDomain = json::value::object();
+    if (!osUserDomainId.empty()){
+        userDomain[U("id")] = json::value::string(to_string_t(osUserDomainId));
+    }
+    else{
+        userDomain[U("name")] = json::value::string(to_string_t(osUserDomainName));
+    }
+    user[U("domain")] = userDomain;
     password[U("user")] = user;
     identity[U("methods")] = methods;
     identity[U("password")] = password;
 
     auto scope = json::value::object();
     auto project = json::value::object();
-    project[U("name")] = json::value::string(to_string_t(osTenantName));
-    project[U("domain")] = domain;
+    if (!osProjectId.empty())
+    {
+        project[U("id")] = json::value::string(to_string_t(osProjectId));
+    }
+    else if (!osProjectName.empty())
+    {
+        project[U("name")] = json::value::string(to_string_t(osProjectName));
+    }
+
+    auto projectDomain = json::value::object();
+    if (!osProjectDomainId.empty()){
+        projectDomain[U("id")] = json::value::string(to_string_t(osProjectDomainId));
+    }
+    else{
+        projectDomain[U("name")] = json::value::string(to_string_t(osProjectDomainName));
+    }
+    project[U("domain")] = projectDomain;
     scope[U("project")] = project;
 
     auth[U("identity")] = identity;
@@ -220,7 +252,10 @@ json::value nova_console_token_auth_impl::get_console_token_data(
 
 nova_console_info nova_console_token_auth_impl::get_console_info(
     std::string osAuthUrl, std::string osUserName,
-    std::string osPassword, std::string osTenantName,
+    std::string osPassword,
+    std::string osProjectName, std::string osProjectId,
+    std::string osProjectDomainName, std::string osUserDomainName,
+    std::string osProjectDomainId, std::string osUserDomainId,
     std::string consoleToken, std::string keystoneVersion,
     std::string osRegion)
 {
@@ -231,14 +266,19 @@ nova_console_info nova_console_token_auth_impl::get_console_info(
         std::tie(authToken, novaUrl) = get_auth_token_data_v2(osAuthUrl,
                                                               osUserName,
                                                               osPassword,
-                                                              osTenantName,
+                                                              osProjectName,
                                                               osRegion);
     }
     else if (keystoneVersion == KEYSTONE_V3){
         std::tie(authToken, novaUrl) = get_auth_token_data_v3(osAuthUrl,
                                                               osUserName,
                                                               osPassword,
-                                                              osTenantName,
+                                                              osProjectName,
+                                                              osProjectId,
+                                                              osProjectDomainName,
+                                                              osUserDomainName,
+                                                              osProjectDomainId,
+                                                              osUserDomainId,
                                                               osRegion);
     }
     else{
