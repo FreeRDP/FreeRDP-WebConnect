@@ -127,7 +127,7 @@
 
             function RDPStart(uri, title){
                 if(uri === undefined){
-                    uri = wsBase;
+                    uri = wsBase.replace(/(\:\d+)(\:\d+)/gi, "$1");
                 }
                 if(title === undefined){
                     title = "FreeRDP WebConnect: connected to " + $('rdphost').value.trim();
