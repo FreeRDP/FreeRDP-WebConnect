@@ -18,6 +18,7 @@
 #include <sstream>
 #include <cpprest/http_client.h>
 #include <cpprest/json.h>
+#include "logging.hpp"
 
 #include "nova_token_auth.hpp"
 #include <iostream>
@@ -124,24 +125,46 @@ std::pair<std::string, std::string> nova_console_token_auth_impl::get_auth_token
 
     utility::string_t authToken;
     utility::string_t novaUrl;
-    //get the authentication token
-    authToken = response_json[U("access")][U("token")][U("id")].as_string();
 
-    //get the nova api endpoint
-    for (auto serviceCatalog : response_json[U("access")][U("serviceCatalog")].as_array())
-        if (serviceCatalog[U("name")].as_string() == U("nova")){
-            if (osRegion.empty()){
-                novaUrl = serviceCatalog[U("endpoints")][0][U("adminURL")].as_string();
-            }
-            else{
-                for (auto endpoint : serviceCatalog[U("endpoints")].as_array()){
-                    if (endpoint[U("region")].as_string() == to_string_t(osRegion)){
-                        novaUrl = endpoint[U("adminURL")].as_string();
-                    }
-                }
+    //check if authentication token is present
+    if (response_json.has_field(U("access"))){
+        if (response_json[U("access")].has_field(U("token"))){
+            if (response_json[U("access")][U("token")].has_field(U("id"))){
+                //get the authentication token
+                authToken = response_json[U("access")][U("token")][U("id")].as_string();
             }
         }
-            
+    }
+    //no authentication toke was found
+    if (authToken.empty()){
+        logger::err << "No authentication token was received\n";
+    }
+
+    //check if serviceCatalog is present
+    if (response_json.has_field(U("access"))){
+        if (response_json[U("access")].has_field(U("serviceCatalog"))){
+            //get the nova api endpoint
+            for (auto serviceCatalog : response_json[U("access")][U("serviceCatalog")].as_array())
+                if (serviceCatalog[U("name")].as_string() == U("nova")){
+                    if (osRegion.empty()){
+                        novaUrl = serviceCatalog[U("endpoints")][0][U("adminURL")].as_string();
+                    }
+                    else{
+                        for (auto endpoint : serviceCatalog[U("endpoints")].as_array()){
+                            if (endpoint[U("region")].as_string() == to_string_t(osRegion)){
+                                novaUrl = endpoint[U("adminURL")].as_string();
+                            }
+                        }
+                    }
+                }
+        }
+        else logger::err << "Service catalog was not present in the received token json\n";
+    }
+    else logger::err << "Returned json has no access field\n";
+
+    if (novaUrl.empty()){
+        logger::err << "No URL for nova endpoint was present in the received token json\n";
+    }
 
     return std::pair<std::string, std::string>(
         to_utf8string(authToken),
@@ -171,8 +194,11 @@ std::pair<std::string, std::string> nova_console_token_auth_impl::get_auth_token
     if (!osUserDomainId.empty()){
         userDomain[U("id")] = json::value::string(to_string_t(osUserDomainId));
     }
-    else{
+    else if(!osUserDomainName.empty()){
         userDomain[U("name")] = json::value::string(to_string_t(osUserDomainName));
+    }
+    else{
+        logger::err << "Neither an user domain id, nor an user domain name was provided\n";
     }
     user[U("domain")] = userDomain;
     password[U("user")] = user;
@@ -189,13 +215,19 @@ std::pair<std::string, std::string> nova_console_token_auth_impl::get_auth_token
     {
         project[U("name")] = json::value::string(to_string_t(osProjectName));
     }
+    else {
+        logger::err << "Neither a project id, nor a project name was provided\n";
+    }
 
     auto projectDomain = json::value::object();
     if (!osProjectDomainId.empty()){
         projectDomain[U("id")] = json::value::string(to_string_t(osProjectDomainId));
     }
-    else{
+    else if(!osProjectDomainName.empty()){
         projectDomain[U("name")] = json::value::string(to_string_t(osProjectDomainName));
+    }
+    else{
+        logger::err << "Neither a project domaind if, nor a project domain name was provided\n";
     }
     project[U("domain")] = projectDomain;
     scope[U("project")] = project;
@@ -218,15 +250,30 @@ std::pair<std::string, std::string> nova_console_token_auth_impl::get_auth_token
     utility::string_t novaUrl;
     //get the authentication token
     authToken = response.headers()[U("X-Subject-Token")];
+    if (authToken.empty()){
+        logger::err << "No authentication token was received\n";
+    }
 
-    //get the nova api endpoint
-    for (auto serviceCatalog : response_json[U("token")][U("catalog")].as_array())
-        if (serviceCatalog[U("name")].as_string() == U("nova"))
-            for (auto endpoint : serviceCatalog[U("endpoints")].as_array())
-                if (endpoint[U("interface")].as_string() == U("admin") &&
-                    (endpoint[U("region")].as_string() == to_string_t(osRegion) || osRegion.empty())){
-                        novaUrl = endpoint[U("url")].as_string();
-                }
+    //verify if there is a catalog present
+    if (response_json.has_field(U("token"))){
+        if (response_json[U("token")].has_field(U("catalog"))){
+            //get the nova api endpoint
+            for (auto serviceCatalog : response_json[U("token")][U("catalog")].as_array())
+                if (serviceCatalog[U("name")].as_string() == U("nova"))
+                    for (auto endpoint : serviceCatalog[U("endpoints")].as_array())
+                        if (endpoint[U("interface")].as_string() == U("admin") &&
+                            (endpoint[U("region")].as_string() == to_string_t(osRegion) || osRegion.empty())){
+                            novaUrl = endpoint[U("url")].as_string();
+                        }
+
+        }
+        else logger::err << "Service catalog was not present in the received token json\n";
+    }
+    else logger::err << "Token json has no token field\n";
+
+    if (novaUrl.empty()){
+        logger::err << "No URL for nova endpoint was present in the received token json\n";
+    }
 
     return std::pair<std::string, std::string>(
         to_utf8string(authToken),
@@ -263,6 +310,7 @@ nova_console_info nova_console_token_auth_impl::get_console_info(
     std::string novaUrl;
 
     if (keystoneVersion == KEYSTONE_V2){
+        logger::info << "Using keystone auth version 2\n";
         std::tie(authToken, novaUrl) = get_auth_token_data_v2(osAuthUrl,
                                                               osUserName,
                                                               osPassword,
@@ -270,6 +318,7 @@ nova_console_info nova_console_token_auth_impl::get_console_info(
                                                               osRegion);
     }
     else if (keystoneVersion == KEYSTONE_V3){
+        logger::info << "Using keystone auth version 3\n";
         std::tie(authToken, novaUrl) = get_auth_token_data_v3(osAuthUrl,
                                                               osUserName,
                                                               osPassword,
@@ -304,8 +353,7 @@ nova_console_info nova_console_token_auth_impl::get_console_info(
         info.port = portValue.as_integer();
     }
 
-    auto internalAccessPathValue = consoleTokenData[U("console")]
-        [U("internal_access_path")];
+    auto internalAccessPathValue = consoleTokenData[U("console")][U("internal_access_path")];
 
     if(internalAccessPathValue.is_string())
     {
