@@ -917,13 +917,11 @@ namespace wsgate{
                 } else {
                     m_sOpenStackPassword.clear();
                 }
-                if (pt.get_optional<std::string>("openstack.tenantname")) {
-                    m_sOpenStackProjectName.assign(pt.get<std::string>("openstack.tenantname"));
-                } else {
-                    m_sOpenStackProjectName.clear();
-                }
                 if (pt.get_optional<std::string>("openstack.projectname")) {
                     m_sOpenStackProjectName.assign(pt.get<std::string>("openstack.projectname"));
+                }
+                else if (pt.get_optional<std::string>("openstack.tenantname")) {
+                    m_sOpenStackProjectName.assign(pt.get<std::string>("openstack.tenantname"));
                 }
                 else {
                     m_sOpenStackProjectName.clear();
