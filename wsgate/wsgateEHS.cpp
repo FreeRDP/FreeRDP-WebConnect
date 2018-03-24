@@ -286,11 +286,11 @@ namespace wsgate{
                 nova_console_token_auth* token_auth = nova_console_token_auth_factory::get_instance();
 
                 nova_console_info info = token_auth->get_console_info(m_sOpenStackAuthUrl, m_sOpenStackUsername,
-                                                                        m_sOpenStackPassword, m_sOpenStackProjectName,
-                                                                        m_sOpenStackProjectId,
-                                                                        m_sOpenStackProjectDomainName, m_sOpenStackUserDomainName,
-                                                                        m_sOpenStackProjectDomainId, m_sOpenStackUserDomainId,
-                                                                        tokenId, m_sOpenStackKeystoneVersion, m_sOpenStackRegion);
+                                                                      m_sOpenStackPassword, m_sOpenStackProjectName,
+                                                                      m_sOpenStackProjectId,
+                                                                      m_sOpenStackProjectDomainName, m_sOpenStackUserDomainName,
+                                                                      m_sOpenStackProjectDomainId, m_sOpenStackUserDomainId,
+                                                                      tokenId, m_sOpenStackKeystoneVersion, m_sOpenStackRegion);
 
                 log::info << "Host: " << info.host << " Port: " << info.port
                             << " Internal access path: " << info.internal_access_path
@@ -919,6 +919,9 @@ namespace wsgate{
                 }
                 if (pt.get_optional<std::string>("openstack.projectname")) {
                     m_sOpenStackProjectName.assign(pt.get<std::string>("openstack.projectname"));
+                } else
+                if (pt.get_optional<std::string>("openstack.tenantname")) {
+                    m_sOpenStackProjectName.assign(pt.get<std::string>("openstack.tenantname"));
                 }
                 else if (pt.get_optional<std::string>("openstack.tenantname")) {
                     m_sOpenStackProjectName.assign(pt.get<std::string>("openstack.tenantname"));
