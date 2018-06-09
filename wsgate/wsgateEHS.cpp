@@ -536,8 +536,11 @@ namespace wsgate{
         MimeType mt = simpleMime(to_lower_copy(basename));
         if (HTML == mt) {
             ostringstream oss;
-
-            oss << (request->Secure() ? "wss://" : "ws://") << thisHost << "/wsgate";
+            bool is_secure = request->Secure();
+            if (request->Headers("X-Forwarded-Proto").compare("https") == 0) {
+              is_secure=true;
+            }
+            oss << (is_secure ? "wss://" : "ws://") << thisHost << "/wsgate";
 
             replace_all(body, "%WSURI%", oss.str());
             replace_all(body, "%JSDEBUG%", (bDynDebug ? "-debug" : ""));
