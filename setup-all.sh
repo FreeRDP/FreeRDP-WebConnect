@@ -277,8 +277,8 @@ fi
 echo '---- Finished installing freerdp ----'
 cd ../.. || exit 99
 echo '---- Checking out casablanca master ----'
-git_clone_pull casablanca https://git.codeplex.com/casablanca  || { echo 'Unable to download casablanca from codeplex'; exit 99; }
-cd casablanca/Release || exit 99
+git_clone_pull casablanca https://github.com/Microsoft/cpprestsdk  || { echo 'Unable to download casablanca from Github'; exit 99; }
+cd cpprestsdk/Release || exit 99
 cmake -DCMAKE_INSTALL_PREFIX=/usr -DCMAKE_BUILD_TYPE=Release . || exit 8
 make || exit 8
 #make test || exit 9
