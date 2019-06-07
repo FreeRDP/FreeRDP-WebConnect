@@ -50,7 +50,7 @@ case $DISTRO in
 	Fedora*)
 		echo 'Fedora detected.Installing required packages...'
 		yum install -y gcc-c++ autoconf automake libtool cmake svn svn2cl \
-		openssl-devel boost-devel libpng-devel elfutils-devel
+		openssl-devel boost-devel libpng-devel elfutils-devel make
 		;;
 	*SUSE*)
 		echo 'SUSE detected.Installing required packages...'
