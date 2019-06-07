@@ -75,9 +75,9 @@ function git_clone_pull()
 # 5 = failed to install ehs package
 # 6 = failed to build FreeRDP package
 # 7 = failed to install FreeRDP package
-# 8 = failed to build casablanca package
-# 9 = failed to test casablanca build
-# 10 = failed to install casablanca package
+# 8 = failed to build cpprestsdk package
+# 9 = failed to test cpprestsdk build
+# 10 = failed to install cpprestsdk package
 # 11 = failed to build FreeRDP-WebConnect package
 # 99 = failed to execute some shell command
 
@@ -112,11 +112,11 @@ function exit_handler()
 			7)	echo "Unable to install FreeRDP package into /usr. Exiting..."
 				#cleanup
 				;;
-			8)	echo "Unable to build casablanca package. Exiting..."
+			8)	echo "Unable to build cpprestsdk package. Exiting..."
 				;;
-			9)	echo "Testing the casablanca build failed. Exiting... "
+			9)	echo "Testing the cpprestsdk build failed. Exiting... "
 				;;
-			10)	echo "Unable to install casablanca package into /usr. Exiting..."
+			10)	echo "Unable to install cpprestsdk package into /usr. Exiting..."
 				;;
 			11)	echo "Unable to build FreeRDP-WebConnect. Exiting..."
 				#cleanup
@@ -276,24 +276,26 @@ else
 fi
 echo '---- Finished installing freerdp ----'
 cd ../.. || exit 99
-echo '---- Checking out casablanca master ----'
-git_clone_pull casablanca https://git.codeplex.com/casablanca  || { echo 'Unable to download casablanca from codeplex'; exit 99; }
-cd casablanca/Release || exit 99
+echo '---- Checking out cpprestsdk master ----'
+git_clone_pull cpprestsdk https://github.com/Microsoft/cpprestsdk  || { echo 'Unable to download cpprestsdk from github'; exit 99; }
+cd cpprestsdk || exit 99
+git submodule update --init
+cd Release || exit 99
 cmake -DCMAKE_INSTALL_PREFIX=/usr -DCMAKE_BUILD_TYPE=Release . || exit 8
 make || exit 8
 #make test || exit 9
 if [[ $sudo_present -eq 1 ]]; then
-	echo 'sudo available. Please enter your password to install casablanca: '
+	echo 'sudo available. Please enter your password to install cpprestsdk: '
 	sudo cp Binaries/libcpprest.so /usr/lib || exit 10
 	sudo ldconfig || exit 10
-	sudo mkdir -p /usr/include/casablanca || exit 10
-	sudo cp -r ../Release/include/* /usr/include/casablanca || exit 10
+	sudo mkdir -p /usr/include/cpprestsdk || exit 10
+	sudo cp -r ../Release/include/* /usr/include/cpprestsdk || exit 10
 else
-	echo 'sudo command unavailable. Please enter root password to install casablanca'
+	echo 'sudo command unavailable. Please enter root password to install cpprestsdk'
 	su -c cp Binaries/libcpprest.so /usr/lib$BITNESS || exit 10
 	su -c ldconfig || exit 10
-	su -c mkdir -p /usr/include/casablanca || exit 10
-	su -c cp -r ../Release/include/* /usr/include/casablanca || exit 10
+	su -c mkdir -p /usr/include/cpprestsdk || exit 10
+	su -c cp -r ../Release/include/* /usr/include/cpprestsdk || exit 10
 fi
 echo '---- Going back to webconnect ----'
 popd
